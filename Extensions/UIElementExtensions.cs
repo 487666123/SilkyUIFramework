@@ -69,7 +69,7 @@ public static class UIElementExtensions
 
     public static T Join<T>(this T uie, UIElementGroup parent) where T : UIView
     {
-        parent.AppendChild(uie);
+        parent.Add(uie);
         return uie;
     }
 

@@ -12,6 +12,7 @@ public static class FlexboxModule
         public void FlexWrapRow(List<FlexLine> flexLines, float maxMainAxisSize, float gap)
         {
             flexLines.Clear();
+            if (elements.Count == 0) return;
             var element = elements[0];
             var flexLine = new FlexLine(element, element.OuterBounds.Width, element.OuterBounds.Height);
 
@@ -43,6 +44,7 @@ public static class FlexboxModule
         public void FlexWrapColumn(List<FlexLine> flexLines, float maxMainAxisSize, float gap)
         {
             flexLines.Clear();
+            if (elements.Count == 0) return;
             var element = elements[0];
             var flexLine = new FlexLine(element, element.OuterBounds.Height, element.OuterBounds.Width);
 

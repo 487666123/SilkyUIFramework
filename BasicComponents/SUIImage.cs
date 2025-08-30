@@ -39,10 +39,10 @@ public class SUIImage : UIView
 
     #endregion
 
-    public Vector2 ImageOffset = Vector2.Zero;
-    public Vector2 ImagePercent = Vector2.Zero;
-    public Vector2 ImageAlign = Vector2.Zero;
-    public Vector2 ImageOriginPercent = Vector2.Zero;
+    public Vector2 ImageOffset { get; set; } = Vector2.Zero;
+    public Vector2 ImagePercent { get; set; } = Vector2.Zero;
+    public Vector2 ImageAlign { get; set; } = Vector2.Zero;
+    public Vector2 ImageOriginPercent { get; set; } = Vector2.Zero;
 
     /// <summary> 图片缩放 </summary>
     public Vector2 ImageScale { get; set; } = Vector2.One;
@@ -87,7 +87,8 @@ public class SUIImage : UIView
     {
         base.Draw(gameTime, spriteBatch);
 
-        if (Texture2D.Value == null) return;
+
+        if (Texture2D?.Value == null) return;
 
         var position = InnerBounds.Position;
         var size = (Vector2)InnerBounds.Size;

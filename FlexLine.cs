@@ -35,8 +35,8 @@ public class FlexLine
     {
         var line = new FlexLine(elements)
         {
-            MainSize = elements.Sum(element => element.OuterBounds.Width) + (elements.Count - 1) * gap,
-            CrossSize = elements.Max(element => element.OuterBounds.Height)
+            MainSize = elements.Count == 0 ? 0 : elements.Sum(element => element.OuterBounds.Width) + (elements.Count - 1) * gap,
+            CrossSize = elements.Count == 0 ? 0 : elements.Max(element => element.OuterBounds.Height)
         };
 
         return line;
@@ -46,8 +46,8 @@ public class FlexLine
     {
         var line = new FlexLine(elements)
         {
-            MainSize = elements.Sum(element => element.OuterBounds.Height) + (elements.Count - 1) * gap,
-            CrossSize = elements.Max(element => element.OuterBounds.Width)
+            MainSize = elements.Count == 0 ? 0 : elements.Sum(element => element.OuterBounds.Height) + (elements.Count - 1) * gap,
+            CrossSize = elements.Count == 0 ? 0 : elements.Max(element => element.OuterBounds.Width)
         };
 
         return line;

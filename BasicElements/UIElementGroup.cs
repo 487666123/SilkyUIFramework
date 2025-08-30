@@ -149,6 +149,9 @@ public partial class UIElementGroup : UIView
         RuntimeHelper.ErrorCapture(child.Initialize);
     }
 
+    public int GetInnerChildIndex(UIView innerChild) => Elements.IndexOf(innerChild);
+    public int GetInnerCachedChildIndex(UIView innerChild) => ElementsCache.IndexOf(innerChild);
+
     public virtual void RemoveChild(UIView child)
     {
         if (!Elements.Remove(child)) return;
