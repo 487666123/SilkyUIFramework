@@ -43,7 +43,7 @@ public partial class UIView
     public void MarkLayoutDirty()
     {
         LayoutIsDirty = true;
-        PositionIsDirty = true;
+        MarkPositionDirty();
 
         // 如果元素是自由定位的，则不需要通知父元素
         if (Positioning.IsFree) return;
@@ -80,7 +80,7 @@ public partial class UIView
 
     public UIElementGroup Parent { get; protected internal set; }
 
-    public virtual void Remove() => Parent?.RemoveChild(this);
+    public virtual void RemoveFromParent() => Parent?.RemoveChild(this);
 
     public virtual bool ContainsPoint(Vector2 point) => Bounds.Contains(point);
 
@@ -111,12 +111,14 @@ public partial class UIView
 
     internal virtual void HandleEnterTree(SilkyUI silkyUI)
     {
+        if (SilkyUI != null || silkyUI == null) return;
         SilkyUI = silkyUI;
         RuntimeSafeHelper.SafeInvoke(OnEnterTree);
     }
 
     internal virtual void HandleExitTree()
     {
+        if (SilkyUI == null) return;
         SilkyUI = null;
         RuntimeSafeHelper.SafeInvoke(OnExitTree);
     }

@@ -12,7 +12,6 @@ public partial class UIView
             if (field == value) return;
             field = value;
             MarkLayoutDirty();
-            MarkPositionDirty();
         }
     }
 
@@ -24,7 +23,6 @@ public partial class UIView
             if (field == value) return;
             field = value;
             MarkLayoutDirty();
-            MarkPositionDirty();
         }
     }
 
@@ -41,7 +39,6 @@ public partial class UIView
             if (field == value) return;
             field = value;
             MarkLayoutDirty();
-            MarkPositionDirty();
         }
     }
 
@@ -58,7 +55,6 @@ public partial class UIView
             if (RectangleRender.Border == value) return;
             RectangleRender.Border = value;
             MarkLayoutDirty();
-            MarkPositionDirty();
         }
     }
 

@@ -66,8 +66,6 @@ public partial class UIElementGroup
         RecalculateHeight();
         ResizeChildrenHeight();
         UpdateChildrenLayoutOffset();
-
-        MarkFreeElementsDirty();
     }
 
     protected void UpdateLayoutFromFlow()
@@ -77,16 +75,11 @@ public partial class UIElementGroup
         RecalculateChildrenHeight();
         ResizeChildrenHeight();
         UpdateChildrenLayoutOffset();
-
-        MarkFreeElementsDirty();
     }
 
     protected void MarkFreeElementsDirty()
     {
-        foreach (var item in from item in FreeElements
-                             where item.Positioning == Positioning.Absolute
-                             where !item.LayoutIsDirty || item.IsDependentParent()
-                             select item)
+        foreach (var item in FreeElements.Where(e => e.IsDependentParent() && !e.LayoutIsDirty))
         {
             item.MarkLayoutDirty();
         }

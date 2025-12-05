@@ -1,4 +1,6 @@
-﻿namespace SilkyUIFramework.Elements;
+﻿using SilkyUIFramework.Layout;
+
+namespace SilkyUIFramework.Elements;
 
 /// <summary>
 /// 似乎在密谋着什么，再等等...
@@ -8,7 +10,7 @@ public partial class UIElementGroup : UIView
 {
     public UIElementGroup()
     {
-        FlexboxModule = new Layout.FlexboxModule(this);
+        FlexboxModule = new FlexboxModule(this);
         GridModule = new GridModule(this);
     }
 
@@ -52,6 +54,7 @@ public partial class UIElementGroup : UIView
     /// </summary>
     internal sealed override void HandleEnterTree(SilkyUI silkyUI)
     {
+        if (SilkyUI != null || silkyUI == null) return;
         base.HandleEnterTree(silkyUI);
 
         foreach (var el in Elements)
@@ -65,6 +68,7 @@ public partial class UIElementGroup : UIView
     /// </summary>
     internal sealed override void HandleExitTree()
     {
+        if (SilkyUI == null) return;
         base.HandleExitTree();
 
         foreach (var el in Elements)
@@ -84,44 +88,30 @@ public partial class UIElementGroup : UIView
         {
             child.CleanupDirtyMark();
         }
+
+        MarkFreeElementsDirty();
     }
 
     #region Append Remove RemoveChild
 
     public virtual bool HasChild(UIView child) => Elements.Contains(child);
 
-    public virtual void Add(UIView child, int? index = null) => AppendChild(child, index);
-
-    public virtual void Add(List<UIView> children, int? index = null) => AppendChild(children, index);
-
-    public void AppendChild(List<UIView> children, int? index = null)
+    public void AddChild(UIView child, int? index = null)
     {
+        if (child == null) return;
+        if (child.Parent == this) return;
+
         if (index == null)
         {
-            var changing = false;
-            foreach (var child in children.Where(child => child != null && child.Parent != this))
-            {
-                changing = true;
-                child.Remove();
-                Elements.Add(child);
-                child.Parent = this;
-            }
-
-            if (!changing) return;
+            child.RemoveFromParent();
+            Elements.Add(child);
+            child.Parent = this;
         }
         else if (index >= 0 || index <= Elements.Count)
         {
-            var changing = false;
-            var i = index.Value;
-            foreach (var child in children.Where(child => child?.Parent != this))
-            {
-                changing = true;
-                child.Remove();
-                Elements.Insert(i++, child);
-                child.Parent = this;
-            }
-
-            if (!changing) return;
+            child.RemoveFromParent();
+            Elements.Insert(index.Value, child);
+            child.Parent = this;
         }
         else return;
 
@@ -129,40 +119,7 @@ public partial class UIElementGroup : UIView
 
         ElementsOrderIsDirty = true;
 
-        foreach (var child in children)
-        {
-            RuntimeSafeHelper.SafeInvoke(() => child.HandleEnterTree(SilkyUI));
-            RuntimeSafeHelper.SafeInvoke(child.Initialize);
-        }
-    }
-
-    public void AppendChild(UIView child, int? index = null)
-    {
-        if (child == null) return;
-        if (child.Parent == this) return;
-
-        if (index == null)
-        {
-            child.Remove();
-            Elements.Add(child);
-            child.Parent = this;
-        }
-        else if (index >= 0 || index <= Elements.Count)
-        {
-            child.Remove();
-            Elements.Insert(index.Value, child);
-            child.Parent = this;
-        }
-        else
-        {
-            return;
-        }
-
-        MarkLayoutDirty();
-        MarkPositionDirty();
-
-        ElementsOrderIsDirty = true;
-
+        OnAddChild(child);
         RuntimeSafeHelper.SafeInvoke(() =>
         {
             if (SilkyUI != null) child.HandleEnterTree(SilkyUI);
@@ -170,10 +127,7 @@ public partial class UIElementGroup : UIView
         RuntimeSafeHelper.SafeInvoke(child.Initialize);
     }
 
-    public virtual void Remove(UIView child)
-    {
-        RemoveChild(child);
-    }
+    protected virtual void OnAddChild(UIView child) { }
 
     public void RemoveChild(UIView child)
     {
@@ -181,11 +135,13 @@ public partial class UIElementGroup : UIView
 
         child.Parent = null;
         MarkLayoutDirty();
-        MarkPositionDirty();
         ElementsOrderIsDirty = true;
 
+        OnRemoveChild(child);
         child.HandleExitTree();
     }
+
+    protected virtual void OnRemoveChild(UIView child) { }
 
     public void RemoveAllChildren()
     {
@@ -196,27 +152,6 @@ public partial class UIElementGroup : UIView
     }
 
     #endregion
-
-    public UIView SelectedElement { get; protected set; }
-
-    public virtual void SelectChild(UIView selectTarget)
-    {
-        if (!ElementsCache.Contains(selectTarget)) return;
-
-        SelectedElement?.HandleDeselected();
-        SelectedElement = selectTarget;
-        SelectedElement?.HandleSelected();
-    }
-
-    public override void OnLeftMouseDown(UIMouseEvent evt)
-    {
-        if (evt.Source != this && evt.Previous is { Selectable: true })
-        {
-            SelectChild(evt.Previous);
-        }
-
-        base.OnLeftMouseDown(evt);
-    }
 
     #region Update UpdateStatus Draw
 

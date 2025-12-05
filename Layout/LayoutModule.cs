@@ -46,7 +46,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     #region SetBounds Methods
 
     /// <summary>
-    /// 通常用于 OnPrepare 阶段直接设置 OuterBounds.Width
+    /// 用于 PreMeasure 阶段直接设置 OuterBounds.Width
     /// </summary>
     protected static void SetInnerWidthClamped(UIView target, float width)
     {
@@ -54,7 +54,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     }
 
     /// <summary>
-    /// 通常用于 OnPrepare 阶段直接设置 OuterBounds.Height
+    /// 用于 PreMeasure 阶段直接设置 OuterBounds.Height
     /// </summary>
     protected static void SetInnerHeightClamped(UIView target, float height)
     {

@@ -9,12 +9,11 @@ public static class SDFRectangle
     public static void DrawHasBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float border, Color borderColor, Matrix matrix)
     {
+        var innerShrinkage = 1 / matrix.M11;
+        SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        var innerShrinkage = 1 / Main.UIScale;
-
-        SetSmoothstepRange();
-        SetMatrixWithBgColor(matrix, backgroundColor);
+        SetMatrixWithBgColor(in matrix, backgroundColor);
 
         Effect.Parameters["uBorder"].SetValue(border);
         Effect.Parameters["uBorderColor"].SetValue(borderColor.ToVector4());
@@ -31,12 +30,11 @@ public static class SDFRectangle
     public static void DrawNoBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, Matrix matrix)
     {
+        var innerShrinkage = 1 / matrix.M11;
+        SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        var innerShrinkage = 1 / Main.UIScale;
-
-        SetSmoothstepRange();
-        SetMatrixWithBgColor(matrix, backgroundColor);
+        SetMatrixWithBgColor(in matrix, backgroundColor);
 
         Effect.CurrentTechnique.Passes["NoBorder"].Apply();
         SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
@@ -49,11 +47,10 @@ public static class SDFRectangle
 
     public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size, Vector4 borderRadius, Matrix matrix)
     {
+        var innerShrinkage = 1 / matrix.M11;
+        SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        var innerShrinkage = 1 / Main.UIScale;
-
-        SetSmoothstepRange();
         Effect.Parameters["uTransformMatrix"].SetValue(matrix);
         Effect.Parameters["uBackgroundColor"].SetValue(Color.White.ToVector4());
 
@@ -72,9 +69,9 @@ public static class SDFRectangle
     public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size,
         Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize, Vector4 borderRadius, Color color, Matrix matrix)
     {
+        SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        SetSmoothstepRange();
         Effect.Parameters["uBackgroundColor"].SetValue(color.ToVector4());
         Effect.Parameters["uTransformMatrix"].SetValue(matrix);
 
@@ -93,10 +90,10 @@ public static class SDFRectangle
     public static void DrawShadow(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float shadowBlurSize, Matrix matrix)
     {
+        SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        SetSmoothstepRange();
-        SetMatrixWithBgColor(matrix, backgroundColor);
+        SetMatrixWithBgColor(in matrix, backgroundColor);
         Effect.Parameters["uShadowBlurSize"].SetValue(shadowBlurSize);
 
         Effect.CurrentTechnique.Passes["Shadow"].Apply();
@@ -110,16 +107,16 @@ public static class SDFRectangle
 
     #region Setter
 
-    private static void SetMatrixWithBgColor(Matrix matrix, Color backgroundColor)
+    private static void SetMatrixWithBgColor(in Matrix matrix, Color backgroundColor)
     {
         Effect.Parameters["uTransformMatrix"].SetValue(matrix);
         Effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
     }
 
-    private static void SetSmoothstepRange()
+    private static void SetSmoothstepRange(in Matrix matrix)
     {
         const float root2Over2 = 1.414213562373f / 2f;
-        Effect.Parameters["uSmoothstepRange"].SetValue(new Vector2(-root2Over2, root2Over2) / Main.UIScale);
+        Effect.Parameters["uSmoothstepRange"].SetValue(new Vector2(-root2Over2 / matrix.M11, root2Over2 / matrix.M11));
     }
 
     #endregion

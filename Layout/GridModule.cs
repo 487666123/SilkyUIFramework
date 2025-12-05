@@ -1,6 +1,4 @@
-using SilkyUIFramework.Layout;
-
-namespace SilkyUIFramework;
+namespace SilkyUIFramework.Layout;
 
 public class GridModule(UIElementGroup parent) : LayoutModule(parent)
 {
@@ -34,6 +32,9 @@ public class GridModule(UIElementGroup parent) : LayoutModule(parent)
     private float _rowsFenceGap = 0f;
     private float _columnsFenceGap = 0f;
 
+    /// <summary>
+    /// 统计行数列数
+    /// </summary>
     public override void UpdateCacheStatus()
     {
         base.UpdateCacheStatus();
@@ -43,6 +44,7 @@ public class GridModule(UIElementGroup parent) : LayoutModule(parent)
 
         _rowValues = new float[rows.Length];
         _columnValues = new float[columns.Length];
+        
         _markers = new bool[rows.Length, columns.Length];
 
         var rowValues = _rowValues.AsSpan();
