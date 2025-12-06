@@ -2,9 +2,19 @@ global using SilkyUIFramework;
 
 namespace SilkyUIFramework;
 
-public enum MouseButtonType { Left, Middle, Right }
+public enum MouseButtonType : int
+{
+    Left,
+    Middle,
+    Right
+}
 
-public enum LayoutType { Flexbox, Grid, Custom, }
+public enum LayoutType
+{
+    Flexbox,
+    Grid,
+    Custom,
+}
 
 public enum HiddenBox
 {

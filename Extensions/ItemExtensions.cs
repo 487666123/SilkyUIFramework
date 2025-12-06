@@ -2,7 +2,10 @@ namespace SilkyUIFramework.Extensions;
 
 public static class ItemExtensions
 {
-    public static bool NotAir(this Item item) => !item.IsAir;
-    public static bool Full(this Item item) => item.stack >= item.maxStack;
-    public static bool NotFull(this Item item) => item.stack < item.maxStack;
+    extension(Item item)
+    {
+        public bool NotAir() => !item.IsAir;
+        public bool Full() => item.stack >= item.maxStack;
+        public bool NotFull() => item.stack < item.maxStack;
+    }
 }

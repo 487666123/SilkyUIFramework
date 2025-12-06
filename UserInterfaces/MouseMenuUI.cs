@@ -1,5 +1,4 @@
-﻿using log4net;
-using SilkyUIFramework.Animation;
+﻿using SilkyUIFramework.Animation;
 
 namespace SilkyUIFramework.UserInterfaces;
 
@@ -20,105 +19,63 @@ public enum MouseAnchor
 
 #if true
 
-[RegisterGlobalUI("MouseMenuUI", 1000)]
-public partial class MouseMenuUI(ILog Logger) : BasicBody, IMouseMenu
+[RegisterGlobalUI(priority: 1000)]
+public partial class MouseMenuUI : BaseBody, IMouseMenu
 {
-    public static bool ShowUI { get; set; }
+    public static bool IsShow { get; set; }
+
     public override bool Enabled
     {
         get
         {
-            if (ShowUI) return true;
-            return !SwitchTimer.IsReverseCompleted;
+            if (IsShow) return true;
+            return !_switchTimer.IsReverseCompleted;
         }
-        set => ShowUI = value;
+        set => IsShow = value;
     }
-    public override bool IsInteractable => SwitchTimer.IsForward;
+
+    public override bool IsInteractable => _switchTimer.IsForward;
+
+    public override Bounds BlurBounds => MenuContainer.Bounds;
+    public override Vector4 BlurBorderRadius => MenuContainer.BorderRadius;
 
     protected override void OnInitialize()
     {
+        EnableBlur = true;
         InitializeComponent();
-
-        Logger.Info("MouseMenuUI loading completed content.");
 
         SetLeft(0f, 0f, 0f);
         SetTop(0f, 0f, 0f);
 
-        // Microsoft.Xna.Framework.Vector4
-
         MenuContainer.BorderColor = SUIColor.Border * 0.75f;
         MenuContainer.BackgroundColor = SUIColor.Background * 0.75f;
-
-        ScrollView.Mask.MaxHeight = new Dimension(300f, 0f);
-        ScrollView.Mask.FitWidth = true;
-        ScrollView.Mask.FitHeight = true;
-
-        ScrollView.Container.FlexWrap = false;
-        ScrollView.Container.FitWidth = true;
-        ScrollView.Container.FitHeight = true;
-        ScrollView.Container.FlexDirection = FlexDirection.Column;
-        ScrollView.Container.MainAlignment = MainAlignment.Start;
-        ScrollView.Container.CrossContentAlignment = CrossContentAlignment.Stretch;
-        ScrollView.Container.CrossAlignment = CrossAlignment.Stretch;
-        ScrollView.Container.Gap = new Size(4f);
     }
 
     public override void OnLeftMouseDown(UIMouseEvent evt)
     {
         if (evt.Source == this) Enabled = false;
-
         base.OnLeftMouseDown(evt);
     }
 
-    public override void OnRightMouseDown(UIMouseEvent evt)
-    {
-        //if (evt.Source == this) Enabled = false;
-
-        base.OnRightMouseDown(evt);
-    }
-
-    protected override void Update(GameTime gameTime)
-    {
-        base.Update(gameTime);
-    }
-
-    public readonly AnimationTimer SwitchTimer = new(3);
+    private readonly AnimationTimer _switchTimer = new(3);
 
     protected override void UpdateStatus(GameTime gameTime)
     {
-        if (ShowUI) SwitchTimer.StartUpdate();
-        else SwitchTimer.StartReverseUpdate();
+        if (IsShow) _switchTimer.StartUpdate();
+        else _switchTimer.StartReverseUpdate();
 
-        SwitchTimer.Update(gameTime);
+        _switchTimer.Update(gameTime);
 
-        UseRenderTarget = SwitchTimer.IsUpdating;
-        Opacity = SwitchTimer.Lerp(0f, 1f);
+        UseRenderTarget = _switchTimer.IsUpdating;
+        Opacity = _switchTimer.Lerp(0f, 1f);
 
-        RenderTargetMatrix = Matrix.CreateTranslation(0, SwitchTimer.Lerp(10f, 0), 0);
+        RenderTargetMatrix = Matrix.CreateTranslation(0, _switchTimer.Lerp(10f, 0), 0);
 
         base.UpdateStatus(gameTime);
     }
 
-    protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
-    {
-        if (BlurMakeSystem.BlurAvailable && !Main.gameMenu)
-        {
-            if (BlurMakeSystem.SingleBlur)
-            {
-                var batch = Main.spriteBatch;
-                batch.End();
-                BlurMakeSystem.KawaseBlur();
-                batch.Begin(0, null, SamplerState.PointClamp, null, SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
-            }
-
-            SDFRectangle.SampleVersion(BlurMakeSystem.BlurRenderTarget,
-                MenuContainer.Bounds.Position * Main.UIScale, MenuContainer.Bounds.Size * Main.UIScale, MenuContainer.BorderRadius * Main.UIScale, Matrix.Identity);
-        }
-
-        base.Draw(gameTime, spriteBatch);
-    }
-
-    public void OpenMenu(MouseAnchor mouseAnchor, Vector2 mousePosition, List<string> contents, MouseMenuCallback callback)
+    public void OpenMenu(MouseAnchor mouseAnchor, Vector2 mousePosition, List<string> contents,
+        MouseMenuCallback callback)
     {
         Enabled = true;
 
@@ -152,7 +109,7 @@ public partial class MouseMenuUI(ILog Logger) : BasicBody, IMouseMenu
 
         ScrollView.Container.RemoveAllChildren();
 
-        for (int i = 0; i < contents.Count; i++)
+        for (var i = 0; i < contents.Count; i++)
         {
             var text = new MouseMenuItem(contents[i], i).Join(ScrollView.Container);
             text.MouseMenuCallback = callback;

@@ -98,7 +98,7 @@ float4 SampleVersion(PSInput input) : SV_Target
 {
     float distance = RectangleDistance(input.DistanceFromEdge, input.BorderRadius);
     return lerp(
-        tex2D(uImage0, input.TextureCoordinates), 0, smoothstep(uSmoothstepRange.x, uSmoothstepRange.y, distance)
+        tex2D(uImage0, input.TextureCoordinates) * uBackgroundColor, 0, smoothstep(uSmoothstepRange.x, uSmoothstepRange.y, distance)
     );
 }
 

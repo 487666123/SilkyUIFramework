@@ -1,4 +1,4 @@
-﻿namespace SilkyUIFramework.Helpers;
+﻿namespace SilkyUIFramework.Helper;
 
 public static class DrawHelper
 {
@@ -55,7 +55,7 @@ public static class DrawHelper
         var vector3 = new Vector2(2f, -6f) * itemScale;
         switch (item.type)
         {
-            case 5324:
+            case ItemID.RubblemakerSmall:
             {
                 var value10 = TextureAssets.Extra[257].Value;
                 var rectangle5 = value10.Frame(3, 1, 2);
@@ -63,7 +63,7 @@ public static class DrawHelper
                     lightColor, 0f, rectangle5.Size() / 2f, 1f, SpriteEffects.None, 0f);
                 break;
             }
-            case 5329:
+            case ItemID.RubblemakerMedium:
             {
                 var value9 = TextureAssets.Extra[257].Value;
                 var rectangle4 = value9.Frame(3, 1, 1);
@@ -71,7 +71,7 @@ public static class DrawHelper
                     lightColor, 0f, rectangle4.Size() / 2f, 1f, SpriteEffects.None, 0f);
                 break;
             }
-            case 5330:
+            case ItemID.RubblemakerLarge:
             {
                 var value8 = TextureAssets.Extra[257].Value;
                 var rectangle3 = value8.Frame(3);
@@ -88,7 +88,7 @@ public static class DrawHelper
         DrawString(position, text, textColor, borderColor, Vector2.Zero, scale, large, spread);
     }
 
-    public static void DrawString(Vector2 pos, string text, Color textColor, Color borderColor, Vector2 origin,
+    private static void DrawString(Vector2 pos, string text, Color textColor, Color borderColor, Vector2 origin,
         float textScale, bool large, float spread = 2f)
     {
         var spriteFont = (large ? FontAssets.DeathText : FontAssets.MouseText).Value;

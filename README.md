@@ -19,7 +19,7 @@
 
 ### SilkyUI 的改进
 **SilkyUI** 针对上述痛点提供了解决方案：
-- 继承 **BasicBody** 并添加 **RegisterUI** 特性即可快速创建 UI
+- 继承 **BaseBody** 并添加 **RegisterUI** 特性即可快速创建 UI
 - 内建层级关系，自动避免鼠标穿透，并支持类似 **Windows 窗口** 的层级更新
 - **UIView / UIElementGroup** 采用脏标记机制，属性变化会自动触发布局更新，无需显式调用 **Recalculate()**，还能局部更新
 - 已实现 [Flexbox 布局标准](https://www.w3.org/TR/css-flexbox-1/)，计划支持 Grid
@@ -34,6 +34,8 @@
 > 交流群：[971038831](https://qm.qq.com/q/mRF9AJDHWM)
 
 ### 相关文档
+
+[SilkyUI 迁移指南](MigrationGuide.md)
 
 [Flexbox 文档](FlexboxModule.md)
 
@@ -89,10 +91,10 @@ git clone https://github.com/487666123/SilkyUIAnalyzer.git
 
 ### 引入这两个项目
 
-1. 将两个项目添加入你的解决方案中（选中 .csproj 文件）
-![alt text](image.png)
-1. 这两个项目会出现在你的解决方案中
-![alt text](image-1.png)
+1. 将两个项目添加入你的解决方案中（选中 .csproj 文件）\
+<img width="350px" src="image.png"/>
+1. 这两个项目会出现在你的解决方案中\
+<img width="350px" src="image-1.png"/>
 1. 在你的项目的 .csporj 文件中添加这两个项目的引用
 ```xml
 <ItemGroup>

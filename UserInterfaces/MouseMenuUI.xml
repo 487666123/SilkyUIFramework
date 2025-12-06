@@ -6,7 +6,10 @@
 		FlexDirection="Column" FitWidth="true" FitHeight="true" Border="2" BorderRadius="8">
 		<ScrollView Name="ScrollView"
 			FitWidth="true" FitHeight="true"
-			Padding="4" Gap="4" Width="100%" Height="100%">
+			Padding="4" Gap="4" Width="100%" Height="100%" CrossAlignment="Stretch">
+			<M.Mask MaxHeight="300px" FitWidth="true" FitHeight="true"/>
+			<M.Container Gap="4" FlexWrap="false" FitWidth="true" FitHeight="true" FlexDirection="Column"
+				MainAlignment="Start" CrossContentAlignment="Stretch" CrossAlignment="Stretch"></M.Container>
 		</ScrollView>
 	</ElementGroup>
 </Body>

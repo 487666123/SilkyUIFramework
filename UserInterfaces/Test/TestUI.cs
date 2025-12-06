@@ -1,12 +1,11 @@
 ﻿#if DEBUG && false
 
 using SilkyUIFramework.Animation;
-using SilkyUIFramework.BasicComponents;
 
 namespace SilkyUIFramework.UserInterfaces.Test;
 
 [RegisterUI("Vanilla: Radial Hotbars", "TestUI")]
-public partial class TestUI : BasicBody
+public partial class TestUI : BaseBody
 {
     protected override void OnInitialize()
     {

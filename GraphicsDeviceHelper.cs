@@ -13,8 +13,8 @@ public static class GraphicsDeviceHelper
 
     public static Size GetBackBufferSizeByUIScale() => GetBackBufferSize() / Main.UIScale;
 
-    public static GraphicsDeviceStates BackupStates(this GraphicsDevice device, SpriteBatch spriteBatch)
+    public static GraphicsDeviceStates BackupStates(this SpriteBatch spriteBatch)
     {
-        return GraphicsDeviceStates.BackupStates(device, spriteBatch);
+        return GraphicsDeviceStates.BackupStates(spriteBatch.GraphicsDevice, spriteBatch);
     }
 }

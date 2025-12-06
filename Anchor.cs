@@ -20,14 +20,14 @@ public readonly struct Anchor(float pixels = 0f, float percent = 0f, float align
     /// <summary>
     /// 计算最终位置（需容器尺寸和对齐轴长度）
     /// </summary>
-    /// <param name="containerSize">容器在对应轴的长度</param>
+    /// <param name="availableSize">容器在对应轴的长度</param>
     /// <param name="elementSize">元素自身的尺寸（用于对齐计算）</param>
-    public float CalculatePosition(float containerSize, float elementSize = 0)
+    public float CalculatePosition(float availableSize, float elementSize = 0)
     {
         // 基础偏移 = 绝对偏移 + 容器尺寸的百分比偏移
-        var baseOffset = Pixels + containerSize * Percent;
+        var baseOffset = Pixels + availableSize * Percent;
         // 对齐调整 = (容器尺寸 - 元素尺寸) * 对齐比例
-        var alignmentOffset = (containerSize - elementSize) * Alignment;
+        var alignmentOffset = (availableSize - elementSize) * Alignment;
 
         return baseOffset + alignmentOffset;
     }
@@ -91,14 +91,14 @@ public readonly struct Anchor(float pixels = 0f, float percent = 0f, float align
         if (part.EndsWith("px", StringComparison.OrdinalIgnoreCase) &&
             TryParseWithSuffix(part, "px", provider, out var px))
         {
-            result = new Anchor(px, 0f, 0f);
+            result = new Anchor(px);
             return true;
         }
 
         if (part.EndsWith("%", StringComparison.OrdinalIgnoreCase) &&
             TryParseWithSuffix(part, "%", provider, out var percent))
         {
-            result = new Anchor(0f, percent / 100f, 0f);
+            result = new Anchor(0f, percent / 100f);
             return true;
         }
 

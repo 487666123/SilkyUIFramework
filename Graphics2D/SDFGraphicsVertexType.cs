@@ -7,12 +7,9 @@ public struct SDFGraphicsVertexType(Vector2 position, Vector2 textureCoordinates
     public Vector2 DistanceFromEdge = distanceFromEdge;
     public float BorderRadius = borderRadius;
 
-    private static readonly VertexDeclaration VertexDeclaration = new([
+    readonly VertexDeclaration IVertexType.VertexDeclaration => new(
             new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
             new VertexElement(8, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
             new VertexElement(16, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 1),
-            new VertexElement(24, VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 2)
-        ]);
-
-    readonly VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
+            new VertexElement(24, VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 2));
 }

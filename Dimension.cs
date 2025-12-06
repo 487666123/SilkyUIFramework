@@ -25,9 +25,9 @@ public readonly struct Dimension(float pixels = 0f, float percent = 0f) : IEquat
     // Parse 调用 TryParse
     public static Dimension Parse(string s, IFormatProvider provider)
     {
-        if (!TryParse(s, provider, out var result))
-            throw new FormatException($"Cannot parse '{s}' as Dimension.");
-        return result;
+        return !TryParse(s, provider, out var result)
+            ? throw new FormatException($"Cannot parse '{s}' as Dimension.")
+            : result;
     }
 
     // TryParse 负责核心逻辑
@@ -47,13 +47,10 @@ public readonly struct Dimension(float pixels = 0f, float percent = 0f) : IEquat
                 return TryParseSingle(parts[0], provider, out result);
 
             case 2:
-                if (TryParseWithSuffix(parts[0], "px", provider, out var px) &&
-                    TryParseWithSuffix(parts[1], "%", provider, out var percent))
-                {
-                    result = new Dimension(px, percent / 100f);
-                    return true;
-                }
-                return false;
+                if (!TryParseWithSuffix(parts[0], "px", provider, out var px) ||
+                    !TryParseWithSuffix(parts[1], "%", provider, out var percent)) return false;
+                result = new Dimension(px, percent / 100f);
+                return true;
 
             default:
                 return false;
@@ -67,18 +64,14 @@ public readonly struct Dimension(float pixels = 0f, float percent = 0f) : IEquat
         if (part.EndsWith("px", StringComparison.OrdinalIgnoreCase) &&
             TryParseWithSuffix(part, "px", provider, out var px))
         {
-            result = new Dimension(px, 0f);
+            result = new Dimension(px);
             return true;
         }
 
-        if (part.EndsWith("%", StringComparison.OrdinalIgnoreCase) &&
-            TryParseWithSuffix(part, "%", provider, out var percent))
-        {
-            result = new Dimension(0f, percent / 100f);
-            return true;
-        }
-
-        return false;
+        if (!part.EndsWith("%", StringComparison.OrdinalIgnoreCase) ||
+            !TryParseWithSuffix(part, "%", provider, out var percent)) return false;
+        result = new Dimension(0f, percent / 100f);
+        return true;
     }
 
     private static bool TryParseWithSuffix(string input, string suffix, IFormatProvider provider, out float value)

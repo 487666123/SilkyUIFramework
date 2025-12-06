@@ -18,5 +18,5 @@ public class UIScrollWheelEvent(UIView source, Vector2 position, int scrollDelta
     public int ScrollDelta { get; } = scrollDelta;
 
     /// <summary> 应用滚动的元素 </summary>
-    public UIView ScrollingElement { get; set; } = null;
+    public UIView ScrollingElement { get; set; }
 }

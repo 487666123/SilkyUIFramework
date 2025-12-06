@@ -4,34 +4,31 @@ namespace SilkyUIFramework;
 
 public readonly struct CanvasSize(int width, int height) : IEquatable<CanvasSize>
 {
-    public readonly int Width = width;
-    public readonly int Height = height;
+    private readonly int _width = width;
+    private readonly int _height = height;
 
-    public readonly override bool Equals([NotNullWhen(true)] object obj)
+    public override bool Equals([NotNullWhen(true)] object obj)
     {
         return obj is CanvasSize other && Equals(other);
     }
 
-    public override int GetHashCode() => HashCode.Combine(Width, Height);
+    public override int GetHashCode() => HashCode.Combine(_width, _height);
 
-    public readonly bool Equals(CanvasSize other) => Width == other.Width && Height == other.Height;
+    public readonly bool Equals(CanvasSize other) => _width == other._width && _height == other._height;
 
     public static bool operator ==(CanvasSize left, CanvasSize right) => left.Equals(right);
     public static bool operator !=(CanvasSize left, CanvasSize right) => !left.Equals(right);
 
-    public static implicit operator CanvasSize(RenderTarget2D renderTarget) => new(renderTarget.Width, renderTarget.Height);
+    public static implicit operator CanvasSize(RenderTarget2D renderTarget) =>
+        new(renderTarget.Width, renderTarget.Height);
 }
 
 /// <summary>
 /// 渲染目标对象池，用于管理和复用 RenderTarget2D 实例
 /// </summary>
+[Service]
 public sealed class RenderTargetPool : IDisposable
 {
-    /// <summary>
-    /// 获取 RenderTargetPool 的单例实例
-    /// </summary>
-    public static RenderTargetPool Instance { get; } = new();
-
     // 图形设备引用
     private readonly GraphicsDevice _graphicsDevice = Main.graphics.GraphicsDevice;
 
@@ -102,7 +99,7 @@ public sealed class RenderTargetPool : IDisposable
 
 
     /// <summary>
-    /// 创建新的渲染目标
+    /// 创建新地渲染目标
     /// </summary>
     /// <param name="graphicsDevice">图形设备</param>
     /// <param name="width">宽度</param>
@@ -149,5 +146,4 @@ public sealed class RenderTargetPool : IDisposable
         _occupied.Clear();
         _available.Clear();
     }
-
 }

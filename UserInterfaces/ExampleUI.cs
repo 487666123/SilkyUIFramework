@@ -3,14 +3,17 @@
 #if DEBUG && false
 
 [RegisterGlobalUI("ExampleUI", 0)]
-public partial class ExampleUI(IMouseMenu menuUI) : BasicBody
+public partial class ExampleUI(IMouseMenu menuUI) : BaseBody
 {
     private readonly IMouseMenu MenuUI = menuUI;
 
     public SUIDraggableView DraggableView { get; protected set; }
 
+    //readonly FontSystem _fontSystem = new();
+
     protected override void OnInitialize()
     {
+
         InitializeComponent();
 
         FitWidth = true;
@@ -197,12 +200,11 @@ public partial class ExampleUI(IMouseMenu menuUI) : BasicBody
     protected override void UpdateStatus(GameTime gameTime)
     {
         base.UpdateStatus(gameTime);
-    }
 
-    public override void HandleDraw(GameTime gameTime, SpriteBatch spriteBatch)
-    {
         UseRenderTarget = false;
-        base.HandleDraw(gameTime, spriteBatch);
+
+        FitWidth = false;
+        SetWidth(300);
     }
 
     protected override void UseRenderTargetDraw(GameTime gameTime, SpriteBatch spriteBatch)

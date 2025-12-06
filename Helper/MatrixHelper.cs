@@ -1,11 +1,11 @@
-﻿namespace SilkyUIFramework.Helpers;
+﻿namespace SilkyUIFramework.Helper;
 
 public static class MatrixHelper
 {
     /// <summary>
     /// <see cref="SpriteBatch"/> 矩阵变换为 SDF 矩阵
     /// </summary>
-    public static void Transform2SDFMatrix(ref Matrix matrix)
+    public static void Transform2SDFMatrix(ref this Matrix matrix)
     {
         var device = Main.graphics.GraphicsDevice;
         var width = device.Viewport.Width;

@@ -15,7 +15,7 @@ public class MouseMenuItem : UIElementGroup
 
         FitWidth = true; FitHeight = true;
 
-        Padding = new Margin(8f, 4f, 8f, 4f);
+        Padding = new Margin(10f, 6f);
         BorderRadius = new Vector4(4f);
 
         TextView = new UITextView()

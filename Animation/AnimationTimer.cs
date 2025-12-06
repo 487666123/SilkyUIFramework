@@ -16,6 +16,53 @@ public enum AnimationTimerStatus
 #endregion
 
 /// <summary>
+/// 不推荐使用!
+/// </summary>
+public interface IInterpolable<TSelf> : IEquatable<TSelf>
+{
+    TSelf Lerp(TSelf target, float t);
+}
+
+/// <summary>
+/// 不推荐使用!
+/// </summary>
+public class AutoAnimation<T> where T : IInterpolable<T>
+{
+    private readonly AnimationTimer _timer = new();
+
+    public AutoAnimation()
+    {
+        _timer.OnChanged += Changed;
+    }
+
+    private T _sourceValue;
+    private T _targetValue;
+
+    private T _value;
+    public T Value
+    {
+        get => _value;
+        set
+        {
+            if (_targetValue.Equals(value)) return;
+            _sourceValue = _value;
+            _targetValue = value;
+            _timer.StartUpdate(true);
+        }
+    }
+
+    public event EventHandler<T> OnChanged;
+
+    private void Changed(object sender, float value)
+    {
+        _value = _timer.Lerp(_sourceValue, _targetValue);
+        OnChanged?.Invoke(this, _value);
+    }
+
+    public void Update(GameTime gameTime) => _timer.Update(gameTime);
+}
+
+/// <summary>
 /// 动画计时器 <br/>
 /// </summary>
 public class AnimationTimer(float speed = 5f, float timerMax = 100f)
@@ -41,6 +88,8 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
     public float Schedule { get; private set; }
 
     public AnimationTimerStatus Status = AnimationTimerStatus.ReverseCompleted;
+
+    public event EventHandler<float> OnChanged;
 
     /// <summary>
     /// 在正向更新完成时回调
@@ -144,6 +193,8 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
                     OnUpdateCompleted?.Invoke();
                 }
 
+                Schedule = Timer / TimerMax;
+                OnChanged?.Invoke(this, Schedule);
                 break;
             }
             case AnimationTimerStatus.ReverseUpdating:
@@ -157,10 +208,11 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
                     OnReverseUpdateCompleted?.Invoke();
                 }
 
+                Schedule = Timer / TimerMax;
+                OnChanged?.Invoke(this, Schedule);
                 break;
             }
         }
-        Schedule = Timer / TimerMax;
     }
 
     #region Lerp Methods
@@ -188,6 +240,11 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
     public float Lerp(float value1, float value2)
     {
         return value1 + (value2 - value1) * Schedule;
+    }
+
+    public T Lerp<T>(T value1, T value2) where T : IInterpolable<T>
+    {
+        return value1.Lerp(value2, Schedule);
     }
 
     #endregion

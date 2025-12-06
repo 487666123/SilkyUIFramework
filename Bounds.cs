@@ -1,80 +1,46 @@
 ﻿namespace SilkyUIFramework;
 
-/// <summary>
-/// 似乎在密谋着什么，再等等...
-/// </summary>
-public struct Bounds
+public struct Bounds(float x, float y, float width, float height)
 {
+    public float X { get; set; } = x;
+
+    public float Y { get; set; } = y;
+
+    public float Width { get; set; } = width;
+
+    public float Height { get; set; } = height;
+
+    public Bounds(Vector2 position, Size size) : this(position.X, position.Y, size.Width, size.Height) { }
+
     public static Bounds Zero { get; } = new(0, 0, 0, 0);
-
-    private float _x;
-    private float _y;
-    private float _width;
-    private float _height;
-
-    public Bounds(float x, float y, float width, float height)
-    {
-        _x = x;
-        _y = y;
-        _width = width;
-        _height = height;
-    }
-
-    public Bounds(Vector2 position, Size size)
-    {
-        _x = position.X;
-        _y = position.Y;
-        _width = size.Width;
-        _height = size.Height;
-    }
-
-    public float X { readonly get => _x; set => _x = value; }
-    public float Y { readonly get => _y; set => _y = value; }
-    public float Width { readonly get => _width; set => _width = value; }
-    public float Height { readonly get => _height; set => _height = value; }
-
-    public float Left { readonly get => _x; set => _x = value; }
-    public float Top { readonly get => _y; set => _y = value; }
-    public readonly float Right => _x + _width;
-    public readonly float Bottom => _y + _height;
 
     public Vector2 Position
     {
-        readonly get => new(_x, _y);
+        readonly get => new(X, Y);
         set
         {
-            _x = value.X;
-            _y = value.Y;
+            X = value.X;
+            Y = value.Y;
         }
     }
 
     public Size Size
     {
-        readonly get => new(_width, _height);
+        readonly get => new(Width, Height);
         set
         {
-            _width = value.Width;
-            _height = value.Height;
+            Width = value.Width;
+            Height = value.Height;
         }
     }
 
-    public void SetPosition(float x, float y)
-    {
-        _x = x;
-        _y = y;
-    }
-
-    public void SetSize(float width, float height)
-    {
-        _width = width;
-        _height = height;
-    }
-
-    public readonly Vector2 Center => new(_x + _width / 2f, _y + _height / 2f);
-    public readonly Vector2 LeftBottom => new(_x, _y + _height);
-    public readonly Vector2 RightBottom => new(_x + _width, _y + _height);
-    public readonly Vector2 LeftTop => new(_x, _y);
-    public readonly Vector2 RightTop => new(_x + _width, _y);
+    public readonly float Right => X + Width;
+    public readonly float Bottom => Y + Height;
+    public readonly Vector2 Center => new(X + Width / 2f, Y + Height / 2f);
+    public readonly Vector2 TopLeft => new(X, Y);
+    public readonly Vector2 TopRight => new(X + Width, Y);
+    public readonly Vector2 BottomLeft => new(X, Y + Height);
+    public readonly Vector2 BottomRight => new(X + Width, Y + Height);
 
     public static implicit operator Bounds(Rectangle rectangle)
     {
@@ -83,7 +49,7 @@ public struct Bounds
 
     public static implicit operator Rectangle(Bounds bounds)
     {
-        return new Rectangle((int)bounds._x, (int)bounds._y, (int)bounds._width, (int)bounds._height);
+        return new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
     }
 
     /// <summary>
@@ -91,10 +57,10 @@ public struct Bounds
     /// </summary>
     public readonly bool Contains(Vector2 point)
     {
-        return point.X >= _x &&
-               point.X <= _x + _width &&
-               point.Y >= _y &&
-               point.Y <= _y + _height;
+        return point.X >= X &&
+               point.X <= X + Width &&
+               point.Y >= Y &&
+               point.Y <= Y + Height;
     }
 
     /// <summary>
@@ -102,14 +68,14 @@ public struct Bounds
     /// </summary>
     public readonly bool Intersects(Bounds other)
     {
-        return _x < other._x + other._width &&
-               _x + _width > other._x &&
-               _y < other._y + other._height &&
-               _y + _height > other._y;
+        return X < other.X + other.Width &&
+               X + Width > other.X &&
+               Y < other.Y + other.Height &&
+               Y + Height > other.Y;
     }
 
-    public override readonly string ToString()
+    public readonly override string ToString()
     {
-        return $"Bounds: {_x}, {_y}, {_width}, {_height}";
+        return $"Bounds: {X}, {Y}, {Width}, {Height}";
     }
 }

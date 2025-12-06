@@ -1,14 +1,7 @@
-一个 UI 类库，提供一些 UI 组件
+一个方便快速的在 tModLoader 中开发 UI 的库
+“A convenient and fast library for developing UI in tModLoader.”
 
-可以方便的快速创建游戏 UI
+如果你想了解更多信息或者在自己的模组使用此库，请参阅 GitHub
+“If you want to learn more or use this library in your own mod, please refer to GitHub.”
 
-对 Flexbox 进行部分实现
-
-三种定位模式: 
-        Absolute positioning
-        Relative positioning
-        Sticky positioning
-
-拖动，滚动无需 Recalculate UI 降低一些性能消耗.
-
-目前还未确定结构，随时可能重构，使用需要承担重构风险。
+GitHub：https://github.com/487666123/SilkyUIFramework
