@@ -1,6 +1,4 @@
-﻿#if DEBUG && true
-
-using SilkyUIFramework.Animation;
+﻿using SilkyUIFramework.Animation;
 using SilkyUIFramework.Components;
 
 namespace SilkyUIFramework.Elements;
@@ -210,5 +208,3 @@ public class SUISlider : UIElementGroup
         }
     }
 }
-
-#endif
