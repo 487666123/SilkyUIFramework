@@ -269,7 +269,7 @@ public class SUIItemSlot : UIView
         if (ItemID.Sets.DrawUnsafeIndicator[item.type])
         {
             var vector2 = new Vector2(-4f, -4f) * sizeScale;
-            var value7 = TextureAssets.Extra[258].Value;
+            var value7 = TextureAssets.Extra[ExtrasID.UnsafeIndicator].Value;
             var rectangle2 = value7.Frame();
             Main.spriteBatch.Draw(value7, center + vector2 + new Vector2(14f) * sizeScale, rectangle2, color, 0f,
                 rectangle2.Size() / 2f, 1f, SpriteEffects.None, 0f);
@@ -282,7 +282,7 @@ public class SUIItemSlot : UIView
             {
                 case ItemID.RubblemakerSmall:
                 {
-                    var value10 = TextureAssets.Extra[257].Value;
+                    var value10 = TextureAssets.Extra[ExtrasID.RubbleMakerIndicator].Value;
                     var rectangle5 = value10.Frame(3, 1, 2);
                     Main.spriteBatch.Draw(value10, center + vector3 + new Vector2(16f) * sizeScale, rectangle5,
                         color, 0f, rectangle5.Size() / 2f, 1f, SpriteEffects.None, 0f);
@@ -290,7 +290,7 @@ public class SUIItemSlot : UIView
                 }
                 case ItemID.RubblemakerMedium:
                 {
-                    var value9 = TextureAssets.Extra[257].Value;
+                    var value9 = TextureAssets.Extra[ExtrasID.RubbleMakerIndicator].Value;
                     var rectangle4 = value9.Frame(3, 1, 1);
                     Main.spriteBatch.Draw(value9, center + vector3 + new Vector2(16f) * sizeScale, rectangle4,
                         color, 0f, rectangle4.Size() / 2f, 1f, SpriteEffects.None, 0f);
@@ -298,7 +298,7 @@ public class SUIItemSlot : UIView
                 }
                 case ItemID.RubblemakerLarge:
                 {
-                    var value8 = TextureAssets.Extra[257].Value;
+                    var value8 = TextureAssets.Extra[ExtrasID.RubbleMakerIndicator].Value;
                     var rectangle3 = value8.Frame(3);
                     Main.spriteBatch.Draw(value8, center + vector3 + new Vector2(16f) * sizeScale, rectangle3,
                         color, 0f, rectangle3.Size() / 2f, 1f, SpriteEffects.None, 0f);
