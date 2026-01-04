@@ -16,7 +16,9 @@ public enum AnimationTimerStatus
 #endregion
 
 /// <summary>
-/// 不推荐使用!
+/// 不推荐使用! 我得换成一个注册中心，一个个实现真的太逊了！<br/>
+/// 这样做也不是没有好处，好处就是可以在编译期就找到问题<br/>
+/// 但是你踏马的难用啊！要是用到别人定义的类我踏马怎么办！
 /// </summary>
 public interface IInterpolable<TSelf> : IEquatable<TSelf>
 {
@@ -70,17 +72,17 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
     /// <summary>
     /// 速度
     /// </summary>
-    public float Speed = speed;
+    public float Speed { get; set; } = speed;
 
     /// <summary>
     /// 当前位置
     /// </summary>
-    public float Timer;
+    public float Timer { get; set; }
 
     /// <summary>
     /// 最大位置
     /// </summary>
-    public float TimerMax = timerMax;
+    public float TimerMax { get; set; } = timerMax;
 
     /// <summary>
     /// 进度
@@ -160,7 +162,9 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
     public void ImmediateReverseCompleted()
     {
         Timer = 0;
+        Schedule = 0f;
         Status = AnimationTimerStatus.ReverseCompleted;
+        OnChanged?.Invoke(this, Schedule);
         OnReverseUpdateCompleted?.Invoke();
     }
 
@@ -170,7 +174,9 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
     public void ImmediateCompleted()
     {
         Timer = TimerMax;
+        Schedule = 1f;
         Status = AnimationTimerStatus.Completed;
+        OnChanged?.Invoke(this, Schedule);
         OnUpdateCompleted?.Invoke();
     }
 
@@ -180,6 +186,7 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
     {
         var speedFactor = Main.FrameSkipMode == Terraria.Enums.FrameSkipMode.Subtle ? 1f :
             (float)gameTime.ElapsedGameTime.TotalSeconds * 60f;
+
         switch (Status)
         {
             case AnimationTimerStatus.Updating:

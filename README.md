@@ -92,9 +92,9 @@ git clone https://github.com/487666123/SilkyUIAnalyzer.git
 ### 引入这两个项目
 
 1. 将两个项目添加入你的解决方案中（选中 .csproj 文件）\
-<img width="350px" src="image.png"/>
+<img width="350px" src="image_1.png"/>
 1. 这两个项目会出现在你的解决方案中\
-<img width="350px" src="image-1.png"/>
+<img width="350px" src="image_2.png"/>
 1. 在你的项目的 .csporj 文件中添加这两个项目的引用
 ```xml
 <ItemGroup>

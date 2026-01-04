@@ -14,7 +14,7 @@ public class SUISliderTrackProgress : UIView
         Width = new Dimension(0f, 0f);
         Height = new Dimension(0f, 1f);
 
-        BackgroundColor = new Color(0x33, 0xDD, 0x55);
+        BackgroundColor = new Color(0x33, 0xCC, 0x55);
     }
 }
 

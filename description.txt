@@ -1,7 +1,9 @@
-一个方便快速的在 tModLoader 中开发 UI 的库
-“A convenient and fast library for developing UI in tModLoader.”
+SilkyUIFramework：
+	一个让 tModLoader UI 开发变得更加轻松便捷的框架。
+	更多信息请访问 GitHub。
 
-如果你想了解更多信息或者在自己的模组使用此库，请参阅 GitHub
-“If you want to learn more or use this library in your own mod, please refer to GitHub.”
+SilkyUIFramework:
+	A framework that makes tModLoader UI development easier and more convenient.
+	For more information, please visit GitHub.
 
 GitHub：https://github.com/487666123/SilkyUIFramework
