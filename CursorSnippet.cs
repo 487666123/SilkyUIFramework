@@ -18,7 +18,11 @@ public class CursorSnippet(SUIEditText editText) : TextSnippet(" ")
     // 宽度计算
     public override float GetStringLength(DynamicSpriteFont font) => 0f;
 
-    // 原版很逆天的使用 Draw 方法来计算大小, 用一个 bool 参数来区分是在计算还是在绘制
+    // 原版的 Snippet 使用 Draw 方法来计算大小
+    // 用一个 bool justCheckingString 参数来区分是在计算还是在绘制
+    // 如果你只是在计算大小, 也需要传入一堆无关的绘制参数
+    // 你也许会想这堆参数或许会影响计算结果？实际他们自己并没有这做过
+    // 并且如果真让绘制参数来影响计算结果, 那也是一个很差的实践, 所以他们不该这样做, 也不该让我们考虑这件事
     public override bool UniqueDraw(bool justCheckingString,
         out Vector2 size, SpriteBatch spriteBatch, Vector2 position = default, Color color = default, float scale = 1)
     {

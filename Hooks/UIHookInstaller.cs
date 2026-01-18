@@ -1,4 +1,6 @@
-﻿namespace SilkyUIFramework.Hooks;
+﻿using MonoMod.Cil;
+
+namespace SilkyUIFramework.Hooks;
 
 internal class UIHookInstaller : ILoadable
 {
@@ -16,10 +18,20 @@ internal class UIHookInstaller : ILoadable
             return orig(smart);
         };
 
-        On_Main.DoDraw += (orig, self, gameTime) =>
+        //On_Main.DoDraw += (orig, self, gameTime) =>
+        //{
+        //    RuntimeSafeHelper.SafeInvoke(static delegate { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); });
+        //    orig(self, gameTime);
+        //};
+
+        IL_Main.DoDraw += (ILContext il) =>
         {
-            RuntimeSafeHelper.SafeInvoke(static delegate { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); });
-            orig(self, gameTime);
+            var c = new ILCursor(il);
+
+            c.EmitDelegate(() =>
+            {
+                RuntimeSafeHelper.SafeInvoke(static delegate { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); });
+            });
         };
 
         //On_Main.DrawInterface += (orig, self, gametime) =>
