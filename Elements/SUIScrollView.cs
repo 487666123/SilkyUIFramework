@@ -32,7 +32,7 @@ public class SUIScrollView : UIElementGroup
     public SUIScrollView(Direction direction = Direction.Vertical)
     {
         Direction = direction;
-        SetGap(8f);
+        Gap = new Size(8f);
 
         Mask = new SUIScrollMask(this)
         {

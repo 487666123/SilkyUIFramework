@@ -54,8 +54,8 @@ public class SilkyUIClientConfig : ModConfig
 
     public override void OnChanged()
     {
-        UITextView.DeathTextOffset = DeathTextOffset;
-        UITextView.MouseTextOffset = MouseTextOffset;
+        TextDrawingHelper.DeathTextOffset = DeathTextOffset;
+        TextDrawingHelper.MouseTextOffset = MouseTextOffset;
 
         BlurMakeSystem.EnableBlur = EnableBlur;
         BlurMakeSystem.SingleBlur = SingleBlur;

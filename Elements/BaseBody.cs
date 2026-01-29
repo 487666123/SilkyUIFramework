@@ -13,7 +13,7 @@ public abstract partial class BaseBody : UIElementGroup
     protected BaseBody()
     {
         SetSize(16f * 30f, 9f * 30f);
-        SetGap(10f);
+        Gap = new Size(10f);
 
         Positioning = Positioning.Fixed;
         Border = 2f;
@@ -82,7 +82,7 @@ public abstract partial class BaseBody : UIElementGroup
     {
         if (LayoutIsDirty)
         {
-            UpdateLayoutFromFree();
+            UpdateBoxLayout();
             CleanupDirtyMark();
         }
 

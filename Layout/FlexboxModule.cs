@@ -2,103 +2,86 @@
 
 namespace SilkyUIFramework.Layout;
 
-public partial class FlexboxModule
+public sealed partial class FlexboxModule
 {
-    private readonly List<FlexLine> _flexLines = [];
-
-    #region Cache Status
-
-    private bool _flexWrap;
-    private FlexDirection _flexDirection;
-    private MainAlignment _mainAlignment;
-    private CrossAlignment _crossAlignment;
-    private CrossContentAlignment _crossContentAlignment;
-
-    public sealed override void UpdateCacheStatus()
-    {
-        base.UpdateCacheStatus();
-        _flexDirection = Parent.FlexDirection;
-        _flexWrap = Parent.FlexWrap;
-        _mainAlignment = Parent.MainAlignment;
-        _crossAlignment = Parent.CrossAlignment;
-        _crossContentAlignment = Parent.CrossContentAlignment;
-    }
-
-    #endregion
+    private readonly List<FlexLine> _lines = [];
 
     private float MaxMainSize()
     {
-        return _flexLines.Select(t => t.MainSize).Prepend(0f).Max();
+        return _lines.Select(t => t.MainSize).Prepend(0f).Max();
     }
 
     private void SingleRow()
     {
-        _flexLines.Clear();
-        _flexLines.Add(FlexLine.CreateSingleRow(Parent.LayoutChildren, Gap.Width));
+        _lines.Clear();
+        _lines.Add(FlexLine.CreateSingleRow(Parent.LayoutChildren, Parent.Gap.Width));
     }
 
     private void SingleColumn()
     {
-        _flexLines.Clear();
-        _flexLines.Add(FlexLine.CreateSingleColumn(Parent.LayoutChildren, Gap.Height));
+        _lines.Clear();
+        _lines.Add(FlexLine.CreateSingleColumn(Parent.LayoutChildren, Parent.Gap.Height));
     }
 
     private void WrapRow()
     {
-        var availableSize = Parent.InnerBounds.Width;
-        var gap = Gap.Width;
+        var width = Parent.InnerBounds.Width;
+        var hGap = Parent.Gap.Width;
         var elements = Parent.LayoutChildren;
-        _flexLines.Clear();
+        _lines.Clear();
 
         var line = FlexLine.CreateRow(elements[0]);
-        _flexLines.Add(line);
+        _lines.Add(line);
 
         for (var i = 1; i < elements.Count; i++)
         {
             var element = elements[i];
 
-            if (line.MainSize + element.OuterBounds.Width + gap <= availableSize)
+            if (line.MainSize + element.OuterBounds.Width + hGap <= width)
             {
-                line.AddByRow(element, gap);
+                line.AddByRow(element, hGap);
                 continue;
             }
 
             line = FlexLine.CreateRow(element);
-            _flexLines.Add(line);
+            _lines.Add(line);
         }
     }
 
     private void WrapColumn()
     {
-        var maxMainAxisSize = Parent.InnerBounds.Height;
-        var gap = Gap.Height;
+        var height = Parent.InnerBounds.Height;
+        var vGap = Parent.Gap.Height;
         var elements = Parent.LayoutChildren;
-        _flexLines.Clear();
+        _lines.Clear();
 
         var line = FlexLine.CreateColumn(elements[0]);
-        _flexLines.Add(line);
+        _lines.Add(line);
 
         for (var i = 1; i < elements.Count; i++)
         {
             var element = elements[i];
 
-            if (line.MainSize + element.OuterBounds.Height + gap <= maxMainAxisSize)
+            if (line.MainSize + element.OuterBounds.Height + vGap <= height)
             {
-                line.AddByColumn(element, gap);
+                line.AddByColumn(element, vGap);
                 continue;
             }
 
             line = FlexLine.CreateColumn(element);
-            _flexLines.Add(line);
+            _lines.Add(line);
         }
     }
 
+    /// <summary>
+    /// 测量子元素大小
+    /// </summary>
     private void MeasureSize(float gap, out float mainSize, out float crossSize)
     {
         mainSize = 0f;
-        crossSize = (_flexLines.Count - 1) * gap;
+        crossSize = (_lines.Count - 1) * gap;
 
-        foreach (var line in _flexLines)
+        foreach (var line in _lines)
         {
             mainSize = Math.Max(mainSize, line.MainSize);
             crossSize += line.CrossSize;
@@ -108,9 +91,9 @@ public partial class FlexboxModule
     private void RowGrowOrShrink()
     {
         var width = Parent.InnerBounds.Width;
-        var gap = Gap.Width;
+        var gap = Parent.Gap.Width;
 
-        foreach (var line in _flexLines)
+        foreach (var line in _lines)
         {
             var remaining = width - line.MainSize;
             switch (remaining)
@@ -168,7 +151,7 @@ public partial class FlexboxModule
     private void ColumnGrowOrShrink()
     {
         var height = Parent.InnerBounds.Height;
-        foreach (var line in _flexLines)
+        foreach (var line in _lines)
         {
             var remaining = height - line.MainSize;
 
@@ -196,7 +179,7 @@ public partial class FlexboxModule
                         totalGrow -= element.FlexGrow;
                     }
 
-                    line.UpdateMainSizeByColumn(Gap.Height);
+                    line.UpdateMainSizeByColumn(Parent.Gap.Height);
                     break;
                 }
                 case < 0:
@@ -221,7 +204,7 @@ public partial class FlexboxModule
                         totalShrink -= element.FlexShrink;
                     }
 
-                    line.UpdateMainSizeByColumn(Gap.Height);
+                    line.UpdateMainSizeByColumn(Parent.Gap.Height);
                     break;
                 }
             }
@@ -232,51 +215,51 @@ public partial class FlexboxModule
 
     private float UpdateCrossSize(float gap)
     {
-        _crossContent = _flexLines.Sum(line => line.CrossSize);
-        return _crossSize = _crossContent + (_flexLines.Count - 1) * gap;
+        _crossContent = _lines.Sum(line => line.CrossSize);
+        return _crossSize = _crossContent + (_lines.Count - 1) * gap;
     }
 
     private void UpdateCrossContentAlignment(float availableSize, float gap)
     {
         UpdateCrossSize(gap);
-        switch (_crossContentAlignment)
+        switch (Parent.CrossContentAlignment)
         {
             default:
             case CrossContentAlignment.Start:
             case CrossContentAlignment.Stretch:
             {
-                _crossOffsetCache = 0f;
-                _crossGapCache = gap;
+                CrossOffsetCache = 0f;
+                CrossGapCache = gap;
                 return;
             }
             case CrossContentAlignment.Center:
             {
-                _crossGapCache = gap;
-                _crossOffsetCache = (availableSize - _crossSize) / 2f;
+                CrossGapCache = gap;
+                CrossOffsetCache = (availableSize - _crossSize) / 2f;
                 return;
             }
             case CrossContentAlignment.End:
             {
-                _crossGapCache = gap;
-                _crossOffsetCache = availableSize - _crossSize;
+                CrossGapCache = gap;
+                CrossOffsetCache = availableSize - _crossSize;
                 return;
             }
             case CrossContentAlignment.SpaceEvenly:
             {
-                _crossGapCache = (availableSize - _crossContent) / (_flexLines.Count + 1);
-                _crossOffsetCache = _crossGapCache;
+                CrossGapCache = (availableSize - _crossContent) / (_lines.Count + 1);
+                CrossOffsetCache = CrossGapCache;
                 return;
             }
             case CrossContentAlignment.SpaceBetween:
             {
-                _crossGapCache = _flexLines.Count > 1 ? (availableSize - _crossContent) / (_flexLines.Count - 1) : 0f;
-                _crossOffsetCache = 0f;
+                CrossGapCache = _lines.Count > 1 ? (availableSize - _crossContent) / (_lines.Count - 1) : 0f;
+                CrossOffsetCache = 0f;
                 return;
             }
         }
     }
 
-    private float CalculateCrossOffset(float availableSize, float itemCrossSize) => _crossAlignment switch
+    private float CalculateCrossOffset(float availableSize, float itemCrossSize) => Parent.CrossAlignment switch
     {
         Center => (availableSize - itemCrossSize) / 2f,
         End => availableSize - itemCrossSize,

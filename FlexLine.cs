@@ -140,23 +140,21 @@ public class FlexLine
 
     public static FlexLine CreateSingleRow(IReadOnlyList<UIView> elements, float gap)
     {
-        var line = new FlexLine(elements)
+        return new FlexLine(elements)
         {
+            // 横，宽相加
             MainSize = elements.Sum(element => element.OuterBounds.Width) + (elements.Count - 1) * gap,
             CrossSize = elements.Max(element => element.OuterBounds.Height)
         };
-
-        return line;
     }
 
     public static FlexLine CreateSingleColumn(IReadOnlyList<UIView> elements, float gap)
     {
-        var line = new FlexLine(elements)
+        return new FlexLine(elements)
         {
+            // 竖，高相加
             MainSize = elements.Sum(element => element.OuterBounds.Height) + (elements.Count - 1) * gap,
             CrossSize = elements.Max(element => element.OuterBounds.Width)
         };
-
-        return line;
     }
 }

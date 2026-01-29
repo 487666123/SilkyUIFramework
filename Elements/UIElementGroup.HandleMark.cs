@@ -40,14 +40,8 @@ public partial class UIElementGroup
     {
         if (LayoutIsDirty)
         {
-            if (Positioning.IsFree)
-            {
-                UpdateLayoutFromFree();
-            }
-            else
-            {
-                UpdateLayoutFromFlow();
-            }
+            if (Positioning.IsFree) UpdateBoxLayout();
+            else UpdateFlowLayout();
 
             CleanupDirtyMark();
         }
@@ -58,19 +52,25 @@ public partial class UIElementGroup
         }
     }
 
-    protected void UpdateLayoutFromFree()
+    /// <summary>
+    /// 正常的布局计算
+    /// </summary>
+    protected void UpdateBoxLayout()
     {
         var container = GetParentInnerSpace();
-        PreMeasure(container.Width, container.Height);
+        Measure(container.Width, container.Height);
         ResizeChildrenWidth();
         RecalculateHeight();
         ResizeChildrenHeight();
         UpdateChildrenLayoutOffset();
     }
 
-    protected void UpdateLayoutFromFlow()
+    /// <summary>
+    /// 设计的是一个在流中的更新，但是我想遗弃了，遗弃了设计起来也会更简单，留着其实也没什么大用的，最初设计是为了节省性能
+    /// </summary>
+    protected void UpdateFlowLayout()
     {
-        PreMeasureChildren();
+        MeasureChildren();
         ResizeChildrenWidth();
         RecalculateChildrenHeight();
         ResizeChildrenHeight();

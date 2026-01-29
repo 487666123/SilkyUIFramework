@@ -48,9 +48,9 @@ public class SUIGif : UIView
         FitHeight = true;
     }
 
-    public override void PreMeasure(float? width, float? height)
+    public override void Measure(float width, float height)
     {
-        base.PreMeasure(width, height);
+        base.Measure(width, height);
 
         if (GifRenderer == null) return;
 

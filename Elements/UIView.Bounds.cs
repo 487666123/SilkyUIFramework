@@ -186,7 +186,7 @@ public partial class UIView
         if (!LayoutIsDirty) return;
 
         var availableSize = GetParentInnerSpace();
-        PreMeasure(availableSize.Width, availableSize.Height);
+        Measure(availableSize.Width, availableSize.Height);
         RecalculateHeight();
         CleanupDirtyMark();
     }
@@ -194,38 +194,36 @@ public partial class UIView
     /// <summary>
     /// 预测量元素宽高
     /// </summary>
-    public virtual void PreMeasure(float? width, float? height)
+    public virtual void Measure(float width, float height)
     {
-        CalculateWidthConstraints(width ?? 0);
-        CalculateHeightConstraints(height ?? 0);
+        UpdaetWidthConstraints(width);
+        UpdateHeightConstraints(height);
 
-        if (FitWidth)
-            SetInnerBoundsWidthRaw(MathHelper.Clamp(0f, MinInnerWidth, MaxInnerWidth));
-        else
-            CalculateBoundsWidth(width ?? 0);
+        if (FitWidth) SetInnerBoundsWidthRaw(MathHelper.Clamp(0f, MinInnerWidth, MaxInnerWidth));
+        else UpdateBoundsWidth(width);
 
-        if (FitHeight)
-            SetInnerBoundsHeightRaw(MathHelper.Clamp(0f, MinInnerHeight, MaxInnerHeight));
-        else
-            CalculateBoundsHeight(height ?? 0);
+        if (FitHeight) SetInnerBoundsHeightRaw(MathHelper.Clamp(0f, MinInnerHeight, MaxInnerHeight));
+        else UpdateBoundsHeight(height);
     }
 
-    public virtual void RefreshWidth(float availableWidth)
+    public virtual void UpdateWidth(float availableWidth)
     {
-        CalculateWidthConstraints(availableWidth);
+        UpdaetWidthConstraints(availableWidth);
 
         if (FitWidth) return;
-        CalculateBoundsWidth(availableWidth);
+
+        UpdateBoundsWidth(availableWidth);
     }
 
     public virtual void RecalculateHeight() { }
 
-    public virtual void RefreshHeight(float availableHeight)
+    public virtual void UpdateHeight(float availableHeight)
     {
-        CalculateHeightConstraints(availableHeight);
+        UpdateHeightConstraints(availableHeight);
 
         if (FitHeight) return;
-        CalculateBoundsHeight(availableHeight);
+
+        UpdateBoundsHeight(availableHeight);
     }
 
     #region 声明和计算约束
@@ -248,7 +246,13 @@ public partial class UIView
     public float MinInnerHeight { get; private set; }
     public float MaxInnerHeight { get; private set; }
 
-    protected internal void CalculateWidthConstraints(float availableWidth)
+    #region Update Size Constraints and Size
+
+    /// <summary>
+    /// 更新宽度约束值
+    /// </summary>
+    /// <param name="availableWidth">可用宽</param>
+    protected void UpdaetWidthConstraints(float availableWidth)
     {
         switch (BoxSizing)
         {
@@ -272,7 +276,11 @@ public partial class UIView
         }
     }
 
-    protected internal void CalculateHeightConstraints(float availableHeight)
+    /// <summary>
+    /// 更新高度约束值
+    /// </summary>
+    /// <param name="availableWidth">可用高</param>
+    protected void UpdateHeightConstraints(float availableHeight)
     {
         switch (BoxSizing)
         {
@@ -296,17 +304,13 @@ public partial class UIView
         }
     }
 
-    #endregion
-
     /// <summary>
-    /// 计算边界宽度<br/>
-    /// 根据 <see cref="BoxSizing"/> 决定边界宽度应用于 <see cref="Bounds"/> 还是 <see cref="InnerBounds"/>
+    /// 更新 <see cref="Bounds"/> 宽度
     /// </summary>
-    /// <param name="availableWidth">父元素可用宽度</param>
-    protected void CalculateBoundsWidth(float availableWidth)
+    /// <param name="availableWidth">可用宽</param>
+    protected void UpdateBoundsWidth(float availableWidth)
     {
-        WidthValue = _width.CalculateSize(availableWidth);
-        WidthValue = MathHelper.Clamp(WidthValue, MinWidthValue, MaxWidthValue);
+        WidthValue = MathHelper.Clamp(_width.CalculateSize(availableWidth), MinWidthValue, MaxWidthValue);
 
         switch (BoxSizing)
         {
@@ -321,11 +325,10 @@ public partial class UIView
     }
 
     /// <summary>
-    /// 计算边界高度<br/>
-    /// 根据 <see cref="BoxSizing"/> 决定边界高度应用于 <see cref="Bounds"/> 还是 <see cref="InnerBounds"/>
+    /// 更新 <see cref="Bounds"/> 高度
     /// </summary>
-    /// <param name="availableHeight">父元素可用宽度</param>
-    protected void CalculateBoundsHeight(float availableHeight)
+    /// <param name="availableWidth">可用高</param>
+    protected void UpdateBoundsHeight(float availableHeight)
     {
         HeightValue = _height.CalculateSize(availableHeight);
         HeightValue = MathHelper.Clamp(HeightValue, MinHeightValue, MaxHeightValue);
@@ -341,6 +344,10 @@ public partial class UIView
                 break;
         }
     }
+
+    #endregion
+
+    #endregion
 
     #region 设置 Bounds 的方法，包括 OuterBounds, Bounds, InnerBounds
 

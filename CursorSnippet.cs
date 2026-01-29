@@ -36,7 +36,7 @@ public class CursorSnippet(SUIEditText editText) : TextSnippet(" ")
 
         if (!justCheckingString)
         {
-            position.Y -= UITextView.GetFontOffset(Font) * scale;
+            position.Y -= TextDrawingHelper.GetFontOffset(Font) * scale;
 
             spriteBatch?.Draw(TextureAssets.MagicPixel.Value, position,
                 new Rectangle(0, 0, 1, 1), _editText.CursorFlashColor, 0f, Vector2.Zero,

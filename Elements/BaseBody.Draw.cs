@@ -87,16 +87,24 @@ public abstract partial class BaseBody
                     SilkyUI.TransformMatrix);
             }
 
-            var scale = Main.UIScale;
-            var bounds = BlurBounds;
-
-            var borderRadius = BlurBorderRadius * scale;
-            var position = bounds.Position * scale;
-            var size = bounds.Size * scale;
-
-            SDFRectangle.SampleVersion(BlurMakeSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
+            DrawBlurRectangle();
         }
 
         base.Draw(gameTime, spriteBatch);
+    }
+
+    /// <summary>
+    /// 绘制模糊矩形
+    /// </summary>
+    public virtual void DrawBlurRectangle()
+    {
+        var scale = Main.UIScale;
+        var bounds = BlurBounds;
+
+        var borderRadius = BlurBorderRadius * scale;
+        var position = bounds.Position * scale;
+        var size = bounds.Size * scale;
+
+        SDFRectangle.SampleVersion(BlurMakeSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
     }
 }

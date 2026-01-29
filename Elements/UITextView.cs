@@ -6,9 +6,6 @@ namespace SilkyUIFramework.Elements;
 [XmlElementMapping("TextView")]
 public class UITextView : UIView
 {
-    public static float DeathTextOffset { get; internal set; }
-    public static float MouseTextOffset { get; internal set; }
-
     public void UseDeathText() => Font = FontAssets.DeathText.Value;
     public void UseMouseText() => Font = FontAssets.MouseText.Value;
     public bool IsDeathText => Font == FontAssets.DeathText.Value;
@@ -136,10 +133,10 @@ public class UITextView : UIView
 
     public Vector2 TextSize { get; protected set; } = Vector2.Zero;
 
-    public override void PreMeasure(float? width, float? height)
+    public override void Measure(float width, float height)
     {
-        CalculateWidthConstraints(width ?? 0);
-        CalculateHeightConstraints(height ?? 0);
+        UpdaetWidthConstraints(width);
+        UpdateHeightConstraints(height);
 
         if (FitWidth)
         {
@@ -148,7 +145,7 @@ public class UITextView : UIView
         }
         else
         {
-            CalculateBoundsWidth(width ?? 0);
+            UpdateBoundsWidth(width);
             RecalculateString(InnerBounds.Width);
         }
 
@@ -156,7 +153,7 @@ public class UITextView : UIView
         {
             SetInnerBoundsHeightRaw(MathHelper.Clamp(TextSize.Y * TextScale, MinInnerHeight, MaxInnerHeight));
         }
-        else CalculateBoundsHeight(height ?? 0);
+        else UpdateBoundsHeight(height);
     }
 
     public override void RecalculateHeight()
@@ -205,13 +202,7 @@ public class UITextView : UIView
         snippet?.OnHover();
     }
 
-    protected virtual float GetFontOffset() => GetFontOffset(Font);
-
-    public static float GetFontOffset(DynamicSpriteFont font)
-    {
-        if (font == FontAssets.DeathText.Value) return DeathTextOffset;
-        return font == FontAssets.MouseText.Value ? MouseTextOffset : 0f;
-    }
+    protected virtual float GetFontOffset() => TextDrawingHelper.GetFontOffset(Font);
 }
 
 public class ContentChangingEventArgs(string newText, string oldText) : EventArgs

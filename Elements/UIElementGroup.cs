@@ -296,12 +296,15 @@ public partial class UIElementGroup : UIView
     #endregion
 
     protected readonly List<UIView> FreeElements = [];
+
     protected readonly List<UIView> LayoutElements = [];
+
     public IReadOnlyList<UIView> FreeChildren => FreeElements;
+
     public IReadOnlyList<UIView> LayoutChildren => LayoutElements;
 
     /// <summary>
-    /// 分类子元素, 在 <see cref="PreMeasureChildren"/> 首行调用 <br/>
+    /// 分类子元素, 在 <see cref="MeasureChildren"/> 首行调用 <br/>
     /// 实际用于更新和绘制的元素存于 <see cref="ElementsCache"/><br/>
     /// 用于布局的元素存于 <see cref="LayoutChildren"/>
     /// 自由元素 (不受布局控制) 存于 <see cref="FreeChildren"/>
