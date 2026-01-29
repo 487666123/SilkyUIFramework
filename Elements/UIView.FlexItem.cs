@@ -15,7 +15,8 @@ public partial class UIView
             if (Parent.LayoutType != LayoutType.Grid) return;
             MarkLayoutDirty();
         }
-    }
+    } = new GridSpan(0, 1);
+
     public GridSpan ColumnSpan
     {
         get; set
@@ -27,7 +28,7 @@ public partial class UIView
             if (Parent.LayoutType != LayoutType.Grid) return;
             MarkLayoutDirty();
         }
-    }
+    } = new GridSpan(0, 1);
 
     /// <summary> 弹性项目的增长因子 </summary>
     public float FlexGrow

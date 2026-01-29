@@ -232,13 +232,11 @@ public readonly struct GridTrack(TemplateType templateType, float value = 0f) : 
 /// <summary>
 /// 元素在 Grid 中的位置和大小
 /// </summary>
-public readonly struct GridSpan : IEquatable<GridSpan>
+public readonly struct GridSpan(int? start, int size) : IEquatable<GridSpan>
 {
-    public GridSpan() => Size = 1;
+    public readonly int? Start { get; } = start;
 
-    public readonly int? Start { get; }
-
-    public readonly int Size { get; }
+    public readonly int Size { get; } = size;
 
     public static bool operator ==(GridSpan left, GridSpan right)
     {
