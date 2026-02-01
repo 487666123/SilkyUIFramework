@@ -1,6 +1,4 @@
-﻿using static SilkyUIFramework.Layout.CrossAlignment;
-
-namespace SilkyUIFramework.Layout;
+﻿namespace SilkyUIFramework.Layout;
 
 public sealed partial class FlexboxModule
 {
@@ -261,8 +259,8 @@ public sealed partial class FlexboxModule
 
     private float CalculateCrossOffset(float availableSize, float itemCrossSize) => Parent.CrossAlignment switch
     {
-        Center => (availableSize - itemCrossSize) / 2f,
-        End => availableSize - itemCrossSize,
-        Stretch or Start or { } => 0f,
+        CrossAlignment.Center => (availableSize - itemCrossSize) / 2f,
+        CrossAlignment.End => availableSize - itemCrossSize,
+        CrossAlignment.Stretch or CrossAlignment.Start or { } => 0f,
     };
 }

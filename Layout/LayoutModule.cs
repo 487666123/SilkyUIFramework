@@ -46,7 +46,7 @@ public abstract class LayoutModule(UIElementGroup parent)
             element.UpdateHeight(height);
         }
     }
-    public virtual void ModifyLayoutOffset() { }
+    public virtual void UpdateChildrenLayoutOffset() { }
 
     #region SetBounds Methods
 

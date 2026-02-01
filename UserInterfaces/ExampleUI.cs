@@ -1,4 +1,6 @@
-﻿namespace SilkyUIFramework.UserInterfaces;
+﻿using SilkyUIFramework.Layout;
+
+namespace SilkyUIFramework.UserInterfaces;
 
 #if DEBUG && false
 
@@ -13,7 +15,6 @@ public partial class ExampleUI(IMouseMenu menuUI) : BaseBody
 
     protected override void OnInitialize()
     {
-
         InitializeComponent();
 
         FitWidth = true;
@@ -121,7 +122,7 @@ public partial class ExampleUI(IMouseMenu menuUI) : BaseBody
                         }
                         case "删除":
                         {
-                            block.Remove();
+                            block.RemoveFromParent();
                             break;
                         }
                     }

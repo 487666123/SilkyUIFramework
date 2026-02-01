@@ -146,7 +146,7 @@ public partial class UIElementGroup
     {
         if (LayoutElements.Count <= 0) return;
 
-        LayoutModule.ModifyLayoutOffset();
+        LayoutModule.UpdateChildrenLayoutOffset();
 
         foreach (var child in LayoutElements.OfType<UIElementGroup>())
         {
