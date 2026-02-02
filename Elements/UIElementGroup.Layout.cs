@@ -129,6 +129,9 @@ public partial class UIElementGroup
         LayoutModule?.RecalculateChildrenHeight();
     }
 
+    /// <summary>
+    /// 重新设置子元素高度的
+    /// </summary>
     protected virtual void ResizeChildrenHeight()
     {
         if (LayoutElements.Count <= 0) return;
@@ -142,15 +145,18 @@ public partial class UIElementGroup
     }
 
 
-    protected virtual void UpdateChildrenLayoutOffset()
+    /// <summary>
+    /// 更新子元素布局位置
+    /// </summary>
+    protected virtual void UpdateChildrenLayoutPosition()
     {
         if (LayoutElements.Count <= 0) return;
 
-        LayoutModule.UpdateChildrenLayoutOffset();
+        LayoutModule.UpdateChildrenLayoutPosition();
 
         foreach (var child in LayoutElements.OfType<UIElementGroup>())
         {
-            child.UpdateChildrenLayoutOffset();
+            child.UpdateChildrenLayoutPosition();
         }
     }
 }

@@ -6,7 +6,7 @@ namespace SilkyUIFramework.Configs;
 
 public class DeathTextOffsetPreview : FloatElement
 {
-    protected readonly Asset<Texture2D> MagicPixel;
+    protected readonly Asset<Texture2D> MagicPixel = TextureAssets.MagicPixel;
     protected Asset<DynamicSpriteFont> SpriteFont;
     protected float TextScale = 0.75f;
 
@@ -16,11 +16,6 @@ public class DeathTextOffsetPreview : FloatElement
         TextScale = 0.6f;
         Height.Set(85f, 0);
         SpriteFont = FontAssets.DeathText;
-    }
-
-    public DeathTextOffsetPreview()
-    {
-        MagicPixel = TextureAssets.MagicPixel;
     }
 
     public override void Draw(SpriteBatch spriteBatch)

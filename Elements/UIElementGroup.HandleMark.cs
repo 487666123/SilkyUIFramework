@@ -62,7 +62,7 @@ public partial class UIElementGroup
         ResizeChildrenWidth();
         RecalculateHeight();
         ResizeChildrenHeight();
-        UpdateChildrenLayoutOffset();
+        UpdateChildrenLayoutPosition();
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ public partial class UIElementGroup
         ResizeChildrenWidth();
         RecalculateChildrenHeight();
         ResizeChildrenHeight();
-        UpdateChildrenLayoutOffset();
+        UpdateChildrenLayoutPosition();
     }
 
     protected void MarkFreeElementsDirty()

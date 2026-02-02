@@ -4,6 +4,8 @@ namespace SilkyUIFramework.Elements;
 
 public partial class UIElementGroup
 {
+    #region Grid Properties
+
     private GridTrack[] _templateRows = [];
 
     public IReadOnlyList<GridTrack> TemplateRows => _templateRows;
@@ -36,6 +38,7 @@ public partial class UIElementGroup
         MarkLayoutDirty();
     }
 
+    #endregion
 
     public FlexDirection FlexDirection
     {

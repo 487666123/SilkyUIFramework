@@ -214,7 +214,7 @@ public sealed partial class FlexboxModule(UIElementGroup parent) : LayoutModule(
     private float CrossOffsetCache { get; set; }
     private float CrossGapCache { get; set; }
 
-    public sealed override void UpdateChildrenLayoutOffset()
+    public sealed override void UpdateChildrenLayoutPosition()
     {
         var crossStart = CrossOffsetCache;
 
