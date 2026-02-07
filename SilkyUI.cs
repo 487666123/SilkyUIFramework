@@ -5,7 +5,9 @@ public class SilkyUI
 {
     public int Priority { get; set; }
     public BaseBody RootNode { get; private set; }
-    public Matrix TransformMatrix { get; set; }
+
+    private Matrix _matrix;
+    public ref Matrix TransformMatrix => ref _matrix;
 
     public void SetBody(BaseBody baseBody)
     {

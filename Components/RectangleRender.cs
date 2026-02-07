@@ -7,7 +7,7 @@ public class RectangleRender
     public Color BackgroundColor { get; set; } = Color.Transparent;
     public Vector4 BorderRadius { get; set; } = Vector4.Zero;
 
-    public void Draw(Vector2 position, Vector2 size, bool noBorder, Matrix matrix)
+    public void Draw(Vector2 position, Vector2 size, bool noBorder, ref Matrix matrix)
     {
         if (Border > 0f)
         {
@@ -49,7 +49,7 @@ public class RectangleRender
     public float ShadowBlurSize { get; set; } = 10f;
     public Color ShadowColor { get; set; } = Color.Transparent;
 
-    public void DrawShadow(Vector2 position, Vector2 size, Matrix matrix)
+    public void DrawShadow(Vector2 position, Vector2 size, ref Matrix matrix)
     {
         if (ShadowColor == Color.Transparent) return;
 

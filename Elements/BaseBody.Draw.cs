@@ -17,8 +17,7 @@ public abstract partial class BaseBody
     public Matrix RenderTargetMatrix = Matrix.CreateScale(1f, 1f, 1f);
 
     public virtual bool EnableBlur { get; set; } = false;
-    public virtual Bounds BlurBounds => Bounds;
-    public virtual Vector4 BlurBorderRadius => BorderRadius;
+    public virtual IEnumerable<UIView> BlurElements => [this];
 
     public override void HandleDraw(GameTime gameTime, SpriteBatch spriteBatch)
     {
@@ -98,13 +97,20 @@ public abstract partial class BaseBody
     /// </summary>
     public virtual void DrawBlurRectangle()
     {
+        if (BlurElements == null) return;
+
         var scale = Main.UIScale;
-        var bounds = BlurBounds;
 
-        var borderRadius = BlurBorderRadius * scale;
-        var position = bounds.Position * scale;
-        var size = bounds.Size * scale;
+        foreach (var el in BlurElements.Where(el => !el.Invalid))
+        {
+            var bounds = el.Bounds;
 
-        SDFRectangle.SampleVersion(BlurMakeSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
+            var position = bounds.Position * scale;
+            var size = bounds.Size * scale;
+
+            var borderRadius = el.BorderRadius * scale;
+
+            SDFRectangle.SampleVersion(BlurMakeSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
+        }
     }
 }

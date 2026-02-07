@@ -4,6 +4,7 @@ using SilkyUIFramework.Animation;
 
 namespace SilkyUIFramework.UserInterfaces.Test;
 
+// 给 Korate 写的那个物品栏
 [RegisterUI("Vanilla: Radial Hotbars", "TestUI")]
 public partial class TestUI : BaseBody
 {

@@ -184,8 +184,7 @@ public class AnimationTimer(float speed = 5f, float timerMax = 100f)
 
     public void Update(GameTime gameTime)
     {
-        var speedFactor = Main.FrameSkipMode == Terraria.Enums.FrameSkipMode.Subtle ? 1f :
-            (float)gameTime.ElapsedGameTime.TotalSeconds * 60f;
+        var speedFactor = (float)gameTime.TerrariaTotalSeconds * 60f;
 
         switch (Status)
         {

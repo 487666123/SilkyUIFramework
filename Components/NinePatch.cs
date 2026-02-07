@@ -52,8 +52,8 @@ public sealed class NinePatch
     {
         var texture = Texture2D.Value;
         batch.Draw(texture, position, TopLeft, color, 0f, origin, scale, 0, 0f);
-        batch.Draw(texture, position.AddX(size.X - Right), TopRight, color, 0f, origin, scale, 0, 0f);
-        batch.Draw(texture, position.AddY(size.Y - Bottom), BottomLeft, color, 0f, origin, scale, 0, 0f);
+        batch.Draw(texture, position + new Vector2(size.X - Right, 0), TopRight, color, 0f, origin, scale, 0, 0f);
+        batch.Draw(texture, position + new Vector2(0, size.Y - Bottom), BottomLeft, color, 0f, origin, scale, 0, 0f);
         batch.Draw(texture, position + size - new Vector2(Right, Bottom), BottomRight, color, 0f, origin, scale, 0, 0f);
     }
 

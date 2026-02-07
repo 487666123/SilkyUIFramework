@@ -159,7 +159,7 @@ public class SUISlider : UIElementGroup
         if (Step > 0)
             value = SnapByStep(value, Step);
         Value = value;
-        Drag?.Invoke(this, value);
+        Drag?.Invoke(this, Value);
     }
 
     public static float SnapByStep(float value, float step) => MathF.Round(value / step) * step;

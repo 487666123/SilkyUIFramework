@@ -36,8 +36,7 @@ public partial class MouseMenuUI : BaseBody, IMouseMenu
 
     public override bool IsInteractable => _switchTimer.IsForward;
 
-    public override Bounds BlurBounds => MenuContainer.Bounds;
-    public override Vector4 BlurBorderRadius => MenuContainer.BorderRadius;
+    public override IEnumerable<UIView> BlurElements => [MenuContainer];
 
     protected override void OnInitialize()
     {

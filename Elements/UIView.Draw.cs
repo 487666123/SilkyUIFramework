@@ -51,8 +51,8 @@ public partial class UIView
     {
         var position = Bounds.Position;
         var size = Bounds.Size;
-        RectangleRender.DrawShadow(position, size, SilkyUI.TransformMatrix);
-        RectangleRender.Draw(position, size, FinallyDrawBorder, SilkyUI.TransformMatrix);
+        RectangleRender.DrawShadow(position, size, ref SilkyUI.TransformMatrix);
+        RectangleRender.Draw(position, size, FinallyDrawBorder, ref SilkyUI.TransformMatrix);
     }
 
     public virtual void HandleDraw(GameTime gameTime, SpriteBatch spriteBatch)

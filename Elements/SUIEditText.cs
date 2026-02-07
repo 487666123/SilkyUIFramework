@@ -76,13 +76,13 @@ public class SUIEditText : UITextView
         snippet?.OnHover();
     }
 
-    private int _cursorFlashTimer;
-    public int CursorCycle { get; set; } = 120;
+    private double _cursorFlashTimer;
+    public double CursorCycle { get; set; } = 2;
 
-    public void CursorToBrightest()
-    {
-        _cursorFlashTimer = CursorCycle / 2;
-    }
+    /// <summary>
+    /// 光标设置到最亮状态
+    /// </summary>
+    public void CursorToBrightest() => _cursorFlashTimer = CursorCycle / 2;
 
     protected override void UpdateStatus(GameTime gameTime)
     {
@@ -90,16 +90,17 @@ public class SUIEditText : UITextView
 
         if (IsFocus)
         {
-            if (_cursorFlashTimer < CursorCycle)
+            var half = CursorCycle / 2;
+            if (_cursorFlashTimer < half)
             {
-                CursorFlashColor = CursorColor * (_cursorFlashTimer / (CursorCycle / 2));
+                CursorFlashColor = CursorColor * (float)(_cursorFlashTimer / half);
             }
             else
             {
-                CursorFlashColor = CursorColor * (2 - _cursorFlashTimer / (CursorCycle / 2));
+                CursorFlashColor = CursorColor * (float)(2 - _cursorFlashTimer / half);
             }
 
-            _cursorFlashTimer++;
+            _cursorFlashTimer += gameTime.TerrariaTotalSeconds;
             _cursorFlashTimer %= CursorCycle;
         }
         else CursorFlashColor = Color.Transparent;
@@ -122,36 +123,40 @@ public class SUIEditText : UITextView
 
     public override void HandlePlayerInput(bool inputMethodStatus)
     {
-        if (!Main.hasFocus) return; // 焦点不在游戏
-
-        // 不能再获取了
-        Main.oldInputText = Main.inputText;
-        var keyboardState = Main.inputText = Keyboard.GetState();
+        // 当前键盘状态
+        var keyboardState = Main.inputText;
 
         var inputString = string.Empty;
+
+        // Ctrl
         // 裁剪，复制，粘贴
-        if (keyboardState.IsControlKeyDown())
+        if (keyboardState.IsControlKeyDown)
         {
-            if (Keys.X.JustPressed())
+            // 剪切
+            if (KeyboardState.JustPressed(Keys.X))
             {
                 KeyboardInputHelper.SetClipboard(Text);
                 Text = "";
             }
-            else if (Keys.C.JustPressed())
+            // 复制
+            else if (KeyboardState.JustPressed(Keys.C))
             {
                 KeyboardInputHelper.SetClipboard(Text);
             }
-            else if (Keys.V.JustPressed())
+            // 粘贴
+            else if (KeyboardState.JustPressed(Keys.V))
             {
                 inputString = Main.PasteTextIn(true, inputString);
             }
         }
-        else
+        // Alt
+        else if (!keyboardState.IsAltKeyDown)
         {
             inputString = KeyboardInputHelper.GetPlayerInput();
         }
 
-        var lineBreak = Keys.Enter.JustPressed() && keyboardState.IsShiftKeyDown();
+        // 换行 => Shift + Enter
+        var lineBreak = KeyboardState.JustPressed(Keys.Enter) && keyboardState.IsShiftKeyDown;
 
         if (lineBreak) inputString += "\n";
         else if (keyboardState.IsKeyDown(Keys.Enter))
@@ -163,80 +168,58 @@ public class SUIEditText : UITextView
         }
         else
         {
-            if (keyboardState.IsKeyDown(Keys.Back) && !Main.oldInputText.IsKeyDown(Keys.Back))
-                DownBackspace();
-            LongPressBackSpace();
+            UpdateBackSpace();
         }
 
         InsertText(inputString);
 
-        UpdateCursorMovement(); // 移动光标靠后点，总不会同一帧就想移动并把文本输入到移动后的地方吧？
+        UpdateCursorMovement();
 
-        if (!Keys.Enter.JustPressed() || lineBreak) return;
+        if (KeyboardState.JustReleased(Keys.Enter) || lineBreak) return;
 
         OnEnterKeyDown?.Invoke();
     }
 
-    private int _moveCursorTimer;
-    private int _longPressBackSpaceTimer;
+    private double _lastMoveCursorTime;
+    private double _moveCursorTimer;
 
     /// <summary>
-    /// 光标位置
+    /// 更新光标位置
     /// </summary>
     private void UpdateCursorMovement()
     {
         if (Main.inputText.IsKeyDown(Keys.Left) || Main.inputText.IsKeyDown(Keys.Right))
         {
+            var interval = _cursorFlashTimer - _lastMoveCursorTime;
+
             switch (_moveCursorTimer)
             {
                 case 0:
                     MoveCursor();
                     break;
-                case >= 30 and < 60:
-                    if (_moveCursorTimer % 10 == 0) MoveCursor();
+                case >= 0.2 and < 0.5:
+                    if (interval > 0.05)
+                    {
+                        MoveCursor();
+                        _lastMoveCursorTime = _cursorFlashTimer;
+                    }
                     break;
-                case >= 60 and < 120:
-                    if (_moveCursorTimer % 5 == 0) MoveCursor();
-                    break;
-                case >= 120 and < 180:
-                    if (_moveCursorTimer % 2 == 0) MoveCursor();
-                    break;
-                case >= 180:
-                    MoveCursor();
+                case >= 0.5:
+                    if (interval > 0.025)
+                    {
+                        MoveCursor();
+                        _lastMoveCursorTime = _cursorFlashTimer;
+                    }
                     break;
             }
 
-            _moveCursorTimer = Math.Min(180, _moveCursorTimer + 1);
+            _moveCursorTimer = Math.Min(2, _moveCursorTimer + Main.gameTimeCache.TerrariaTotalSeconds);
         }
-        else _moveCursorTimer = 0;
-    }
-
-    /// <summary>
-    /// 长按删除
-    /// </summary>
-    public void LongPressBackSpace()
-    {
-        if (Main.inputText.IsKeyDown(Keys.Back) && Main.oldInputText.IsKeyDown(Keys.Back))
+        else
         {
-            switch (_longPressBackSpaceTimer)
-            {
-                case >= 30 and < 60:
-                    if (_longPressBackSpaceTimer % 10 == 0) DownBackspace();
-                    break;
-                case >= 60 and < 120:
-                    if (_longPressBackSpaceTimer % 5 == 0) DownBackspace();
-                    break;
-                case >= 120 and < 180:
-                    if (_longPressBackSpaceTimer % 2 == 0) DownBackspace();
-                    break;
-                case >= 180:
-                    DownBackspace();
-                    break;
-            }
-
-            _longPressBackSpaceTimer++;
+            _lastMoveCursorTime = 0;
+            _moveCursorTimer = 0;
         }
-        else _longPressBackSpaceTimer = 0;
     }
 
     /// 移动光标
@@ -248,8 +231,51 @@ public class SUIEditText : UITextView
         else if (Main.inputText.IsKeyDown(Keys.Right)) CursorIndex++;
     }
 
-    /// 删除光标前字符并使光标 -1
-    private void DownBackspace()
+    private double _lastLongPressBackSpaceTime;
+    private double _longPressBackSpaceTimer;
+
+    /// <summary>
+    /// 更新退格键
+    /// </summary>
+    public void UpdateBackSpace()
+    {
+        if (Main.inputText.IsKeyDown(Keys.Back))
+        {
+            var interval = _longPressBackSpaceTimer - _lastLongPressBackSpaceTime;
+            switch (_longPressBackSpaceTimer)
+            {
+                case 0:
+                    PerformBackspace();
+                    break;
+                case >= 0.2 and < 0.5:
+                    if (interval > 0.05)
+                    {
+                        PerformBackspace();
+                        _lastLongPressBackSpaceTime = _longPressBackSpaceTimer;
+                    }
+                    break;
+                case >= 0.5:
+                    if (interval > 0.025)
+                    {
+                        PerformBackspace();
+                        _lastLongPressBackSpaceTime = _longPressBackSpaceTimer;
+                    }
+                    break;
+            }
+
+            _longPressBackSpaceTimer += Main.gameTimeCache.TerrariaTotalSeconds;
+        }
+        else
+        {
+            _lastLongPressBackSpaceTime = 0;
+            _longPressBackSpaceTimer = 0;
+        }
+    }
+
+    /// <summary>
+    /// 执行退格
+    /// </summary>
+    private void PerformBackspace()
     {
         CursorToBrightest();
 
@@ -295,6 +321,7 @@ public class SUIEditText : UITextView
         LastInputText = Text;
         StartTakingInput?.Invoke(this, evt);
     }
+
     public override void OnLostFocus(UIMouseEvent evt)
     {
         base.OnLostFocus(evt);

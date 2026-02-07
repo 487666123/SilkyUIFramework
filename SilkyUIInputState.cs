@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+﻿using Microsoft.Xna.Framework.Input;
 using ReLogic.Localization.IME;
 using ReLogic.OS;
 
@@ -185,6 +185,11 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     internal void HandleInput(SpriteBatch spriteBatch)
     {
         if (FocusedElement is not { OccupyPlayerInput: true }) return;
+
+        if (!Main.hasFocus) return; // 焦点不在游戏
+
+        Main.oldInputText = Main.inputText;
+        Main.inputText = Keyboard.GetState();
 
         spriteBatch.ReBegin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
 
