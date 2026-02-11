@@ -7,7 +7,8 @@ public class SUIImage : UIView
 {
     #region Texture2D
 
-    public delegate void TextureChangeEventHandler(SUIImage sender, Asset<Texture2D> newTexture2D, Asset<Texture2D> oldTexture2D);
+    public delegate void TextureChangeEventHandler(SUIImage sender, Asset<Texture2D> newTexture2D,
+        Asset<Texture2D> oldTexture2D);
 
     public Asset<Texture2D> Texture2D
     {
@@ -27,14 +28,18 @@ public class SUIImage : UIView
         get
         {
             if (Texture2D.Value is { } texture2D)
-                return new(texture2D.Width, texture2D.Height);
+                return new Vector2(texture2D.Width, texture2D.Height);
             return Vector2.Zero;
         }
     }
 
+    /// <summary>
+    /// 纹理修改后
+    /// </summary>
     public event TextureChangeEventHandler TextureChanged;
 
-    protected virtual void OnTextureChanged(SUIImage sender, Asset<Texture2D> newTexture2D, Asset<Texture2D> oldTexture2D) =>
+    protected virtual void OnTextureChanged(SUIImage sender, Asset<Texture2D> newTexture2D,
+        Asset<Texture2D> oldTexture2D) =>
         TextureChanged?.Invoke(sender, newTexture2D, oldTexture2D);
 
     #endregion
@@ -70,7 +75,7 @@ public class SUIImage : UIView
     {
         base.Measure(width, height);
 
-        if (Texture2D == null || Texture2D.Value == null) return;
+        if (Texture2D?.Value == null) return;
 
         if (FitWidth)
         {
@@ -87,6 +92,7 @@ public class SUIImage : UIView
     {
         base.Draw(gameTime, spriteBatch);
 
+        if (ImageColor == Color.Transparent) return;
         if (Texture2D?.Value == null) return;
 
         var position = InnerBounds.Position;
