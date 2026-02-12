@@ -3,6 +3,8 @@
 SilkyUI 框架提供了一系列预定义的 UI 控件，用于快速构建用户界面。\
 本页面详细介绍了每个控件的属性、方法和使用方式。
 
+> **布局系统说明**：有关 Flexbox 布局的详细文档，请参阅 [FlexboxModule.md](./Layout/FlexboxModule.md)。
+
 ## 控件索引
 
 | 控件                                        | XML 元素名        | 描述                                                     |
@@ -46,31 +48,21 @@ SilkyUI 框架提供了一系列预定义的 UI 控件，用于快速构建用�
 | ------------------------- | ------------- | --------------------------------------------------- |
 | `Width`                   | `Dimension`   | 宽度尺寸                                            |
 | `Height`                  | `Dimension`   | 高度尺寸                                            |
-| `Padding`                 | `Size`        | 内边距                                              |
-| `Margin`                  | `Size`        | 外边距                                              |
+| `Padding`                 | `Margin`      | 内边距                                              |
+| `Margin`                  | `Margin`      | 外边距                                              |
 | `BackgroundColor`         | `Color`       | 背景颜色                                            |
 | `Border`                  | `float`       | 边框宽度                                            |
 | `BorderColor`             | `Color`       | 边框颜色                                            |
 | `BorderRadius`            | `Vector4`     | 边框圆角（左上、右上、右下、左下）                  |
-| `Positioning`             | `Positioning` | 定位方式（`Absolute`、`Relative`、`Fixed`、`Free`） |
+| `Positioning`             | `Positioning` | 定位方式（`Relative`、`Absolute`、`Sticky`、`Fixed`、`Static`） |
 | `IgnoreMouseInteraction`  | `bool`        | 忽略鼠标交互（不影响子元素）                        |
 | `DisableMouseInteraction` | `bool`        | 禁用鼠标交互（影响子元素）                          |
 | `Invalid`                 | `bool`        | 是否无效（不参与布局）                              |
 | `ZIndex`                  | `int`         | Z 轴顺序                                            |
-| `LayoutType`              | `LayoutType`  | 布局类型（`Absolute`、`Flexbox`、`Grid`）           |
 
-#### 布局相关属性（Flexbox）
+#### 布局相关属性
 
-| 属性                    | 类型                    | 描述                        |
-| ----------------------- | ----------------------- | --------------------------- |
-| `FlexDirection`         | `FlexDirection`         | 主轴方向（`Row`、`Column`） |
-| `FlexWrap`              | `bool`                  | 是否换行                    |
-| `MainAlignment`         | `MainAlignment`         | 主轴对齐方式                |
-| `CrossAlignment`        | `CrossAlignment`        | 交叉轴对齐方式              |
-| `CrossContentAlignment` | `CrossContentAlignment` | 交叉轴内容对齐方式          |
-| `FlexGrow`              | `float`                 | 弹性增长系数                |
-| `FlexShrink`            | `float`                 | 弹性收缩系数                |
-| `FlexBasis`             | `Dimension`             | 弹性基准尺寸                |
+有关 Flexbox 布局的详细说明，请参阅 [FlexboxModule.md](../Layout/FlexboxModule.md)。
 
 #### 方法
 
@@ -112,9 +104,9 @@ SilkyUI 框架提供了一系列预定义的 UI 控件，用于快速构建用�
 
 | 方法                            | 描述           |
 | ------------------------------- | -------------- |
-| `AddElement(UIView element)`    | 添加子元素     |
-| `RemoveElement(UIView element)` | 移除子元素     |
-| `ClearElements()`               | 清空所有子元素 |
+| `AddChild(UIView child)`        | 添加子元素     |
+| `RemoveChild(UIView child)`     | 移除子元素     |
+| `RemoveAllChildren()`           | 清空所有子元素 |
 | `IndexOf(UIView view)`          | 获取子元素索引 |
 
 ### BaseBody
@@ -141,9 +133,11 @@ UI 主体，继承自 `UIElementGroup`，提供完整的 UI 窗口功能，通�
 - 边框：2 像素黑色
 - 背景颜色：白色半透明（0.25 透明度）
 - 布局类型：`Flexbox`
-- 主轴方向：`Column`
+- 主轴方向：`Column`（垂直）
 - 主轴对齐：`Start`
-- 换行：关闭
+- 换行：`false`
+- 绘制边框：`true`
+（有关 Flexbox 布局的详细说明，请参阅 [FlexboxModule.md](../Layout/FlexboxModule.md)）
 
 ## 文本控件
 
@@ -284,7 +278,7 @@ toggle.OnStatusChanges += (status) => Console.WriteLine($"开关状态: {status}
 | 属性                    | 类型      | 描述         |
 | ----------------------- | --------- | ------------ |
 | `CurrentScrollPosition` | `Vector2` | 当前滚动位置 |
-| `ScrollRange`           | `Vector2` | 可滚动范围   |
+| `GetScrollRange()`      | `Vector2` | 获取可滚动范围（方法） |
 
 #### 事件
 - `OnCurrentScrollPositionChanged`: 滚动位置改变时触发
@@ -403,7 +397,6 @@ GIF 动画显示控件。
 2. **响应式设计**: 使用百分比尺寸和弹性布局适应不同屏幕大小
 3. **事件处理**: 利用控件提供的事件进行交互逻辑处理
 4. **XML 布局**: 尽可能使用 XML 布局文件，提高代码可维护性
-5. **样式复用**: 通过继承或样式类复用控件样式
 
 ## 扩展自定义控件
 

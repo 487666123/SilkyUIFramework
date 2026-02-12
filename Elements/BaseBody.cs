@@ -7,8 +7,8 @@ public abstract partial class BaseBody : UIElementGroup
     public virtual bool Enabled { get; set; } = true;
     public virtual bool IsInteractable => true;
 
-    protected bool AvailableItem { get; set; } = false;
-    protected bool AvailableScroll { get; set; } = false;
+    protected virtual bool AvailableItem { get; set; } = false;
+    protected virtual bool AvailableScroll { get; set; } = false;
 
     protected BaseBody()
     {
