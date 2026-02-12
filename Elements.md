@@ -145,7 +145,9 @@ UI 主体，继承自 `UIElementGroup`，提供完整的 UI 窗口功能，通�
 
 用于显示文本的视图，支持富文本片段、自动换行、文本缩放、颜色等。
 
-### 属性
+**XML 元素名**: `TextView`
+
+#### 属性
 
 | 属性                | 类型                | 描述                                                              |
 | ------------------- | ------------------- | ----------------------------------------------------------------- |
@@ -167,7 +169,7 @@ UI 主体，继承自 `UIElementGroup`，提供完整的 UI 窗口功能，通�
 | `IsDeathText`       | `bool`              | 是否使用死亡文本字体                                              |
 | `IsMouseText`       | `bool`              | 是否使用鼠标文本字体                                              |
 
-### 方法
+#### 方法
 
 | 方法                                 | 描述                                      |
 | ------------------------------------ | ----------------------------------------- |
@@ -176,7 +178,7 @@ UI 主体，继承自 `UIElementGroup`，提供完整的 UI 窗口功能，通�
 | `Measure(float width, float height)` | 重写自 `UIView`，测量视图大小             |
 | `RecalculateHeight()`                | 重新计算视图高度（当宽度固定时）          |
 
-### 事件
+#### 事件
 
 | 事件              | 描述                                   |
 | ----------------- | -------------------------------------- |
@@ -273,12 +275,19 @@ toggle.OnStatusChanges += (status) => Console.WriteLine($"开关状态: {status}
 
 滚动条控件，支持水平和垂直方向。
 
+**XML 元素名**: `Scrollbar`
+
 #### 关键属性
 
 | 属性                    | 类型      | 描述         |
 | ----------------------- | --------- | ------------ |
 | `CurrentScrollPosition` | `Vector2` | 当前滚动位置 |
-| `GetScrollRange()`      | `Vector2` | 获取可滚动范围（方法） |
+
+#### 方法
+
+| 方法               | 返回类型 | 描述         |
+| ------------------ | -------- | ------------ |
+| `GetScrollRange()` | `Vector2` | 获取可滚动范围 |
 
 #### 事件
 - `OnCurrentScrollPositionChanged`: 滚动位置改变时触发
@@ -335,6 +344,8 @@ toggle.OnStatusChanges += (status) => Console.WriteLine($"开关状态: {status}
 | `ImageOffset`       | `Vector2`          | 图片偏移量     |
 | `ImagePercent`      | `Vector2`          | 图片百分比位置 |
 | `ImageScale`        | `Vector2`          | 图片缩放比例   |
+| `ImageAlign`        | `Vector2`          | 图片对齐方式（0-1范围） |
+| `ImageOriginPercent`| `Vector2`          | 图片原点百分比位置 |
 
 #### 事件
 - `TextureChanged`: 纹理改变时触发

@@ -2,12 +2,37 @@
 
 public abstract partial class BaseBody
 {
+    /// <summary>
+    /// 我的文档\My Games\Terraria\tModLoader\SilkyUI.png
+    /// </summary>
+    /// <returns></returns>
+    public static string GetDefaultScreenshotPath(string name = "SilkyUI")
+    {
+        string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string tmlPath = Path.Combine(docPath, "My Games", "Terraria", "tModLoader");
+        return Path.Combine(tmlPath, $"{name}.png");
+    }
+
     private bool _capture = false;
 
+    /// <summary>
+    /// 截图保存路径，默认为
+    /// </summary>
+    public string ScreenshotSavePath { get; set; }
+
+    /// <summary>
+    /// 截图
+    /// </summary>
     public void Catch() => _capture = true;
 
+    /// <summary>
+    /// 使用 RenderTarget2D 捕获 UI (可用于制作动画)
+    /// </summary>
     public virtual bool UseRenderTarget { get; set; } = false;
 
+    /// <summary>
+    /// RenderTarget2D 透明度
+    /// </summary>
     public virtual float Opacity
     {
         get;
@@ -32,14 +57,14 @@ public abstract partial class BaseBody
         var backBufferWidth = device.PresentationParameters.BackBufferWidth;
         var backBufferHeight = device.PresentationParameters.BackBufferHeight;
         var renderTargetPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
-        var uiRenderTarget = renderTargetPool.Rent(backBufferWidth, backBufferHeight);
+        var render = renderTargetPool.Rent(backBufferWidth, backBufferHeight);
 
         RuntimeSafeHelper.SafeInvoke(delegate
         {
             spriteBatch.End();
 
             var original = device.GetRenderTargets();
-            device.SetRenderTarget(uiRenderTarget);
+            device.SetRenderTarget(render);
             device.Clear(Color.Transparent);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
@@ -51,27 +76,26 @@ public abstract partial class BaseBody
 
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
                 RenderTargetMatrix);
-            spriteBatch.Draw(uiRenderTarget, Vector2.Zero, null, Color.White * Opacity, 0f, Vector2.Zero, Vector2.One,
+            spriteBatch.Draw(render, Vector2.Zero, null, Color.White * Opacity, 0f, Vector2.Zero, Vector2.One,
                 0, 0);
 
+            // 截图
             if (_capture)
             {
-                string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                string tmlPath = Path.Combine(docPath, "My Games", "Terraria", "tModLoader");
-                string savePath = Path.Combine(tmlPath, "SilkyUI.png");
-
-                Main.NewText($"Save Path: {savePath}");
+                var savePath = ScreenshotSavePath;
 
                 using (var stream = new FileStream(savePath, FileMode.Create))
                 {
-                    uiRenderTarget.SaveAsPng(stream, uiRenderTarget.Width, uiRenderTarget.Height);
+                    render.SaveAsPng(stream, render.Width, render.Height);
+                    // 截图成功时提示
+                    Main.NewText($"ScreenshotSavePath Save Path: {savePath}");
                 }
 
                 _capture = false;
             }
         });
 
-        renderTargetPool.Return(uiRenderTarget);
+        renderTargetPool.Return(render);
     }
 
     protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

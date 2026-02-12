@@ -1,12 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Body Class="SilkyUIFramework.UserInterfaces.ExampleUI">
-	<ElementGroup
-		Name="MenuContainer"
-		BackgroundColor="#0099ff"
-		Width="0 1"
-		Height="50"
+	<ElementGroup Name="MenuContainer"
+		Width="0px 1%" Height="50" BackgroundColor="#0099ff"
 		LayoutType="Flexbox" FlexDirection="Column" Gap="10">
-		<TextView Padding="new(4)" BackgroundColor="Color.Black * 0.25f"></TextView>
-		<EditText Padding="new(4)" BackgroundColor="Color.Black * 0.25f"></EditText>
 	</ElementGroup>
 </Body>

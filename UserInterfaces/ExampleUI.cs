@@ -2,7 +2,7 @@
 
 namespace SilkyUIFramework.UserInterfaces;
 
-#if DEBUG && false
+#if DEBUG && true
 
 [RegisterGlobalUI("ExampleUI", 0)]
 public partial class ExampleUI(IMouseMenu menuUI) : BaseBody
@@ -15,7 +15,7 @@ public partial class ExampleUI(IMouseMenu menuUI) : BaseBody
 
     protected override void OnInitialize()
     {
-        InitializeComponent();
+        // InitializeComponent();
 
         FitWidth = true;
         FitHeight = true;

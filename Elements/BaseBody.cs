@@ -12,6 +12,8 @@ public abstract partial class BaseBody : UIElementGroup
 
     protected BaseBody()
     {
+        ScreenshotSavePath = GetDefaultScreenshotPath(GetType().Name);
+
         SetSize(16f * 30f, 9f * 30f);
         Gap = new Size(10f);
 
@@ -78,6 +80,11 @@ public abstract partial class BaseBody : UIElementGroup
         return IgnoreMouseInteraction ? null : this;
     }
 
+    /// <summary>
+    /// 更新布局，不调用基类实现以确保使用标准的盒子布局算法。
+    /// 基类 UIElementGroup.UpdateLayout() 会根据 Positioning.IsFree 选择不同的布局算法（UpdateBoxLayout 或 UpdateFlowLayout），
+    /// 但 BaseBody 作为顶级 UI 容器，始终需要使用完整的盒子布局计算以确保正确的尺寸和位置。
+    /// </summary>
     public override void UpdateLayout()
     {
         if (LayoutIsDirty)

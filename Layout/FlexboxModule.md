@@ -1,4 +1,8 @@
-## Flexible Box 基本属性
+# Flexbox 布局模块
+
+Flexbox（弹性盒子布局）是一种一维布局模型，用于在容器内对子元素进行排列、对齐和分配空间。SilkyUI 实现了 CSS Flexbox 规范的核心功能，便于创建响应式、灵活的 UI 布局。
+
+## 属性对照表
 
 本模块基于 CSS Flexbox 规范设计，下表列出了 SilkyUI 属性名与 CSS 原属性名的对应关系：
 
@@ -25,10 +29,15 @@
 | `MainAlignment`         | `MainAlignment`         | `MainAlignment.Start`           | `justify-content` | 主轴对齐方式       |
 | `CrossAlignment`        | `CrossAlignment`        | `CrossAlignment.Start`          | `align-items`     | 交叉轴单行对齐方式 |
 | `CrossContentAlignment` | `CrossContentAlignment` | `CrossContentAlignment.Stretch` | `align-content`   | 交叉轴多行对齐方式 |
+| `Gap`                   | `Size`                  | `0`                             | `gap`             | 行和列之间的间距   |
+| `FitWidth`              | `bool`                  | `true`                          | 无 CSS 对应       | 宽度是否适应内容（`true`）或固定（`false`） |
+| `FitHeight`             | `bool`                  | `true`                          | 无 CSS 对应       | 高度是否适应内容（`true`）或固定（`false`） |
 
 **注意**：
 - `FlexWrap` 为 `true` 时对应 CSS `flex-wrap: wrap`，为 `false` 时对应 `flex-wrap: nowrap`（默认）
 - CSS 中的 `flex-wrap: wrap-reverse` 当前未实现
+- 当 `FlexWrap` 为 `true` 时，容器需要有固定宽度（`FitWidth = false`）或高度（`FitHeight = false`）才能换行
+- `Gap` 属性的 `Size` 类型支持从 `float` 隐式转换，例如 `Gap = 10` 等同于 `Gap = new Size(10)`
 
 ### `Flexbox Item` 属性（子元素）
 
@@ -138,7 +147,7 @@ container.AddChild(item3);
               CrossAlignment="Center"
               CrossContentAlignment="Stretch"
               Gap="10"
-              FitWidth="false" FitHeight="false">
+              FitWidth="false">
     <View Width="50px" Height="50px" FlexGrow="1" />
     <View Width="80px" Height="80px" FlexShrink="2" />
     <View Width="60px" Height="60px" />
@@ -147,6 +156,56 @@ container.AddChild(item3);
 
 ### 注意事项
 
-- 当 `FlexWrap` 为 `true` 时，容器需要有固定宽度（`FitWidth = false`）或高度（`FitHeight = false`）才能换行。
+- 当 `FlexWrap` 为 `true` 时，容器需要有固定尺寸才能换行：
+  - `FlexDirection="Row"`：需要固定宽度（`FitWidth = false`）
+  - `FlexDirection="Column"`：需要固定高度（`FitHeight = false`）
 - `FlexGrow` 和 `FlexShrink` 仅在子元素总尺寸与容器可用空间不匹配时生效。
 - 默认的 `CrossContentAlignment` 为 `Stretch`，会拉伸多行以填满交叉轴空间。
+- 使用 `FlexGrow: 1` 可以让元素填充剩余空间，适合创建自适应布局。
+
+### 常见布局模式
+
+#### 1. 水平导航栏
+```xml
+<ElementGroup FlexDirection="Row"
+              MainAlignment="SpaceBetween"
+              CrossAlignment="Center"
+              Height="40px" Border="1" BorderColor="#ccc">
+    <TextView Text="Logo" Width="100px" />
+    <ElementGroup FlexDirection="Row" Gap="20">
+        <TextView Text="首页" />
+        <TextView Text="关于" />
+        <TextView Text="设置" />
+    </ElementGroup>
+    <TextView Text="用户" Width="80px" />
+</ElementGroup>
+```
+
+#### 2. 垂直菜单（侧边栏）
+```xml
+<ElementGroup FlexDirection="Column"
+              MainAlignment="Start"
+              CrossAlignment="Stretch"
+              Width="200px" Gap="5" Padding="10">
+    <TextView Text="菜单项1" Padding="10" BackgroundColor="#f0f0f0" />
+    <TextView Text="菜单项2" Padding="10" BackgroundColor="#f0f0f0" />
+    <TextView Text="菜单项3" Padding="10" BackgroundColor="#f0f0f0" />
+    <View FlexGrow="1" /> <!-- 弹性空白占位 -->
+    <TextView Text="底部项" Padding="10" BackgroundColor="#e0e0e0" />
+</ElementGroup>
+```
+
+#### 3. 自适应网格（卡片布局）
+```xml
+<ElementGroup FlexDirection="Row"
+              FlexWrap="true"
+              MainAlignment="SpaceEvenly"
+              CrossContentAlignment="Start"
+              Gap="10" FitWidth="false">
+    <!-- 每个卡片固定宽度，自动换行 -->
+    <View Width="150px" Height="200px" BackgroundColor="#f8f8f8" Border="1" />
+    <View Width="150px" Height="200px" BackgroundColor="#f8f8f8" Border="1" />
+    <View Width="150px" Height="200px" BackgroundColor="#f8f8f8" Border="1" />
+    <View Width="150px" Height="200px" BackgroundColor="#f8f8f8" Border="1" />
+</ElementGroup>
+```

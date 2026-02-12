@@ -47,7 +47,7 @@ SilkyUIFramework.csproj 中的关键依赖项：
 - 在 XML 文件中声明式定义 UI (`UserInterfaces/*.xml`)
 - 通过 `XmlElementMappingAttribute` 映射到 C# 类
 - 支持类型解析的属性赋值（实现 `IParsable<TSelf>`）
-- XML 属性支持 float、double、char、int、string、Vector2、Vector3、Vector4、Color 类型
+- XML 属性支持基本类型（bool、int、float、double、string）、特殊类型（Color、Vector2/3/4）、实现 `IParsable<T>` 的类型（如 Dimension、Anchor）以及枚举类型（直接使用成员名称）
 
 ### 布局系统
 - `FlexboxModule.cs` 实现 CSS Flexbox 规范
