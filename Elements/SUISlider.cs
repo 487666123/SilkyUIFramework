@@ -14,7 +14,8 @@ public class SUISliderTrackProgress : UIView
         Width = new Dimension(0f, 0f);
         Height = new Dimension(0f, 1f);
 
-        BackgroundColor = new Color(0x33, 0xCC, 0x55);
+        BackgroundColor = Color.LightGreen;
+        //BackgroundColor = new Color(0x33, 0xCC, 0x55);
     }
 }
 
@@ -35,7 +36,8 @@ public class SUISliderTrack : UIElementGroup
 
         Border = 2f;
         BorderColor = Color.White;
-        BackgroundColor = new Color(0xDD, 0x55, 0x33);
+        BackgroundColor = Color.LightCoral;
+        //BackgroundColor = new Color(0xDD, 0x55, 0x33);
 
         ProgressBar = new SUISliderTrackProgress().Join(this);
     }

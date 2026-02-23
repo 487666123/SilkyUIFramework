@@ -1,7 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Body Class="SilkyUIFramework.UserInterfaces.ExampleUI">
-	<ElementGroup Name="MenuContainer"
-		Width="0px 1%" Height="50" BackgroundColor="#0099ff"
-		LayoutType="Flexbox" FlexDirection="Column" Gap="10">
-	</ElementGroup>
-</Body>
