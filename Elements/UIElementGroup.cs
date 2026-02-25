@@ -8,12 +8,18 @@ namespace SilkyUIFramework.Elements;
 [XmlElementMapping("ElementGroup")]
 public partial class UIElementGroup : UIView
 {
+    /// <summary>
+    /// 创建一个元素容器，并初始化默认布局模块。
+    /// </summary>
     public UIElementGroup()
     {
         FlexboxModule = new FlexboxModule(this);
         GridModule = new GridModule(this);
     }
 
+    /// <summary>
+    /// 是否启用内容裁剪，启用后仅绘制容器可视范围内的子元素区域。
+    /// </summary>
     public bool OverflowHidden { get; set; }
 
     /// <summary>
@@ -32,6 +38,9 @@ public partial class UIElementGroup : UIView
         }
     }
 
+    /// <summary>
+    /// 所有直接子元素（包含当前帧可能不会参与更新与绘制的元素）。
+    /// </summary>
     protected List<UIView> Elements { get; } = [];
 
     /// <summary>
@@ -39,6 +48,9 @@ public partial class UIElementGroup : UIView
     /// </summary>
     protected List<UIView> ElementsCache { get; } = [];
 
+    /// <summary>
+    /// 直接子元素只读视图。
+    /// </summary>
     public IReadOnlyList<UIView> Children => Elements;
 
     /// <summary>
@@ -46,7 +58,14 @@ public partial class UIElementGroup : UIView
     /// </summary>
     public IReadOnlyList<UIView> ChildrenCache => ElementsCache;
 
+    /// <summary>
+    /// 返回子元素在 <see cref="Children"/> 中的索引，不存在则返回 -1。
+    /// </summary>
     public int IndexOf(UIView view) => Elements.IndexOf(view);
+
+    /// <summary>
+    /// 返回子元素在 <see cref="ChildrenCache"/> 中的索引，不存在则返回 -1。
+    /// </summary>
     public int IndexOfInCache(UIView view) => ElementsCache.IndexOf(view);
 
     /// <summary>
@@ -94,8 +113,16 @@ public partial class UIElementGroup : UIView
 
     #region Append Remove RemoveChild
 
+    /// <summary>
+    /// 判断是否包含指定直接子元素。
+    /// </summary>
     public virtual bool HasChild(UIView child) => Elements.Contains(child);
 
+    /// <summary>
+    /// 添加子元素到当前容器，可选插入位置。
+    /// </summary>
+    /// <param name="child">要添加的子元素。</param>
+    /// <param name="index">插入索引；为 <see langword="null"/> 时追加到末尾。</param>
     public void AddChild(UIView child, int? index = null)
     {
         if (child == null) return;
@@ -127,8 +154,16 @@ public partial class UIElementGroup : UIView
         RuntimeSafeHelper.SafeInvoke(child.Initialize);
     }
 
+    /// <summary>
+    /// 子元素添加后的扩展钩子。
+    /// </summary>
+    /// <param name="child">已加入容器的子元素。</param>
     protected virtual void OnAddChild(UIView child) { }
 
+    /// <summary>
+    /// 从当前容器移除指定直接子元素。
+    /// </summary>
+    /// <param name="child">要移除的子元素。</param>
     public void RemoveChild(UIView child)
     {
         if (!Elements.Remove(child)) return;
@@ -141,8 +176,15 @@ public partial class UIElementGroup : UIView
         child.HandleExitTree();
     }
 
+    /// <summary>
+    /// 子元素移除后的扩展钩子。
+    /// </summary>
+    /// <param name="child">已从容器移除的子元素。</param>
     protected virtual void OnRemoveChild(UIView child) { }
 
+    /// <summary>
+    /// 移除当前容器的全部直接子元素。
+    /// </summary>
     public void RemoveAllChildren()
     {
         foreach (var child in Elements.ToArray())
@@ -161,6 +203,9 @@ public partial class UIElementGroup : UIView
         UpdateChildren(gameTime);
     }
 
+    /// <summary>
+    /// 更新子元素逻辑。
+    /// </summary>
     protected virtual void UpdateChildren(GameTime gameTime)
     {
         foreach (var child in ElementsCache) child.HandleUpdate(gameTime);
@@ -172,6 +217,9 @@ public partial class UIElementGroup : UIView
         UpdateChildrenStatus(gameTime);
     }
 
+    /// <summary>
+    /// 更新子元素交互状态与过渡状态。
+    /// </summary>
     protected virtual void UpdateChildrenStatus(GameTime gameTime)
     {
         foreach (var child in ElementsCache)
@@ -186,6 +234,12 @@ public partial class UIElementGroup : UIView
         DrawChildren(gameTime, spriteBatch);
     }
 
+    /// <summary>
+    /// 计算当前容器用于裁剪的屏幕空间矩形。
+    /// </summary>
+    /// <remarks>
+    /// 返回值会与当前设备的 ScissorRectangle 取交集，避免越界裁剪。
+    /// </remarks>
     public virtual Rectangle GetClippingRectangle(SpriteBatch spriteBatch)
     {
         var bounds = HiddenBox switch
@@ -210,10 +264,14 @@ public partial class UIElementGroup : UIView
         return Rectangle.Intersect(rectangle, scissorRectangle);
     }
 
+    /// <summary>
+    /// 绘制子元素，按配置启用裁剪与可选独立渲染目标。
+    /// </summary>
     public virtual void DrawChildren(GameTime gameTime, SpriteBatch spriteBatch)
     {
         if (OverflowHidden)
         {
+            // 进入裁剪分支前先结束当前批次，后续会切换裁剪状态或渲染目标。
             spriteBatch.End();
 
             var device = spriteBatch.GraphicsDevice;
@@ -222,11 +280,13 @@ public partial class UIElementGroup : UIView
 
             if (IndependentRenderTarget && scissorRectangle.Width > 0 && scissorRectangle.Height > 0)
             {
+                // 在独立 RenderTarget 中完成裁剪绘制，再回贴到主目标。
                 var renderTargetPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
                 var renderTarget = renderTargetPool.Rent(scissorRectangle.Width, scissorRectangle.Height);
 
                 RuntimeSafeHelper.SafeInvoke(() =>
                 {
+                    // 临时替换渲染目标与视口，结束后必须完整恢复图形状态。
                     var binding = device.GetRenderTargets();
                     var viewport = device.Viewport;
 
@@ -240,6 +300,7 @@ public partial class UIElementGroup : UIView
                     spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
                         SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
 
+                    // 只绘制与容器可见区域相交的子元素，减少无效绘制。
                     foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
                     {
                         child.HandleDraw(gameTime, spriteBatch);
@@ -251,6 +312,7 @@ public partial class UIElementGroup : UIView
                     device.Viewport = viewport;
                     device.ScissorRectangle = originalScissor;
 
+                    // 将离屏结果绘制回主目标后，恢复正常批次继续后续绘制流程。
                     DrawRenderTarget(spriteBatch, renderTarget, scissorRectangle.Position);
                     spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
                         SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
@@ -261,6 +323,7 @@ public partial class UIElementGroup : UIView
                 return;
             }
 
+            // 不启用独立 RenderTarget 时，直接使用设备裁剪矩形进行绘制。
             device.ScissorRectangle = scissorRectangle;
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
                 SilkyUI.TransformMatrix);
@@ -289,18 +352,31 @@ public partial class UIElementGroup : UIView
     {
         var scale = Main.UIScale;
         spriteBatch.GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
+
         SDFRectangle.SampleVersion(renderTarget, position, renderTarget.SizeVec2,
             Vector2.Zero, Vector2.One, (BorderRadius - new Vector4(2)) * scale, Color.White, Matrix.Identity);
     }
 
     #endregion
 
+    /// <summary>
+    /// 不参与布局流计算的子元素集合。
+    /// </summary>
     protected readonly List<UIView> FreeElements = [];
 
+    /// <summary>
+    /// 参与布局流计算的子元素集合。
+    /// </summary>
     protected readonly List<UIView> LayoutElements = [];
 
+    /// <summary>
+    /// 当前帧自由定位子元素只读视图。
+    /// </summary>
     public IReadOnlyList<UIView> FreeChildren => FreeElements;
 
+    /// <summary>
+    /// 当前帧参与布局子元素只读视图。
+    /// </summary>
     public IReadOnlyList<UIView> LayoutChildren => LayoutElements;
 
     /// <summary>
@@ -330,6 +406,9 @@ public partial class UIElementGroup : UIView
         }
     }
 
+    /// <summary>
+    /// 命中测试：从上层绘制顺序向下查找鼠标位置对应元素。
+    /// </summary>
     public override UIView GetElementAt(Vector2 mousePosition)
     {
         if (DisableMouseInteraction) return null;
@@ -363,6 +442,9 @@ public partial class UIElementGroup : UIView
         return ContainsPoint(mousePosition) ? this : null;
     }
 
+    /// <summary>
+    /// 容器滚动偏移量；更新时会标记位置脏状态。
+    /// </summary>
     public Vector2 ScrollOffset
     {
         get;

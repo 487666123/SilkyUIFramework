@@ -1,19 +1,34 @@
 ﻿namespace SilkyUIFramework.Graphics2D;
 
+/// <summary>
+/// 基于 SDF 着色器绘制矩形（支持圆角、描边、阴影与纹理采样）。
+/// </summary>
 public static class SDFRectangle
 {
+    /// <summary>
+    /// SpriteBatch 默认特效 pass，用于在自定义绘制后恢复主批次状态。
+    /// </summary>
     public static EffectPass SpriteEffectPass => Main.spriteBatch.spriteEffectPass;
+    /// <summary>
+    /// 当前图形设备。
+    /// </summary>
     public static GraphicsDevice GraphicsDevice => Main.graphics.GraphicsDevice;
+    /// <summary>
+    /// SDF 矩形着色器实例。
+    /// </summary>
     private static Effect Effect => ModAsset.SDFRectangle.Value;
 
-    public static void DrawHasBorder(Vector2 position, Vector2 size,
+    /// <summary>
+    /// 绘制带描边的圆角矩形。
+    /// </summary>
+    public static void DrawWithBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float border, Color borderColor, Matrix matrix)
     {
         var innerShrinkage = 1 / matrix.M11;
         SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        SetMatrixWithBgColor(in matrix, backgroundColor);
+        SetTransformAndBackground(in matrix, backgroundColor);
 
         Effect.Parameters["uBorder"].SetValue(border);
         Effect.Parameters["uBorderColor"].SetValue(borderColor.ToVector4());
@@ -27,14 +42,17 @@ public static class SDFRectangle
         SpriteEffectPass.Apply();
     }
 
-    public static void DrawNoBorder(Vector2 position, Vector2 size,
+    /// <summary>
+    /// 绘制无描边的圆角矩形。
+    /// </summary>
+    public static void DrawWithoutBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, Matrix matrix)
     {
         var innerShrinkage = 1 / matrix.M11;
         SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        SetMatrixWithBgColor(in matrix, backgroundColor);
+        SetTransformAndBackground(in matrix, backgroundColor);
 
         Effect.CurrentTechnique.Passes["NoBorder"].Apply();
         SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
@@ -45,6 +63,10 @@ public static class SDFRectangle
         SpriteEffectPass.Apply();
     }
 
+    /// <summary>
+    /// 采样整张纹理并按圆角矩形裁剪后绘制。
+    /// 纹理坐标会根据屏幕尺寸自动推导。
+    /// </summary>
     public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size, Vector4 borderRadius, Matrix matrix)
     {
         var innerShrinkage = 1 / matrix.M11;
@@ -66,6 +88,9 @@ public static class SDFRectangle
         SpriteEffectPass.Apply();
     }
 
+    /// <summary>
+    /// 采样纹理指定区域并按圆角矩形裁剪后绘制。
+    /// </summary>
     public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size,
         Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize, Vector4 borderRadius, Color color, Matrix matrix)
     {
@@ -87,13 +112,16 @@ public static class SDFRectangle
         SpriteEffectPass.Apply();
     }
 
+    /// <summary>
+    /// 绘制圆角矩形阴影。
+    /// </summary>
     public static void DrawShadow(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float shadowBlurSize, Matrix matrix)
     {
         SetSmoothstepRange(in matrix);
         matrix.Transform2SDFMatrix();
 
-        SetMatrixWithBgColor(in matrix, backgroundColor);
+        SetTransformAndBackground(in matrix, backgroundColor);
         Effect.Parameters["uShadowBlurSize"].SetValue(shadowBlurSize);
 
         Effect.CurrentTechnique.Passes["Shadow"].Apply();
@@ -107,12 +135,18 @@ public static class SDFRectangle
 
     #region Setter
 
-    private static void SetMatrixWithBgColor(in Matrix matrix, Color backgroundColor)
+    /// <summary>
+    /// 设置通用变换矩阵与背景色参数。
+    /// </summary>
+    private static void SetTransformAndBackground(in Matrix matrix, Color backgroundColor)
     {
         Effect.Parameters["uTransformMatrix"].SetValue(matrix);
         Effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
     }
 
+    /// <summary>
+    /// 根据当前缩放设置 smoothstep 过渡区间，控制边缘抗锯齿宽度。
+    /// </summary>
     private static void SetSmoothstepRange(in Matrix matrix)
     {
         const float root2Over2 = 1.414213562373f / 2f;
@@ -121,9 +155,18 @@ public static class SDFRectangle
 
     #endregion
 
+    /// <summary>
+    /// 4 个象限共 16 个顶点缓存（每个象限 4 顶点）。
+    /// </summary>
     private static readonly SDFGraphicsVertexType[] RectangleVertexData = new SDFGraphicsVertexType[16];
+    /// <summary>
+    /// 对应 4 个象限的索引数据（每象限 2 个三角形）。
+    /// </summary>
     private static readonly short[] IndexData = [0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11, 12, 13, 14, 14, 13, 15];
 
+    /// <summary>
+    /// 构建纯色矩形绘制所需顶点数据。
+    /// </summary>
     private static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius)
     {
         position -= new Vector2(innerShrinkage);
@@ -150,7 +193,9 @@ public static class SDFRectangle
         vertexData.SetBorderRadius(borderRadius.W, 12);
     }
 
-    /// <summary> 设置并绘制图元 </summary>
+    /// <summary>
+    /// 构建带纹理坐标的矩形绘制顶点数据。
+    /// </summary>
     private static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius, Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize)
     {
         position -= new Vector2(innerShrinkage);
@@ -183,7 +228,9 @@ public static class SDFRectangle
         vertexData.SetBorderRadius(borderRadius.W, 12);
     }
 
-    /// <summary> 设置顶点位置 </summary>
+    /// <summary>
+    /// 按一个象限写入 4 个顶点位置。
+    /// </summary>
     public static void SetPosition(this SDFGraphicsVertexType[] vertexData, Vector2 position, Vector2 size, int indexOffset)
     {
         vertexData[indexOffset].Position = position;
@@ -192,7 +239,9 @@ public static class SDFRectangle
         vertexData[indexOffset + 3].Position = position + size;
     }
 
-    /// <summary> 设置圆角 </summary>
+    /// <summary>
+    /// 为一个象限的 4 个顶点写入相同圆角半径。
+    /// </summary>
     public static void SetBorderRadius(this SDFGraphicsVertexType[] vertexData, float borderRadius, int indexOffset)
     {
         vertexData[indexOffset].BorderRadius = borderRadius;
@@ -201,7 +250,9 @@ public static class SDFRectangle
         vertexData[indexOffset + 3].BorderRadius = borderRadius;
     }
 
-    /// <summary> 设置当前点与边界的距离 </summary>
+    /// <summary>
+    /// 写入 SDF 距离字段，用于像素着色器计算圆角矩形距离场。
+    /// </summary>
     public static void SetDistanceFromEdge(this SDFGraphicsVertexType[] vertexData, Vector2 size, float borderRadius, int a, int b, int c, int d, int indexOffset)
     {
         vertexData[indexOffset + a].DistanceFromEdge = new Vector2(borderRadius);
@@ -211,7 +262,7 @@ public static class SDFRectangle
     }
 
     /// <summary>
-    /// 设置捕获图元的位置
+    /// 为一个象限写入 4 个纹理坐标。
     /// </summary>
     public static void SetTextureCoordinates(this SDFGraphicsVertexType[] vertexData, Vector2 position, Vector2 size, int indexOffset)
     {

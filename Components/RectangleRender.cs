@@ -14,24 +14,24 @@ public class RectangleRender
             if (BorderColor == Color.Transparent || noBorder)
             {
                 if (BackgroundColor != Color.Transparent)
-                    SDFRectangle.DrawNoBorder(
+                    SDFRectangle.DrawWithoutBorder(
                         position + new Vector2(Border), size - new Vector2(Border * 2f),
                         BorderRadius - new Vector4(Border), BackgroundColor, matrix
                     );
             }
             else
             {
-                SDFRectangle.DrawHasBorder(position, size, BorderRadius, BackgroundColor, Border, BorderColor, matrix);
+                SDFRectangle.DrawWithBorder(position, size, BorderRadius, BackgroundColor, Border, BorderColor, matrix);
             }
         }
         else if (BackgroundColor != Color.Transparent)
         {
-            SDFRectangle.DrawNoBorder(position, size, BorderRadius, BackgroundColor, matrix);
+            SDFRectangle.DrawWithoutBorder(position, size, BorderRadius, BackgroundColor, matrix);
         }
     }
 
     public void DrawOnlyBorder(Vector2 position, Vector2 size, Matrix matrix) =>
-        SDFRectangle.DrawHasBorder(position, size, BorderRadius, Color.Transparent, Border, BorderColor, matrix);
+        SDFRectangle.DrawWithBorder(position, size, BorderRadius, Color.Transparent, Border, BorderColor, matrix);
 
     public void CopyStyle(RectangleRender rectangleRender)
     {
