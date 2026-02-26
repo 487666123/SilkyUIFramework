@@ -65,7 +65,7 @@ public partial class UIElementGroup
 
         MeasureChildren();
 
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
         LayoutModule?.Measure();
     }
 
@@ -75,18 +75,18 @@ public partial class UIElementGroup
     public virtual void MeasureChildren()
     {
         ClassifyChildren();
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
 
         LayoutModule?.PrepareData();
 
         var availableWidth = FitWidth ? 0 : InnerBounds.Width;
         var availableHeight = FitHeight ? 0 : InnerBounds.Height;
 
-        for (var i = 0; i < LayoutElements.Count; i++)
+        for (var i = 0; i < InFlowElements.Count; i++)
         {
             var cacheWidth = availableWidth;
             var cacheHeight = availableHeight;
-            LayoutElements[i].Measure(cacheWidth, cacheHeight);
+            InFlowElements[i].Measure(cacheWidth, cacheHeight);
         }
 
         LayoutModule?.MeasureChildren();
@@ -95,11 +95,11 @@ public partial class UIElementGroup
     /// <summary> 重设宽度 </summary>
     public virtual void ResizeChildrenWidth()
     {
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
 
         LayoutModule?.ResizeChildrenWidth();
 
-        foreach (var item in LayoutElements.OfType<UIElementGroup>())
+        foreach (var item in InFlowElements.OfType<UIElementGroup>())
         {
             item.ResizeChildrenWidth();
         }
@@ -119,9 +119,9 @@ public partial class UIElementGroup
 
     protected virtual void RecalculateChildrenHeight()
     {
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
 
-        foreach (var el in LayoutElements)
+        foreach (var el in InFlowElements)
         {
             el.RecalculateHeight();
         }
@@ -134,11 +134,11 @@ public partial class UIElementGroup
     /// </summary>
     protected virtual void ResizeChildrenHeight()
     {
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
 
         LayoutModule?.ResizeChildrenHeight();
 
-        foreach (var item in LayoutElements.OfType<UIElementGroup>())
+        foreach (var item in InFlowElements.OfType<UIElementGroup>())
         {
             item.ResizeChildrenHeight();
         }
@@ -150,11 +150,11 @@ public partial class UIElementGroup
     /// </summary>
     protected virtual void UpdateChildrenLayoutPosition()
     {
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
 
         LayoutModule.UpdateChildrenLayoutPosition();
 
-        foreach (var child in LayoutElements.OfType<UIElementGroup>())
+        foreach (var child in InFlowElements.OfType<UIElementGroup>())
         {
             child.UpdateChildrenLayoutPosition();
         }

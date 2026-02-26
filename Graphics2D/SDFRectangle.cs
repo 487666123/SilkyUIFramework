@@ -26,7 +26,7 @@ public static class SDFRectangle
     public static void DrawWithBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float border, Color borderColor, Matrix matrix)
     {
-        var innerShrinkage = 1 / matrix.M11;
+        var edgePadding = 1 / matrix.M11;
         matrix = PrepareSdfMatrix(matrix);
 
         var effect = Effect;
@@ -38,7 +38,7 @@ public static class SDFRectangle
         effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
         effect.CurrentTechnique.Passes["HasBorder"].Apply();
 
-        SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
+        SetRectanglePrimitives(edgePadding, position, size, borderRadius);
 
         SubmitRectanglePrimitives();
     }
@@ -49,7 +49,7 @@ public static class SDFRectangle
     public static void DrawWithoutBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, Matrix matrix)
     {
-        var innerShrinkage = 1 / matrix.M11;
+        var edgePadding = 1 / matrix.M11;
         matrix = PrepareSdfMatrix(matrix);
 
         var effect = Effect;
@@ -58,7 +58,7 @@ public static class SDFRectangle
         effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
         effect.CurrentTechnique.Passes["NoBorder"].Apply();
 
-        SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
+        SetRectanglePrimitives(edgePadding, position, size, borderRadius);
 
         SubmitRectanglePrimitives();
     }
@@ -69,7 +69,7 @@ public static class SDFRectangle
     /// </summary>
     public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size, Vector4 borderRadius, Matrix matrix)
     {
-        var innerShrinkage = 1 / matrix.M11;
+        var edgePadding = 1 / matrix.M11;
         matrix = PrepareSdfMatrix(matrix);
         var device = GraphicsDevice;
         var screenSize = new Vector2(device.Viewport.Width, device.Viewport.Height);
@@ -81,7 +81,7 @@ public static class SDFRectangle
         effect.CurrentTechnique.Passes["SampleVersion"].Apply();
 
         device.Textures[0] = texture2D;
-        SetRectanglePrimitives(innerShrinkage, position, size, borderRadius, position / screenSize, size / screenSize);
+        SetRectanglePrimitives(edgePadding, position, size, borderRadius, position / screenSize, size / screenSize);
 
         SubmitRectanglePrimitives();
     }
@@ -155,13 +155,13 @@ public static class SDFRectangle
     /// <summary>
     /// 纯色矩形顶点构建委托到几何构建器。
     /// </summary>
-    private static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius)
-        => SDFRectangleGeometryBuilder.SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
+    private static void SetRectanglePrimitives(float edgePadding, Vector2 position, Vector2 size, Vector4 borderRadius)
+        => SDFRectangleGeometryBuilder.SetRectanglePrimitives(edgePadding, position, size, borderRadius);
 
     /// <summary>
     /// 纹理矩形顶点构建委托到几何构建器。
     /// </summary>
-    private static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius,
+    private static void SetRectanglePrimitives(float edgePadding, Vector2 position, Vector2 size, Vector4 borderRadius,
         Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize)
-        => SDFRectangleGeometryBuilder.SetRectanglePrimitives(innerShrinkage, position, size, borderRadius, textureCoordinatesPosition, textureCoordinatesSize);
+        => SDFRectangleGeometryBuilder.SetRectanglePrimitives(edgePadding, position, size, borderRadius, textureCoordinatesPosition, textureCoordinatesSize);
 }

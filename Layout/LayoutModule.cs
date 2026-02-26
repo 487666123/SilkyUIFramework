@@ -28,7 +28,7 @@ public abstract class LayoutModule(UIElementGroup parent)
         if (Parent.FitWidth) return;
 
         var width = Parent.InnerBounds.Width;
-        foreach (var element in Parent.LayoutChildren)
+        foreach (var element in Parent.InFlowChildren)
         {
             element.UpdateWidth(width);
         }
@@ -41,7 +41,7 @@ public abstract class LayoutModule(UIElementGroup parent)
         if (Parent.FitHeight) return;
 
         var height = Parent.InnerBounds.Height;
-        foreach (var element in Parent.LayoutChildren)
+        foreach (var element in Parent.InFlowChildren)
         {
             element.UpdateHeight(height);
         }

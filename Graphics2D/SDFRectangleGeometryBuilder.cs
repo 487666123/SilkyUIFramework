@@ -19,13 +19,13 @@ internal static class SDFRectangleGeometryBuilder
 
     /// <summary>
     /// 构建纯色矩形绘制所需顶点数据。
-    /// <paramref name="innerShrinkage"/> 用于按缩放补偿边缘，避免描边/抗锯齿出现像素缝隙。
+    /// <paramref name="edgePadding"/> 用于按缩放补偿边缘，避免描边/抗锯齿出现像素缝隙。
     /// </summary>
-    internal static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius)
+    internal static void SetRectanglePrimitives(float edgePadding, Vector2 position, Vector2 size, Vector4 borderRadius)
     {
-        position -= new Vector2(innerShrinkage);
-        size += new Vector2(innerShrinkage * 2);
-        borderRadius += new Vector4(innerShrinkage);
+        position -= new Vector2(edgePadding);
+        size += new Vector2(edgePadding * 2);
+        borderRadius += new Vector4(edgePadding);
 
         size /= 2f;
 
@@ -36,10 +36,10 @@ internal static class SDFRectangleGeometryBuilder
         vertexData.SetPosition(new(position.X, position.Y + size.Y), size, 8);
         vertexData.SetPosition(position + size, size, 12);
 
-        vertexData.SetDistanceFromEdge(size, borderRadius.X + innerShrinkage, 0, 1, 2, 3, 0);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Y + innerShrinkage, 1, 0, 3, 2, 4);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Z + innerShrinkage, 2, 3, 0, 1, 8);
-        vertexData.SetDistanceFromEdge(size, borderRadius.W + innerShrinkage, 3, 2, 1, 0, 12);
+        vertexData.SetDistanceFromEdge(size, borderRadius.X + edgePadding, 0, 1, 2, 3, 0);
+        vertexData.SetDistanceFromEdge(size, borderRadius.Y + edgePadding, 1, 0, 3, 2, 4);
+        vertexData.SetDistanceFromEdge(size, borderRadius.Z + edgePadding, 2, 3, 0, 1, 8);
+        vertexData.SetDistanceFromEdge(size, borderRadius.W + edgePadding, 3, 2, 1, 0, 12);
 
         vertexData.SetBorderRadius(borderRadius.X, 0);
         vertexData.SetBorderRadius(borderRadius.Y, 4);
@@ -51,12 +51,12 @@ internal static class SDFRectangleGeometryBuilder
     /// 构建带纹理坐标的矩形绘制顶点数据。
     /// 输入 UV 采用矩形左上 + 尺寸形式。
     /// </summary>
-    internal static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius,
+    internal static void SetRectanglePrimitives(float edgePadding, Vector2 position, Vector2 size, Vector4 borderRadius,
         Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize)
     {
-        position -= new Vector2(innerShrinkage);
-        size += new Vector2(innerShrinkage * 2);
-        borderRadius += new Vector4(innerShrinkage);
+        position -= new Vector2(edgePadding);
+        size += new Vector2(edgePadding * 2);
+        borderRadius += new Vector4(edgePadding);
 
         size /= 2f;
         textureCoordinatesSize /= 2f;
@@ -73,10 +73,10 @@ internal static class SDFRectangleGeometryBuilder
         vertexData.SetTextureCoordinates(new(textureCoordinatesPosition.X, textureCoordinatesPosition.Y + textureCoordinatesSize.Y), textureCoordinatesSize, 8);
         vertexData.SetTextureCoordinates(textureCoordinatesPosition + textureCoordinatesSize, textureCoordinatesSize, 12);
 
-        vertexData.SetDistanceFromEdge(size, borderRadius.X + innerShrinkage, 0, 1, 2, 3, 0);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Y + innerShrinkage, 1, 0, 3, 2, 4);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Z + innerShrinkage, 2, 3, 0, 1, 8);
-        vertexData.SetDistanceFromEdge(size, borderRadius.W + innerShrinkage, 3, 2, 1, 0, 12);
+        vertexData.SetDistanceFromEdge(size, borderRadius.X + edgePadding, 0, 1, 2, 3, 0);
+        vertexData.SetDistanceFromEdge(size, borderRadius.Y + edgePadding, 1, 0, 3, 2, 4);
+        vertexData.SetDistanceFromEdge(size, borderRadius.Z + edgePadding, 2, 3, 0, 1, 8);
+        vertexData.SetDistanceFromEdge(size, borderRadius.W + edgePadding, 3, 2, 1, 0, 12);
 
         vertexData.SetBorderRadius(borderRadius.X, 0);
         vertexData.SetBorderRadius(borderRadius.Y, 4);

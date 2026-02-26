@@ -4,6 +4,7 @@ namespace SilkyUIFramework.Elements;
 
 /// <summary>
 /// 似乎在密谋着什么，再等等...
+/// UI 元素容器基类，负责子元素管理、布局分类、更新链路与可选裁剪绘制。
 /// </summary>
 [XmlElementMapping("ElementGroup")]
 public partial class UIElementGroup : UIView
@@ -27,7 +28,7 @@ public partial class UIElementGroup : UIView
     /// </summary>
     public bool IndependentRenderTarget { get; set; } = true;
 
-    /// <summary> 需要持续调用，以保证所有元素都被初始化 </summary>
+    /// <summary> 递归初始化当前容器及其子元素；重复调用是安全的。 </summary>
     internal sealed override void Initialize()
     {
         base.Initialize();
@@ -44,7 +45,7 @@ public partial class UIElementGroup : UIView
     protected List<UIView> Elements { get; } = [];
 
     /// <summary>
-    /// 实际用于更新和绘制的元素
+    /// 当前帧有效子元素缓存（已过滤 <see cref="UIView.Invalid"/>），用于布局、更新和绘制。
     /// </summary>
     protected List<UIView> ElementsCache { get; } = [];
 
@@ -54,7 +55,7 @@ public partial class UIElementGroup : UIView
     public IReadOnlyList<UIView> Children => Elements;
 
     /// <summary>
-    /// 实际用于更新和绘制的元素
+    /// <see cref="ElementsCache"/> 的只读视图。
     /// </summary>
     public IReadOnlyList<UIView> ChildrenCache => ElementsCache;
 
@@ -97,13 +98,14 @@ public partial class UIElementGroup : UIView
     }
 
     /// <summary>
-    /// 清理脏标记 (只会清理 <see cref="LayoutElements"/>)
+    /// 清理当前容器脏标记，并递归清理 <see cref="InFlowElements"/>。
+    /// <see cref="OutOfFlowElements"/> 由 <c>MarkFreeElementsDirty</c> 按需标记。
     /// </summary>
     public override void CleanupDirtyMark()
     {
         base.CleanupDirtyMark();
 
-        foreach (var child in LayoutElements)
+        foreach (var child in InFlowElements)
         {
             child.CleanupDirtyMark();
         }
@@ -300,7 +302,7 @@ public partial class UIElementGroup : UIView
                     spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
                         SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
 
-                    // 只绘制与容器可见区域相交的子元素，减少无效绘制。
+                    // 先做一层粗略裁剪：仅绘制与容器 InnerBounds 相交的子元素，减少无效绘制。
                     foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
                     {
                         child.HandleDraw(gameTime, spriteBatch);
@@ -362,46 +364,46 @@ public partial class UIElementGroup : UIView
     /// <summary>
     /// 不参与布局流计算的子元素集合。
     /// </summary>
-    protected readonly List<UIView> FreeElements = [];
+    protected readonly List<UIView> OutOfFlowElements = [];
 
     /// <summary>
     /// 参与布局流计算的子元素集合。
     /// </summary>
-    protected readonly List<UIView> LayoutElements = [];
+    protected readonly List<UIView> InFlowElements = [];
 
     /// <summary>
-    /// 当前帧自由定位子元素只读视图。
+    /// 当前帧脱离布局流子元素只读视图。
     /// </summary>
-    public IReadOnlyList<UIView> FreeChildren => FreeElements;
+    public IReadOnlyList<UIView> OutOfFlowChildren => OutOfFlowElements;
 
     /// <summary>
     /// 当前帧参与布局子元素只读视图。
     /// </summary>
-    public IReadOnlyList<UIView> LayoutChildren => LayoutElements;
+    public IReadOnlyList<UIView> InFlowChildren => InFlowElements;
 
     /// <summary>
-    /// 分类子元素, 在 <see cref="MeasureChildren"/> 首行调用 <br/>
-    /// 实际用于更新和绘制的元素存于 <see cref="ElementsCache"/><br/>
-    /// 用于布局的元素存于 <see cref="LayoutChildren"/>
-    /// 自由元素 (不受布局控制) 存于 <see cref="FreeChildren"/>
+    /// 在 <see cref="MeasureChildren"/> 首行调用，按 <see cref="PositioningExtensions.IsOutOfFlow"/> 对当前帧有效子元素分组。<br/>
+    /// 实际用于更新和绘制的元素存于 <see cref="ElementsCache"/>。<br/>
+    /// 参与布局流计算的元素存于 <see cref="InFlowChildren"/>。<br/>
+    /// 脱离布局流的元素存于 <see cref="OutOfFlowChildren"/>。
     /// </summary>
     protected virtual void ClassifyChildren()
     {
         ElementsCache.Clear();
         ElementsCache.AddRange(Elements.Where(el => !el.Invalid));
 
-        FreeElements.Clear();
-        LayoutElements.Clear();
+        OutOfFlowElements.Clear();
+        InFlowElements.Clear();
 
         foreach (var child in ElementsCache)
         {
-            if (child.Positioning.IsFree)
+            if (child.Positioning.IsOutOfFlow)
             {
-                FreeElements.Add(child);
+                OutOfFlowElements.Add(child);
             }
             else
             {
-                LayoutElements.Add(child);
+                InFlowElements.Add(child);
             }
         }
     }

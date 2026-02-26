@@ -40,7 +40,7 @@ public partial class UIElementGroup
     {
         if (LayoutIsDirty)
         {
-            if (Positioning.IsFree) UpdateBoxLayout();
+            if (Positioning.IsOutOfFlow) UpdateBoxLayout();
             else UpdateFlowLayout();
 
             CleanupDirtyMark();
@@ -79,7 +79,7 @@ public partial class UIElementGroup
 
     protected void MarkFreeElementsDirty()
     {
-        foreach (var item in FreeElements.Where(e => e.IsDependentParent() && !e.LayoutIsDirty))
+        foreach (var item in OutOfFlowElements.Where(e => e.IsDependentParent() && !e.LayoutIsDirty))
         {
             item.MarkLayoutDirty();
         }

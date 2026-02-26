@@ -107,7 +107,7 @@ public class GridModule(UIElementGroup parent) : LayoutModule(parent)
 
     public override void PrepareData()
     {
-        var list = Parent.LayoutChildren;
+        var list = Parent.InFlowChildren;
         _locations = new Location[list.Count];
 
         var rows = Parent.TemplateRows;

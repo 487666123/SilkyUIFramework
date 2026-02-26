@@ -46,7 +46,7 @@ public partial class UIView
         MarkPositionDirty();
 
         // 如果元素是自由定位的，则不需要通知父元素
-        if (Positioning.IsFree) return;
+        if (Positioning.IsOutOfFlow) return;
         Parent?.NotifyParentChildDirty();
     }
 
@@ -143,7 +143,7 @@ public partial class UIView
         set
         {
             if (field == value) return;
-            var isFree = field.IsFree == value.IsFree;
+            var isFree = field.IsOutOfFlow == value.IsOutOfFlow;
 
             field = value;
             MarkPositionDirty();

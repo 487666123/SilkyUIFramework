@@ -12,20 +12,20 @@ public sealed partial class FlexboxModule
     private void SingleRow()
     {
         _lines.Clear();
-        _lines.Add(FlexLine.CreateSingleRow(Parent.LayoutChildren, Parent.Gap.Width));
+        _lines.Add(FlexLine.CreateSingleRow(Parent.InFlowChildren, Parent.Gap.Width));
     }
 
     private void SingleColumn()
     {
         _lines.Clear();
-        _lines.Add(FlexLine.CreateSingleColumn(Parent.LayoutChildren, Parent.Gap.Height));
+        _lines.Add(FlexLine.CreateSingleColumn(Parent.InFlowChildren, Parent.Gap.Height));
     }
 
     private void WrapRow()
     {
         var width = Parent.InnerBounds.Width;
         var hGap = Parent.Gap.Width;
-        var elements = Parent.LayoutChildren;
+        var elements = Parent.InFlowChildren;
         _lines.Clear();
 
         var line = FlexLine.CreateRow(elements[0]);
@@ -50,7 +50,7 @@ public sealed partial class FlexboxModule
     {
         var height = Parent.InnerBounds.Height;
         var vGap = Parent.Gap.Height;
-        var elements = Parent.LayoutChildren;
+        var elements = Parent.InFlowChildren;
         _lines.Clear();
 
         var line = FlexLine.CreateColumn(elements[0]);
