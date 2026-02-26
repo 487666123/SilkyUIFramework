@@ -1,17 +1,38 @@
 namespace SilkyUIFramework;
 
+/// <summary>
+/// SilkyUI 根容器，负责维护 UI 根节点、矩阵变换，并驱动更新与绘制流程。
+/// </summary>
 [Service(ServiceLifetime.Transient)]
 public class SilkyUI
 {
+    /// <summary>
+    /// UI 实例优先级。通常由管理器按该值排序决定更新/绘制顺序。
+    /// </summary>
     public int Priority { get; set; }
+
+    /// <summary>
+    /// 当前 UI 树根节点。可能为 <see langword="null"/>。
+    /// </summary>
     public BaseBody RootNode { get; private set; }
 
     private Matrix _matrix;
+
+    /// <summary>
+    /// UI 变换矩阵引用。以引用返回便于调用方原地修改矩阵。
+    /// </summary>
     public ref Matrix TransformMatrix => ref _matrix;
 
+    /// <summary>
+    /// 设置并切换根节点。
+    /// 会触发旧节点退出树（ExitTree）与新节点进入树（EnterTree）的生命周期回调。
+    /// </summary>
     public void SetBody(BaseBody baseBody)
     {
-        if (RootNode == baseBody || baseBody is { SilkyUI: not null }) return;
+        if (RootNode == baseBody) return;
+
+        if (baseBody is { SilkyUI: not null })
+            throw new InvalidOperationException($"Cannot attach body '{baseBody.GetType().FullName}' because it is already attached to another SilkyUI instance.");
 
         if (RootNode != null)
             RuntimeSafeHelper.SafeInvoke(RootNode.HandleExitTree);
@@ -22,6 +43,9 @@ public class SilkyUI
             RuntimeSafeHelper.SafeInvoke(() => RootNode.HandleEnterTree(this));
     }
 
+    /// <summary>
+    /// 获取鼠标当前悬停的可交互元素。
+    /// </summary>
     public UIView GetHoverElement()
     {
         if (RootNode is not { Enabled: true, IsInteractable: true }) return null;
@@ -31,6 +55,9 @@ public class SilkyUI
         return RootNode.GetElementAt(SilkyUIInputState.MousePosition);
     }
 
+    /// <summary>
+    /// 驱动 UI 逻辑更新，不执行绘制。
+    /// </summary>
     public void Update(GameTime gameTime)
     {
         if (RootNode == null) return;
@@ -39,6 +66,9 @@ public class SilkyUI
         RootNode.HandleUpdate(gameTime);
     }
 
+    /// <summary>
+    /// 执行 UI 绘制主流程：初始化、布局更新、状态更新与最终绘制。
+    /// </summary>
     public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
         if (RootNode == null) return;
@@ -53,7 +83,7 @@ public class SilkyUI
         RootNode.UpdatePosition();
         RootNode.UpdateElementsOrder();
 
-        // 更新 UI 的各种状态，比如动画
+        // 更新 UI 的各类运行状态（例如动画），状态变化可能影响后续布局与显示。
         RootNode.HandleUpdateStatus(gameTime);
 
         if (!RootNode.Enabled) return;
@@ -65,6 +95,10 @@ public class SilkyUI
         RootNode.HandleDraw(gameTime, spriteBatch);
     }
 
+    /// <summary>
+    /// OverflowHidden 裁剪所用的光栅化状态。
+    /// 开启 ScissorTest 并关闭剔除，避免 UI 平面元素被背面剔除。
+    /// </summary>
     public static RasterizerState RasterizerStateForOverflowHidden { get; } = new RasterizerState
     {
         CullMode = CullMode.None,

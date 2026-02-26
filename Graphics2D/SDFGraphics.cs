@@ -32,14 +32,23 @@ public static class SDFGraphics
         Main.spriteBatch.spriteEffectPass.Apply();
     }
 
+    /// <summary>
+    /// 统一准备 SDF Effect：矩阵转换到 SDF 空间并写入 uTransform。
+    /// </summary>
+    private static Effect PrepareEffect(Matrix matrix)
+    {
+        matrix = MatrixHelper.Transform2SDFMatrix(matrix);
+
+        var effect = ModAsset.SDFGraphics.Value;
+        effect.Parameters["uTransform"].SetValue(matrix);
+        return effect;
+    }
+
     /// 绘制叉号
     public static void HasBorderCross(Vector2 position, float size, float borderRadius, Color backgroundColor,
         float border, Color borderColor, Matrix matrix)
     {
-        matrix.Transform2SDFMatrix();
-
-        var effect = ModAsset.SDFGraphics.Value;
-        effect.Parameters["uTransform"].SetValue(matrix);
+        var effect = PrepareEffect(matrix);
         effect.Parameters["uSizeOver2"].SetValue(new Vector2(size) / 2f);
         effect.Parameters["uBorder"].SetValue(border);
         effect.Parameters["uRound"].SetValue(borderRadius);
@@ -54,10 +63,7 @@ public static class SDFGraphics
     public static void HasBorderRound(Vector2 position, float size, Color background, float border, Color borderColor,
         Matrix matrix)
     {
-        matrix.Transform2SDFMatrix();
-
-        var effect = ModAsset.SDFGraphics.Value;
-        effect.Parameters["uTransform"].SetValue(matrix);
+        var effect = PrepareEffect(matrix);
         effect.Parameters["uBackgroundColor"].SetValue(background.ToVector4());
         effect.Parameters["uBorder"].SetValue(border);
         effect.Parameters["uBorderColor"].SetValue(borderColor.ToVector4());
@@ -67,10 +73,7 @@ public static class SDFGraphics
 
     public static void NoBorderRound(Vector2 position, float size, Color background, Matrix matrix)
     {
-        matrix.Transform2SDFMatrix();
-
-        var effect = ModAsset.SDFGraphics.Value;
-        effect.Parameters["uTransform"].SetValue(matrix);
+        var effect = PrepareEffect(matrix);
         effect.Parameters["uSizeOver2"].SetValue(new Vector2(size) / 2f);
         effect.Parameters["uBackgroundColor"].SetValue(background.ToVector4());
         effect.CurrentTechnique.Passes["NoBorderRound"].Apply();
@@ -82,8 +85,6 @@ public static class SDFGraphics
     /// </summary>
     public static void NoBorderLine(Vector2 topLef, Vector2 bottomRight, float width, Color background, Matrix matrix)
     {
-        matrix.Transform2SDFMatrix();
-
         var min = Vector2.Min(topLef, bottomRight);
         var max = Vector2.Max(topLef, bottomRight);
         var size = max - min + new Vector2(width * 2);
@@ -91,8 +92,7 @@ public static class SDFGraphics
         topLef += new Vector2(width) - min;
         bottomRight += new Vector2(width) - min;
 
-        var effect = ModAsset.SDFGraphics.Value;
-        effect.Parameters["uTransform"].SetValue(matrix);
+        var effect = PrepareEffect(matrix);
         effect.Parameters["uStart"].SetValue(topLef);
         effect.Parameters["uEnd"].SetValue(bottomRight);
         effect.Parameters["uLineWidth"].SetValue(width);
@@ -107,8 +107,6 @@ public static class SDFGraphics
     public static void HasBorderLine(Vector2 topLef, Vector2 bottomRight, float width, Color background, float border,
         Color borderColor, Matrix matrix)
     {
-        matrix.Transform2SDFMatrix();
-
         var min = Vector2.Min(topLef, bottomRight);
         var max = Vector2.Max(topLef, bottomRight);
         var size = max - min + new Vector2(width * 2);
@@ -116,8 +114,7 @@ public static class SDFGraphics
         topLef += new Vector2(width) - min;
         bottomRight += new Vector2(width) - min;
 
-        var effect = ModAsset.SDFGraphics.Value;
-        effect.Parameters["uTransform"].SetValue(matrix);
+        var effect = PrepareEffect(matrix);
         effect.Parameters["uStart"].SetValue(topLef);
         effect.Parameters["uEnd"].SetValue(bottomRight);
         effect.Parameters["uLineWidth"].SetValue(width);

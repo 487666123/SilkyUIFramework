@@ -1,7 +1,8 @@
 ﻿namespace SilkyUIFramework.Graphics2D;
 
 /// <summary>
-/// 基于 SDF 着色器绘制矩形（支持圆角、描边、阴影与纹理采样）。
+/// SDF 矩形绘制门面：负责参数绑定、pass 选择与图元提交。
+/// 几何顶点构建由 <see cref="SDFRectangleGeometryBuilder"/> 负责。
 /// </summary>
 public static class SDFRectangle
 {
@@ -20,255 +21,147 @@ public static class SDFRectangle
 
     /// <summary>
     /// 绘制带描边的圆角矩形。
+    /// 内部会根据当前缩放计算抗锯齿过渡范围，并使用 HasBorder pass。
     /// </summary>
     public static void DrawWithBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float border, Color borderColor, Matrix matrix)
     {
         var innerShrinkage = 1 / matrix.M11;
-        SetSmoothstepRange(in matrix);
-        matrix.Transform2SDFMatrix();
+        matrix = PrepareSdfMatrix(matrix);
 
-        SetTransformAndBackground(in matrix, backgroundColor);
+        var effect = Effect;
 
-        Effect.Parameters["uBorder"].SetValue(border);
-        Effect.Parameters["uBorderColor"].SetValue(borderColor.ToVector4());
+        effect.Parameters["uBorder"].SetValue(border);
+        effect.Parameters["uBorderColor"].SetValue(borderColor.ToVector4());
 
-        Effect.CurrentTechnique.Passes["HasBorder"].Apply();
+        effect.Parameters["uTransformMatrix"].SetValue(matrix);
+        effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
+        effect.CurrentTechnique.Passes["HasBorder"].Apply();
+
         SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
 
-        GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList,
-            RectangleVertexData, 0, RectangleVertexData.Length, IndexData, 0, 8);
-
-        SpriteEffectPass.Apply();
+        SubmitRectanglePrimitives();
     }
 
     /// <summary>
-    /// 绘制无描边的圆角矩形。
+    /// 绘制无描边的圆角矩形（NoBorder pass）。
     /// </summary>
     public static void DrawWithoutBorder(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, Matrix matrix)
     {
         var innerShrinkage = 1 / matrix.M11;
-        SetSmoothstepRange(in matrix);
-        matrix.Transform2SDFMatrix();
+        matrix = PrepareSdfMatrix(matrix);
 
-        SetTransformAndBackground(in matrix, backgroundColor);
+        var effect = Effect;
 
-        Effect.CurrentTechnique.Passes["NoBorder"].Apply();
+        effect.Parameters["uTransformMatrix"].SetValue(matrix);
+        effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
+        effect.CurrentTechnique.Passes["NoBorder"].Apply();
+
         SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
 
-        GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList,
-            RectangleVertexData, 0, RectangleVertexData.Length, IndexData, 0, 8);
-
-        SpriteEffectPass.Apply();
+        SubmitRectanglePrimitives();
     }
 
     /// <summary>
     /// 采样整张纹理并按圆角矩形裁剪后绘制。
-    /// 纹理坐标会根据屏幕尺寸自动推导。
+    /// 纹理坐标根据当前 Viewport 自动推导。
     /// </summary>
     public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size, Vector4 borderRadius, Matrix matrix)
     {
         var innerShrinkage = 1 / matrix.M11;
-        SetSmoothstepRange(in matrix);
-        matrix.Transform2SDFMatrix();
-
-        Effect.Parameters["uTransformMatrix"].SetValue(matrix);
-        Effect.Parameters["uBackgroundColor"].SetValue(Color.White.ToVector4());
-
+        matrix = PrepareSdfMatrix(matrix);
         var device = GraphicsDevice;
         var screenSize = new Vector2(device.Viewport.Width, device.Viewport.Height);
-        Effect.CurrentTechnique.Passes["SampleVersion"].Apply();
+
+        var effect = Effect;
+
+        effect.Parameters["uTransformMatrix"].SetValue(matrix);
+        effect.Parameters["uBackgroundColor"].SetValue(Color.White.ToVector4());
+        effect.CurrentTechnique.Passes["SampleVersion"].Apply();
+
         device.Textures[0] = texture2D;
         SetRectanglePrimitives(innerShrinkage, position, size, borderRadius, position / screenSize, size / screenSize);
 
-        GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList,
-            RectangleVertexData, 0, RectangleVertexData.Length, IndexData, 0, 8);
-
-        SpriteEffectPass.Apply();
+        SubmitRectanglePrimitives();
     }
 
     /// <summary>
-    /// 采样纹理指定区域并按圆角矩形裁剪后绘制。
+    /// 采样纹理指定 UV 区域并按圆角矩形裁剪后绘制。
     /// </summary>
     public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size,
         Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize, Vector4 borderRadius, Color color, Matrix matrix)
     {
-        SetSmoothstepRange(in matrix);
-        matrix.Transform2SDFMatrix();
-
-        Effect.Parameters["uBackgroundColor"].SetValue(color.ToVector4());
-        Effect.Parameters["uTransformMatrix"].SetValue(matrix);
-
+        matrix = PrepareSdfMatrix(matrix);
         var device = GraphicsDevice;
-        var screenSize = new Vector2(device.Viewport.Width, device.Viewport.Height);
-        Effect.CurrentTechnique.Passes["SampleVersion"].Apply();
+
+        var effect = Effect;
+
+        effect.Parameters["uTransformMatrix"].SetValue(matrix);
+        effect.Parameters["uBackgroundColor"].SetValue(color.ToVector4());
+        effect.CurrentTechnique.Passes["SampleVersion"].Apply();
+
         device.Textures[0] = texture2D;
         SetRectanglePrimitives(0, position, size, borderRadius, textureCoordinatesPosition, textureCoordinatesSize);
 
-        GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList,
-            RectangleVertexData, 0, RectangleVertexData.Length, IndexData, 0, 8);
-
-        SpriteEffectPass.Apply();
+        SubmitRectanglePrimitives();
     }
 
     /// <summary>
-    /// 绘制圆角矩形阴影。
+    /// 绘制圆角矩形阴影（Shadow pass）。
     /// </summary>
     public static void DrawShadow(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float shadowBlurSize, Matrix matrix)
     {
-        SetSmoothstepRange(in matrix);
-        matrix.Transform2SDFMatrix();
+        matrix = PrepareSdfMatrix(matrix);
 
-        SetTransformAndBackground(in matrix, backgroundColor);
-        Effect.Parameters["uShadowBlurSize"].SetValue(shadowBlurSize);
+        var effect = Effect;
 
-        Effect.CurrentTechnique.Passes["Shadow"].Apply();
+        effect.Parameters["uTransformMatrix"].SetValue(matrix);
+        effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
+        effect.Parameters["uShadowBlurSize"].SetValue(shadowBlurSize);
+        effect.CurrentTechnique.Passes["Shadow"].Apply();
         SetRectanglePrimitives(0f, position, size, borderRadius);
 
+        SubmitRectanglePrimitives();
+    }
+
+    /// <summary>
+    /// 将 SpriteBatch 变换矩阵转换到 SDF 所需坐标空间，并设置边缘抗锯齿区间。
+    /// smoothstep 计算依赖缩放分量 <c>M11</c>，调用方需保证其非 0。
+    /// </summary>
+    private static Matrix PrepareSdfMatrix(Matrix matrix)
+    {
+        const float root2Over2 = 1.414213562373f / 2f;
+        var zoom = matrix.M11;
+        Effect.Parameters["uSmoothstepRange"].SetValue(new Vector2(-root2Over2 / zoom, root2Over2 / zoom));
+
+        return MatrixHelper.Transform2SDFMatrix(matrix);
+    }
+
+    /// <summary>
+    /// 提交已写入的矩形图元，并恢复 SpriteBatch 默认 pass。
+    /// 调用前应已完成 effect 参数设置与 pass.Apply。
+    /// </summary>
+    private static void SubmitRectanglePrimitives()
+    {
         GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList,
-            RectangleVertexData, 0, RectangleVertexData.Length, IndexData, 0, 8);
+            SDFRectangleGeometryBuilder.RectangleVertexData, 0, SDFRectangleGeometryBuilder.RectangleVertexData.Length,
+            SDFRectangleGeometryBuilder.IndexData, 0, 8);
 
         SpriteEffectPass.Apply();
     }
 
-    #region Setter
-
     /// <summary>
-    /// 设置通用变换矩阵与背景色参数。
-    /// </summary>
-    private static void SetTransformAndBackground(in Matrix matrix, Color backgroundColor)
-    {
-        Effect.Parameters["uTransformMatrix"].SetValue(matrix);
-        Effect.Parameters["uBackgroundColor"].SetValue(backgroundColor.ToVector4());
-    }
-
-    /// <summary>
-    /// 根据当前缩放设置 smoothstep 过渡区间，控制边缘抗锯齿宽度。
-    /// </summary>
-    private static void SetSmoothstepRange(in Matrix matrix)
-    {
-        const float root2Over2 = 1.414213562373f / 2f;
-        Effect.Parameters["uSmoothstepRange"].SetValue(new Vector2(-root2Over2 / matrix.M11, root2Over2 / matrix.M11));
-    }
-
-    #endregion
-
-    /// <summary>
-    /// 4 个象限共 16 个顶点缓存（每个象限 4 顶点）。
-    /// </summary>
-    private static readonly SDFGraphicsVertexType[] RectangleVertexData = new SDFGraphicsVertexType[16];
-    /// <summary>
-    /// 对应 4 个象限的索引数据（每象限 2 个三角形）。
-    /// </summary>
-    private static readonly short[] IndexData = [0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11, 12, 13, 14, 14, 13, 15];
-
-    /// <summary>
-    /// 构建纯色矩形绘制所需顶点数据。
+    /// 纯色矩形顶点构建委托到几何构建器。
     /// </summary>
     private static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius)
-    {
-        position -= new Vector2(innerShrinkage);
-        size += new Vector2(innerShrinkage * 2);
-        borderRadius += new Vector4(innerShrinkage);
-
-        size /= 2f;
-
-        var vertexData = RectangleVertexData;
-
-        vertexData.SetPosition(position, size, 0);
-        vertexData.SetPosition(new(position.X + size.X, position.Y), size, 4);
-        vertexData.SetPosition(new(position.X, position.Y + size.Y), size, 8);
-        vertexData.SetPosition(position + size, size, 12);
-
-        vertexData.SetDistanceFromEdge(size, borderRadius.X + innerShrinkage, 0, 1, 2, 3, 0);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Y + innerShrinkage, 1, 0, 3, 2, 4);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Z + innerShrinkage, 2, 3, 0, 1, 8);
-        vertexData.SetDistanceFromEdge(size, borderRadius.W + innerShrinkage, 3, 2, 1, 0, 12);
-
-        vertexData.SetBorderRadius(borderRadius.X, 0);
-        vertexData.SetBorderRadius(borderRadius.Y, 4);
-        vertexData.SetBorderRadius(borderRadius.Z, 8);
-        vertexData.SetBorderRadius(borderRadius.W, 12);
-    }
+        => SDFRectangleGeometryBuilder.SetRectanglePrimitives(innerShrinkage, position, size, borderRadius);
 
     /// <summary>
-    /// 构建带纹理坐标的矩形绘制顶点数据。
+    /// 纹理矩形顶点构建委托到几何构建器。
     /// </summary>
-    private static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius, Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize)
-    {
-        position -= new Vector2(innerShrinkage);
-        size += new Vector2(innerShrinkage * 2);
-        borderRadius += new Vector4(innerShrinkage);
-
-        size /= 2f;
-        textureCoordinatesSize /= 2f;
-
-        var vertexData = RectangleVertexData;
-
-        vertexData.SetPosition(position, size, 0);
-        vertexData.SetPosition(new(position.X + size.X, position.Y), size, 4);
-        vertexData.SetPosition(new(position.X, position.Y + size.Y), size, 8);
-        vertexData.SetPosition(position + size, size, 12);
-
-        vertexData.SetTextureCoordinates(textureCoordinatesPosition, textureCoordinatesSize, 0);
-        vertexData.SetTextureCoordinates(new(textureCoordinatesPosition.X + textureCoordinatesSize.X, textureCoordinatesPosition.Y), textureCoordinatesSize, 4);
-        vertexData.SetTextureCoordinates(new(textureCoordinatesPosition.X, textureCoordinatesPosition.Y + textureCoordinatesSize.Y), textureCoordinatesSize, 8);
-        vertexData.SetTextureCoordinates(textureCoordinatesPosition + textureCoordinatesSize, textureCoordinatesSize, 12);
-
-        vertexData.SetDistanceFromEdge(size, borderRadius.X + innerShrinkage, 0, 1, 2, 3, 0);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Y + innerShrinkage, 1, 0, 3, 2, 4);
-        vertexData.SetDistanceFromEdge(size, borderRadius.Z + innerShrinkage, 2, 3, 0, 1, 8);
-        vertexData.SetDistanceFromEdge(size, borderRadius.W + innerShrinkage, 3, 2, 1, 0, 12);
-
-        vertexData.SetBorderRadius(borderRadius.X, 0);
-        vertexData.SetBorderRadius(borderRadius.Y, 4);
-        vertexData.SetBorderRadius(borderRadius.Z, 8);
-        vertexData.SetBorderRadius(borderRadius.W, 12);
-    }
-
-    /// <summary>
-    /// 按一个象限写入 4 个顶点位置。
-    /// </summary>
-    public static void SetPosition(this SDFGraphicsVertexType[] vertexData, Vector2 position, Vector2 size, int indexOffset)
-    {
-        vertexData[indexOffset].Position = position;
-        vertexData[indexOffset + 1].Position = new Vector2(position.X + size.X, position.Y);
-        vertexData[indexOffset + 2].Position = new Vector2(position.X, position.Y + size.Y);
-        vertexData[indexOffset + 3].Position = position + size;
-    }
-
-    /// <summary>
-    /// 为一个象限的 4 个顶点写入相同圆角半径。
-    /// </summary>
-    public static void SetBorderRadius(this SDFGraphicsVertexType[] vertexData, float borderRadius, int indexOffset)
-    {
-        vertexData[indexOffset].BorderRadius = borderRadius;
-        vertexData[indexOffset + 1].BorderRadius = borderRadius;
-        vertexData[indexOffset + 2].BorderRadius = borderRadius;
-        vertexData[indexOffset + 3].BorderRadius = borderRadius;
-    }
-
-    /// <summary>
-    /// 写入 SDF 距离字段，用于像素着色器计算圆角矩形距离场。
-    /// </summary>
-    public static void SetDistanceFromEdge(this SDFGraphicsVertexType[] vertexData, Vector2 size, float borderRadius, int a, int b, int c, int d, int indexOffset)
-    {
-        vertexData[indexOffset + a].DistanceFromEdge = new Vector2(borderRadius);
-        vertexData[indexOffset + b].DistanceFromEdge = new Vector2(borderRadius - size.X, borderRadius);
-        vertexData[indexOffset + c].DistanceFromEdge = new Vector2(borderRadius, borderRadius - size.Y);
-        vertexData[indexOffset + d].DistanceFromEdge = new Vector2(borderRadius) - size;
-    }
-
-    /// <summary>
-    /// 为一个象限写入 4 个纹理坐标。
-    /// </summary>
-    public static void SetTextureCoordinates(this SDFGraphicsVertexType[] vertexData, Vector2 position, Vector2 size, int indexOffset)
-    {
-        vertexData[indexOffset].TextureCoordinates = position;
-        vertexData[indexOffset + 1].TextureCoordinates = new Vector2(position.X + size.X, position.Y);
-        vertexData[indexOffset + 2].TextureCoordinates = new Vector2(position.X, position.Y + size.Y);
-        vertexData[indexOffset + 3].TextureCoordinates = position + size;
-    }
+    private static void SetRectanglePrimitives(float innerShrinkage, Vector2 position, Vector2 size, Vector4 borderRadius,
+        Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize)
+        => SDFRectangleGeometryBuilder.SetRectanglePrimitives(innerShrinkage, position, size, borderRadius, textureCoordinatesPosition, textureCoordinatesSize);
 }
