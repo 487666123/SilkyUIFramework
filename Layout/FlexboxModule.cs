@@ -100,7 +100,7 @@ public sealed partial class FlexboxModule
                 {
                     var growElements = line.Elements
                         .Where(el => el.FlexGrow > 0)
-                        .Select(el => (Element: el, AvailableGrowth: el.MaxOuterWidth - el.OuterBounds.Width))
+                        .Select(el => (Element: el, AvailableGrowth: el.WidthMertrics.MaxOuter - el.OuterBounds.Width))
                         .Where(item => item.AvailableGrowth > 0)
                         .OrderBy(item => item.AvailableGrowth).ToArray();
                     var totalGrow = growElements.Sum(el => el.Element.FlexGrow);
@@ -122,7 +122,7 @@ public sealed partial class FlexboxModule
                 {
                     var shrinkElements = line.Elements
                         .Where(el => el.FlexShrink > 0)
-                        .Select(el => (Element: el, AvailableShrink: el.MinOuterWidth - el.OuterBounds.Width))
+                        .Select(el => (Element: el, AvailableShrink: el.WidthMertrics.MinOuter - el.OuterBounds.Width))
                         .Where(item => item.AvailableShrink < 0)
                         .OrderByDescending(item => item.AvailableShrink).ToArray();
                     var totalShrink = shrinkElements.Sum(el => el.Element.FlexShrink);
@@ -159,7 +159,7 @@ public sealed partial class FlexboxModule
                 {
                     var sortedElements = line.Elements
                         .Where(el => el.FlexGrow > 0)
-                        .Select(el => (Element: el, AvailableGrowth: el.MaxOuterHeight - el.OuterBounds.Height))
+                        .Select(el => (Element: el, AvailableGrowth: el.HeightMertrics.MaxOuter - el.OuterBounds.Height))
                         .Where(item => item.AvailableGrowth > 0)
                         .OrderBy(item => item.AvailableGrowth).ToArray();
                     var totalGrow = sortedElements.Sum(item => item.Element.FlexGrow);
@@ -184,7 +184,7 @@ public sealed partial class FlexboxModule
                 {
                     var sortedElements = line.Elements
                         .Where(el => el.FlexShrink > 0)
-                        .Select(el => (Element: el, AvailableShrink: el.MinOuterHeight - el.OuterBounds.Height))
+                        .Select(el => (Element: el, AvailableShrink: el.HeightMertrics.MinOuter - el.OuterBounds.Height))
                         .Where(item => item.AvailableShrink < 0)
                         .OrderByDescending(item => item.AvailableShrink).ToArray();
                     var totalShrink = sortedElements.Sum(el => el.Element.FlexShrink);

@@ -18,6 +18,11 @@ public class SUIImage : UIView
             if (value == field) return;
             field = value;
 
+            if (field != null)
+            {
+                _imageLoading = field.Value is null;
+            }
+
             if (FitWidth || FitHeight) MarkLayoutDirty();
             OnTextureChanged(this, value, field);
         }
@@ -85,6 +90,19 @@ public class SUIImage : UIView
         if (FitHeight)
         {
             SetInnerBoundsHeightRaw(Texture2D.Value.Height);
+        }
+    }
+
+    private bool _imageLoading = false;
+    protected override void UpdateStatus(GameTime gameTime)
+    {
+        base.UpdateStatus(gameTime);
+
+        var imageLoading = Texture2D?.Value is null;
+        if (imageLoading != _imageLoading)
+        {
+            _imageLoading = imageLoading;
+            MarkLayoutDirty();
         }
     }
 

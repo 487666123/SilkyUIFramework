@@ -34,13 +34,9 @@ public class SilkyUI
         if (baseBody is { SilkyUI: not null })
             throw new InvalidOperationException($"Cannot attach body '{baseBody.GetType().FullName}' because it is already attached to another SilkyUI instance.");
 
-        if (RootNode != null)
-            RuntimeSafeHelper.SafeInvoke(RootNode.HandleExitTree);
-
+        RootNode?.HandleExitTree();
         RootNode = baseBody;
-
-        if (RootNode != null)
-            RuntimeSafeHelper.SafeInvoke(() => RootNode.HandleEnterTree(this));
+        RootNode?.HandleEnterTree(this);
     }
 
     /// <summary>

@@ -55,7 +55,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// </summary>
     protected static void SetInnerWidthClamped(UIView target, float width)
     {
-        target.SetInnerBoundsWidthRaw(MathHelper.Clamp(width, target.MinInnerWidth, target.MaxInnerWidth));
+        target.SetInnerBoundsWidthRaw(target.WidthMertrics.ClampInner(width));
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// </summary>
     protected static void SetInnerHeightClamped(UIView target, float height)
     {
-        target.SetInnerBoundsHeightRaw(MathHelper.Clamp(height, target.MinInnerHeight, target.MaxInnerHeight));
+        target.SetInnerBoundsHeightRaw(target.HeightMertrics.ClampInner(height));
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// </summary>
     protected static void SetOuterWidthClamped(UIView target, float width)
     {
-        target.SetOuterBoundsWidthRaw(MathHelper.Clamp(width, target.MinOuterWidth, target.MaxOuterWidth));
+        target.SetOuterBoundsWidthRaw(target.WidthMertrics.ClampOuter(width));
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// </summary>
     protected static void SetOuterHeightClamped(UIView target, float height)
     {
-        target.SetOuterBoundsHeightRaw(MathHelper.Clamp(height, target.MinOuterHeight, target.MaxOuterHeight));
+        target.SetOuterBoundsHeightRaw(target.HeightMertrics.ClampOuter(height));
     }
 
     #endregion

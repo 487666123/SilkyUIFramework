@@ -102,7 +102,7 @@ public partial class UIView
     {
         if (_initialized) return;
         _initialized = true;
-        RuntimeSafeHelper.SafeInvoke(OnInitialize);
+        OnInitialize();
     }
 
     protected virtual void OnInitialize() { }
@@ -113,14 +113,14 @@ public partial class UIView
     {
         if (SilkyUI != null || silkyUI == null) return;
         SilkyUI = silkyUI;
-        RuntimeSafeHelper.SafeInvoke(OnEnterTree);
+        OnEnterTree();
     }
 
     internal virtual void HandleExitTree()
     {
         if (SilkyUI == null) return;
         SilkyUI = null;
-        RuntimeSafeHelper.SafeInvoke(OnExitTree);
+        OnExitTree();
     }
 
     /// <summary> 当元素加入UI树中时调用 </summary>
@@ -352,17 +352,17 @@ public partial class UIView
     }
 
     /// <summary>
-    /// 布局计算后的最终值，为了方便编自定义布局，公开此字段
+    /// 布局计算后的最终值
     /// </summary>
     public Bounds Bounds;
 
     /// <summary>
-    /// 布局计算后的最终值，为了方便编自定义布局，公开此字段
+    /// 布局计算后的最终值
     /// </summary>
     public Bounds InnerBounds;
 
     /// <summary>
-    /// 布局计算后的最终值，为了方便编自定义布局，公开此字段
+    /// 布局计算后的最终值
     /// </summary>
     public Bounds OuterBounds;
 
@@ -370,8 +370,8 @@ public partial class UIView
 
     public virtual void HandleUpdateStatus(GameTime gameTime)
     {
-        RuntimeSafeHelper.SafeInvoke(OnUpdateStatus, action => action(gameTime));
-        RuntimeSafeHelper.SafeInvoke(() => UpdateStatus(gameTime));
+        OnUpdateStatus?.Invoke(gameTime);
+        UpdateStatus(gameTime);
     }
 
     public event Action<GameTime> OnUpdate;
@@ -379,9 +379,7 @@ public partial class UIView
 
     public virtual void HandleUpdate(GameTime gameTime)
     {
-        RuntimeSafeHelper.SafeInvoke(OnUpdate, action => action(gameTime));
+        OnUpdate?.Invoke(gameTime);
         Update(gameTime);
     }
-
-    public event Action<GameTime, SpriteBatch> DrawAction;
 }

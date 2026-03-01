@@ -70,6 +70,6 @@ public class SUIToggleSwitch : UIView
         var end = InnerBounds.BottomRight - beadSize;
 
         InternalRectangleRender.BorderRadius = new Vector4(beadSize.Y / 2f);
-        InternalRectangleRender.Draw(SwitchTimer.Lerp(position, end), beadSize, false,ref SilkyUI.TransformMatrix);
+        InternalRectangleRender.Draw(SwitchTimer.Lerp(position, end), beadSize, ref SilkyUI.TransformMatrix);
     }
 }

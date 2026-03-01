@@ -3,8 +3,8 @@
 namespace SilkyUIFramework.Elements;
 
 /// <summary>
-/// 似乎在密谋着什么，再等等...
-/// UI 元素容器基类，负责子元素管理、布局分类、更新链路与可选裁剪绘制。
+/// UI 元素容器基类。
+/// 负责子元素管理、布局分组、更新链路与可选裁剪绘制。
 /// </summary>
 [XmlElementMapping("ElementGroup")]
 public partial class UIElementGroup : UIView
@@ -24,11 +24,15 @@ public partial class UIElementGroup : UIView
     public bool OverflowHidden { get; set; }
 
     /// <summary>
-    /// 仅在开启 <see cref="OverflowHidden"/> 时有效，通过将内容绘制在新的 RenderTarget 上实现隐藏超出部分的效果
+    /// 仅在开启 <see cref="OverflowHidden"/> 时生效。
+    /// 通过在独立 RenderTarget 中绘制并回贴，隐藏超出容器可视范围的内容。
     /// </summary>
     public bool IndependentRenderTarget { get; set; } = true;
 
-    /// <summary> 递归初始化当前容器及其子元素；重复调用是安全的。 </summary>
+    /// <summary>
+    /// 递归初始化当前容器及其子元素。
+    /// 重复调用是安全的。
+    /// </summary>
     internal sealed override void Initialize()
     {
         base.Initialize();
@@ -70,7 +74,7 @@ public partial class UIElementGroup : UIView
     public int IndexOfInCache(UIView view) => ElementsCache.IndexOf(view);
 
     /// <summary>
-    /// 处理元素进入 UI 树
+    /// 处理当前容器及其直接子元素进入 UI 树。
     /// </summary>
     internal sealed override void HandleEnterTree(SilkyUI silkyUI)
     {
@@ -84,7 +88,7 @@ public partial class UIElementGroup : UIView
     }
 
     /// <summary>
-    /// 处理元素退出 UI 树
+    /// 处理当前容器及其直接子元素退出 UI 树。
     /// </summary>
     internal sealed override void HandleExitTree()
     {
@@ -136,7 +140,7 @@ public partial class UIElementGroup : UIView
             Elements.Add(child);
             child.Parent = this;
         }
-        else if (index >= 0 || index <= Elements.Count)
+        else if (index >= 0 && index <= Elements.Count)
         {
             child.RemoveFromParent();
             Elements.Insert(index.Value, child);
@@ -149,11 +153,8 @@ public partial class UIElementGroup : UIView
         ElementsOrderIsDirty = true;
 
         OnAddChild(child);
-        RuntimeSafeHelper.SafeInvoke(() =>
-        {
-            if (SilkyUI != null) child.HandleEnterTree(SilkyUI);
-        });
-        RuntimeSafeHelper.SafeInvoke(child.Initialize);
+        child.HandleEnterTree(SilkyUI);
+        child.Initialize();
     }
 
     /// <summary>
@@ -199,6 +200,9 @@ public partial class UIElementGroup : UIView
 
     #region Update UpdateStatus Draw
 
+    /// <summary>
+    /// 更新当前容器，并向下分发子元素更新。
+    /// </summary>
     public override void HandleUpdate(GameTime gameTime)
     {
         base.HandleUpdate(gameTime);
@@ -213,6 +217,9 @@ public partial class UIElementGroup : UIView
         foreach (var child in ElementsCache) child.HandleUpdate(gameTime);
     }
 
+    /// <summary>
+    /// 更新当前容器状态，并向下分发子元素状态更新。
+    /// </summary>
     public override void HandleUpdateStatus(GameTime gameTime)
     {
         base.HandleUpdateStatus(gameTime);
@@ -230,6 +237,9 @@ public partial class UIElementGroup : UIView
         }
     }
 
+    /// <summary>
+    /// 绘制当前容器，并按当前配置绘制子元素。
+    /// </summary>
     public override void HandleDraw(GameTime gameTime, SpriteBatch spriteBatch)
     {
         base.HandleDraw(gameTime, spriteBatch);
@@ -269,87 +279,99 @@ public partial class UIElementGroup : UIView
     /// <summary>
     /// 绘制子元素，按配置启用裁剪与可选独立渲染目标。
     /// </summary>
-    public virtual void DrawChildren(GameTime gameTime, SpriteBatch spriteBatch)
+    public virtual void DrawChildren(GameTime gameTime, SpriteBatch sb)
     {
-        if (OverflowHidden)
+        if (!OverflowHidden)
         {
-            // 进入裁剪分支前先结束当前批次，后续会切换裁剪状态或渲染目标。
-            spriteBatch.End();
-
-            var device = spriteBatch.GraphicsDevice;
-            var originalScissor = device.ScissorRectangle;
-            var scissorRectangle = GetClippingRectangle(spriteBatch);
-
-            if (IndependentRenderTarget && scissorRectangle.Width > 0 && scissorRectangle.Height > 0)
+            foreach (var child in ElementsInOrder)
             {
-                // 在独立 RenderTarget 中完成裁剪绘制，再回贴到主目标。
-                var renderTargetPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
-                var renderTarget = renderTargetPool.Rent(scissorRectangle.Width, scissorRectangle.Height);
+                child.HandleDraw(gameTime, sb);
+            }
+            return;
+        }
 
-                RuntimeSafeHelper.SafeInvoke(() =>
+        // 进入裁剪分支前先结束当前批次，后续会切换裁剪状态或渲染目标。
+        sb.End();
+
+        var device = sb.GraphicsDevice;
+        var originalScissor = device.ScissorRectangle;
+        var scissorRectangle = GetClippingRectangle(sb);
+
+        if (IndependentRenderTarget && scissorRectangle.Width > 0 && scissorRectangle.Height > 0)
+        {
+            // 在独立 RenderTarget 中完成裁剪绘制，再回贴到主目标。
+            var rtPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
+            var renderTarget = rtPool.Rent(scissorRectangle.Width, scissorRectangle.Height);
+
+            // 临时替换渲染目标与视口，结束后必须完整恢复图形状态。
+            var bindings = device.GetRenderTargets();
+            var viewport = device.Viewport;
+
+            try
+            {
+                device.SetRenderTarget(renderTarget);
+                device.Clear(Color.Transparent);
+
+                device.Viewport = device.Viewport.WithXy(-scissorRectangle.X, -scissorRectangle.Y)
+                    .IncreaseSize(scissorRectangle.X, scissorRectangle.Y);
+                device.ScissorRectangle = new Rectangle(0, 0, scissorRectangle.Width, scissorRectangle.Height);
+
+                sb.Begin(SpriteSortMode.Deferred, null, null, null,
+                    SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
+
+                // 先做一层粗略裁剪：仅绘制与容器 InnerBounds 相交的子元素，减少无效绘制。
+                foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
                 {
-                    // 临时替换渲染目标与视口，结束后必须完整恢复图形状态。
-                    var binding = device.GetRenderTargets();
-                    var viewport = device.Viewport;
+                    child.HandleDraw(gameTime, sb);
+                }
 
-                    device.SetRenderTarget(renderTarget);
-                    device.Clear(Color.Transparent);
-
-                    device.Viewport = device.Viewport.WithXy(-scissorRectangle.X, -scissorRectangle.Y)
-                        .IncreaseSize(scissorRectangle.X, scissorRectangle.Y);
-                    device.ScissorRectangle = new Rectangle(0, 0, scissorRectangle.Width, scissorRectangle.Height);
-
-                    spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
-                        SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
-
-                    // 先做一层粗略裁剪：仅绘制与容器 InnerBounds 相交的子元素，减少无效绘制。
-                    foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
-                    {
-                        child.HandleDraw(gameTime, spriteBatch);
-                    }
-
-                    spriteBatch.End();
-
-                    device.RestoreRenderTargets(binding);
-                    device.Viewport = viewport;
-                    device.ScissorRectangle = originalScissor;
-
-                    // 将离屏结果绘制回主目标后，恢复正常批次继续后续绘制流程。
-                    DrawRenderTarget(spriteBatch, renderTarget, scissorRectangle.Position);
-                    spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
-                        SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
-                });
-
-                renderTargetPool.Return(renderTarget);
-
-                return;
+                sb.End();
             }
-
-            // 不启用独立 RenderTarget 时，直接使用设备裁剪矩形进行绘制。
-            device.ScissorRectangle = scissorRectangle;
-            spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
-                SilkyUI.TransformMatrix);
-
-            foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
+            finally
             {
-                child.HandleDraw(gameTime, spriteBatch);
+                device.RestoreRenderTargets(bindings);
+                device.Viewport = viewport;
+                device.ScissorRectangle = originalScissor;
+
+                try
+                {
+                    // 将离屏结果绘制回主目标后，恢复正常批次继续后续绘制流程。
+                    DrawRenderTarget(sb, renderTarget, scissorRectangle.Position);
+                    sb.Begin(SpriteSortMode.Deferred, null, null, null,
+                        SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
+                }
+                finally
+                {
+                    rtPool.Return(renderTarget);
+                }
             }
-
-            spriteBatch.End();
-
-            device.ScissorRectangle = originalScissor;
-            spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
-                SilkyUI.TransformMatrix);
 
             return;
         }
 
-        foreach (var child in ElementsInOrder)
+        // 不启用独立 RenderTarget 时，直接使用设备裁剪矩形进行绘制。
+        device.ScissorRectangle = scissorRectangle;
+        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
+            SilkyUI.TransformMatrix);
+
+        foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
         {
-            child.HandleDraw(gameTime, spriteBatch);
+            child.HandleDraw(gameTime, sb);
         }
+
+        sb.End();
+
+        device.ScissorRectangle = originalScissor;
+        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
+            SilkyUI.TransformMatrix);
     }
 
+    /// <summary>
+    /// 将独立 RenderTarget 的内容绘制回主目标。
+    /// </summary>
+    /// <param name="spriteBatch">当前绘制批次。</param>
+    /// <param name="renderTarget">待回贴的离屏纹理。</param>
+    /// <param name="position">回贴到主目标时的左上角位置。</param>
     protected virtual void DrawRenderTarget(SpriteBatch spriteBatch, RenderTarget2D renderTarget, Vector2 position)
     {
         var scale = Main.UIScale;
@@ -382,10 +404,9 @@ public partial class UIElementGroup : UIView
     public IReadOnlyList<UIView> InFlowChildren => InFlowElements;
 
     /// <summary>
-    /// 在 <see cref="MeasureChildren"/> 首行调用，按 <see cref="PositioningExtensions.IsOutOfFlow"/> 对当前帧有效子元素分组。<br/>
-    /// 实际用于更新和绘制的元素存于 <see cref="ElementsCache"/>。<br/>
-    /// 参与布局流计算的元素存于 <see cref="InFlowChildren"/>。<br/>
-    /// 脱离布局流的元素存于 <see cref="OutOfFlowChildren"/>。
+    /// 建议在 <see cref="MeasureChildren"/> 开始处调用，重建当前帧子元素分类缓存。
+    /// 有效元素写入 <see cref="ElementsCache"/>，再按 <see cref="PositioningExtensions.IsOutOfFlow"/>
+    /// 分入 <see cref="InFlowElements"/> 与 <see cref="OutOfFlowElements"/>。
     /// </summary>
     protected virtual void ClassifyChildren()
     {
@@ -415,7 +436,7 @@ public partial class UIElementGroup : UIView
     {
         if (DisableMouseInteraction) return null;
 
-        // 开启溢出隐藏后, 需要先检查自身是否包含点
+        // 开启溢出隐藏后，先检查鼠标点是否位于当前容器可命中区域。
         if (OverflowHidden)
         {
             if (!ContainsPoint(mousePosition)) return null;
@@ -426,21 +447,21 @@ public partial class UIElementGroup : UIView
                 if (target != null) return target;
             }
 
-            // 所有子元素都不符合条件, 如果自身不忽略鼠标交互, 则返回自己
+            // 子元素均未命中时，若当前元素可交互则返回自身。
             return IgnoreMouseInteraction ? null : this;
         }
 
-        // 没有开启溢出隐藏, 直接检查所有有效子元素
+        // 未开启溢出隐藏时，直接按绘制顺序逆序检测子元素命中。
         foreach (var child in ElementsInOrder.Reverse<UIView>())
         {
             var target = child.GetElementAt(mousePosition);
             if (target != null) return target;
         }
 
-        // 忽略鼠标交互
+        // 当前元素忽略鼠标交互时直接返回 null。
         if (IgnoreMouseInteraction) return null;
 
-        // 元素包含点
+        // 子元素未命中时，命中当前元素则返回自身。
         return ContainsPoint(mousePosition) ? this : null;
     }
 

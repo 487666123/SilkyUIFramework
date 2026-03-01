@@ -30,7 +30,7 @@ internal class UIHookInstaller : ILoadable
 
             c.EmitDelegate(() =>
             {
-                RuntimeSafeHelper.SafeInvoke(static delegate { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); });
+                try { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); } catch { }
             });
         };
 

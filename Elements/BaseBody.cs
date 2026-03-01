@@ -26,7 +26,6 @@ public abstract partial class BaseBody : UIElementGroup
         FlexDirection = FlexDirection.Column;
         MainAlignment = MainAlignment.Start;
         FlexWrap = false;
-        FinallyDrawBorder = true;
     }
 
     protected override void UpdateStatus(GameTime gameTime)

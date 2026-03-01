@@ -60,10 +60,7 @@ public class UITextView : UIView
             if (MaximumCharacters > 0 && value.Length > MaximumCharacters) value = value[..MaximumCharacters];
 
             var changingEventArgs = new ContentChangingEventArgs(value, field);
-            RuntimeSafeHelper.SafeInvoke(ContentChanging, action =>
-            {
-                changingEventArgs.NewText = value = action(this, changingEventArgs);
-            });
+            ContentChanging?.Invoke(this, changingEventArgs);
 
             value = OnContentChanging(value, field);
 
@@ -73,7 +70,7 @@ public class UITextView : UIView
             MarkLayoutDirty();
 
             var changedEventArgs = new ContentChangedEventArgs(field);
-            RuntimeSafeHelper.SafeInvoke(ContentChanged, action => action(this, changedEventArgs));
+            ContentChanged?.Invoke(this, changedEventArgs);
             OnContentChanged(field);
         }
     } = string.Empty;
@@ -135,13 +132,13 @@ public class UITextView : UIView
 
     public override void Measure(float width, float height)
     {
-        UpdaetWidthConstraints(width);
+        UpdateWidthConstraints(width);
         UpdateHeightConstraints(height);
 
         if (FitWidth)
         {
-            RecalculateString(MaxInnerWidth);
-            SetInnerBoundsWidthRaw(MathHelper.Clamp(TextSize.X * TextScale, MinInnerWidth, MaxInnerWidth));
+            RecalculateString(WidthMertrics.MinInner);
+            SetInnerBoundsWidthRaw(WidthMertrics.ClampInner(TextSize.X * TextScale));
         }
         else
         {
@@ -151,7 +148,7 @@ public class UITextView : UIView
 
         if (FitHeight)
         {
-            SetInnerBoundsHeightRaw(MathHelper.Clamp(TextSize.Y * TextScale, MinInnerHeight, MaxInnerHeight));
+            SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(TextSize.Y * TextScale));
         }
         else UpdateBoundsHeight(height);
     }
@@ -160,7 +157,7 @@ public class UITextView : UIView
     {
         RecalculateString(InnerBounds.Width);
 
-        if (FitHeight) SetInnerBoundsHeightRaw(MathHelper.Clamp(TextSize.Y * TextScale, MinInnerHeight, MaxInnerHeight));
+        if (FitHeight) SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(TextSize.Y * TextScale));
     }
 
     protected virtual void RecalculateString(float maxWidth)
