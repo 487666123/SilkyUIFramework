@@ -17,28 +17,54 @@ internal static class ServiceProviderBuilder
     public static IServiceProvider BuildServiceProvider(IEnumerable<Type[]> allTypes)
     {
         var services = new ServiceCollection();
+        RegisterCoreServices(services);
+        RegisterAllTypeGroups(services, allTypes);
+
+        return services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// 注册框架构建服务提供器所需的核心单例。
+    /// </summary>
+    private static void RegisterCoreServices(IServiceCollection services)
+    {
         services.AddSingleton(_ => SilkyUIFramework.Instance.Logger);
         services.AddSingleton(_ => SilkyUISystem.Instance);
+    }
 
+    /// <summary>
+    /// 扫描并注册所有类型分组中的服务与 UI Body。
+    /// </summary>
+    private static void RegisterAllTypeGroups(IServiceCollection services, IEnumerable<Type[]> allTypes)
+    {
         foreach (var types in allTypes)
         {
             RegisterAttributedServices(services, types);
+            RegisterBodies(services, types);
+        }
+    }
 
-            foreach (var type in types.Where(type => type.IsSubclassOf(typeof(BaseBody))))
+    /// <summary>
+    /// 注册带 UI 特性的 <see cref="BaseBody"/>。
+    /// </summary>
+    private static void RegisterBodies(IServiceCollection services, Type[] types)
+    {
+        var bodyType = typeof(BaseBody);
+        var registerType = typeof(RegisterUIAttribute);
+        var registerGlobalType = typeof(RegisterGlobalUIAttribute);
+
+        foreach (var type in types.Where(type => type.IsSubclassOf(bodyType)))
+        {
+            if (type.IsDefined(registerType))
             {
-                if (type.IsDefined(typeof(RegisterUIAttribute)))
-                {
-                    Register(services, ServiceLifetime.Transient, type);
-                }
+                Register(services, ServiceLifetime.Transient, type);
+            }
 
-                if (type.IsDefined(typeof(RegisterGlobalUIAttribute)))
-                {
-                    Register(services, ServiceLifetime.Singleton, type);
-                }
+            if (type.IsDefined(registerGlobalType))
+            {
+                Register(services, ServiceLifetime.Singleton, type);
             }
         }
-
-        return services.BuildServiceProvider();
     }
 
     /// <summary>
