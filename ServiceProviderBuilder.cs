@@ -18,7 +18,11 @@ internal static class ServiceProviderBuilder
     {
         var services = new ServiceCollection();
         RegisterCoreServices(services);
-        RegisterAllTypeGroups(services, allTypes);
+
+        foreach (var registration in ScanRegistrations(allTypes))
+        {
+            Register(services, registration);
+        }
 
         return services.BuildServiceProvider();
     }
@@ -33,82 +37,101 @@ internal static class ServiceProviderBuilder
     }
 
     /// <summary>
-    /// 扫描并注册所有类型分组中的服务与 UI Body。
+    /// 扫描并生成所有类型分组中的注册信息。
     /// </summary>
-    private static void RegisterAllTypeGroups(IServiceCollection services, IEnumerable<Type[]> allTypes)
-    {
-        foreach (var types in allTypes)
-        {
-            RegisterAttributedServices(services, types);
-            RegisterBodies(services, types);
-        }
-    }
-
-    /// <summary>
-    /// 注册带 UI 特性的 <see cref="BaseBody"/>。
-    /// </summary>
-    private static void RegisterBodies(IServiceCollection services, Type[] types)
+    private static IEnumerable<RegistrationInfo> ScanRegistrations(IEnumerable<Type[]> allTypes)
     {
         var bodyType = typeof(BaseBody);
-        var registerType = typeof(RegisterUIAttribute);
-        var registerGlobalType = typeof(RegisterGlobalUIAttribute);
 
-        foreach (var type in types.Where(type => type.IsSubclassOf(bodyType)))
+        foreach (var types in allTypes)
         {
-            if (type.IsDefined(registerType))
+            foreach (var type in types)
             {
-                Register(services, ServiceLifetime.Transient, type);
-            }
+                // 继承 BaseBody 时，永不进入 Service 特性分支
+                if (type.IsSubclassOf(bodyType))
+                {
+                    if (type.IsDefined(typeof(RegisterUIAttribute)))
+                    {
+                        yield return new RegistrationInfo(type, ServiceLifetime.Transient);
+                    }
+                    else if (type.IsDefined(typeof(RegisterGlobalUIAttribute)))
+                    {
+                        yield return new RegistrationInfo(type, ServiceLifetime.Singleton);
+                    }
 
-            if (type.IsDefined(registerGlobalType))
-            {
-                Register(services, ServiceLifetime.Singleton, type);
+                    continue;
+                }
+
+                if (type.GetCustomAttribute<ServiceAttribute>() is { } serviceAttr)
+                {
+                    yield return new RegistrationInfo(type, serviceAttr.Lifetime);
+                }
             }
         }
     }
 
     /// <summary>
-    /// 注册所有带 <see cref="ServiceAttribute"/> 的类型。
+    /// 按注册信息分发实现类型注册与接口映射注册。
     /// </summary>
-    private static void RegisterAttributedServices(IServiceCollection services, Type[] types)
+    private static void Register(IServiceCollection services, RegistrationInfo registration)
     {
-        foreach (var (type, attr) in CollectServices(types))
-        {
-            Register(services, attr.Lifetime, type);
-        }
+        RegisterImplementation(services, registration.Lifetime, registration.Implementation);
+        RegisterInterfaceMappings(services, registration.Lifetime, registration.Implementation);
     }
 
     /// <summary>
-    /// 从类型数组中筛出带 <see cref="ServiceAttribute"/> 的类型及其特性实例。
+    /// 仅注册实现类型本身。
     /// </summary>
-    private static IEnumerable<(Type, ServiceAttribute)> CollectServices(Type[] types)
-        => types.Select(t => (t, t.GetCustomAttribute<ServiceAttribute>())).Where(p => p.Item2 != null);
-
-    /// <summary>
-    /// 按生命周期注册实现类型，并将其已实现接口映射到同一实例解析链。
-    /// </summary>
-    /// <param name="services">服务集合。</param>
-    /// <param name="lifetime">注册生命周期。</param>
-    /// <param name="impl">实现类型。</param>
-    private static void Register(IServiceCollection services, ServiceLifetime lifetime, Type impl)
+    private static void RegisterImplementation(
+        IServiceCollection services, ServiceLifetime lifetime, Type implementation)
     {
-        var interfaces = impl.GetInterfaces();
         switch (lifetime)
         {
             case ServiceLifetime.Singleton:
             {
-                services.AddSingleton(impl);
-                foreach (var iface in interfaces)
-                    services.AddSingleton(iface, sp => sp.GetRequiredService(impl));
+                services.AddSingleton(implementation);
                 break;
             }
             case ServiceLifetime.Transient:
             {
-                services.AddTransient(impl);
-                foreach (var iface in interfaces)
-                    services.AddTransient(iface, sp => sp.GetRequiredService(impl));
+                services.AddTransient(implementation);
                 break;
             }
         }
     }
+
+    /// <summary>
+    /// 将实现类型的所有接口映射到同一实例解析链。
+    /// </summary>
+    private static void RegisterInterfaceMappings(
+        IServiceCollection services, ServiceLifetime lifetime, Type implementation)
+    {
+        foreach (var iface in implementation.GetInterfaces())
+        {
+            RegisterInterfaceMapping(services, lifetime, iface, implementation);
+        }
+    }
+
+    /// <summary>
+    /// 注册单个接口到实现类型的映射。
+    /// </summary>
+    private static void RegisterInterfaceMapping(
+        IServiceCollection services, ServiceLifetime lifetime, Type interfaceType, Type implementation)
+    {
+        switch (lifetime)
+        {
+            case ServiceLifetime.Singleton:
+            {
+                services.AddSingleton(interfaceType, sp => sp.GetRequiredService(implementation));
+                break;
+            }
+            case ServiceLifetime.Transient:
+            {
+                services.AddTransient(interfaceType, sp => sp.GetRequiredService(implementation));
+                break;
+            }
+        }
+    }
+
+    private readonly record struct RegistrationInfo(Type Implementation, ServiceLifetime Lifetime);
 }
