@@ -170,21 +170,22 @@ public partial class UIView
     #endregion
 
     /// <summary>
-    /// 返回当前元素可提供给子元素的可用空间。
-    /// 当轴处于 Fit 模式时，返回 0，表示该轴尺寸由内容反推。
+    /// 获取当前元素布局测量所用的可用尺寸。
+    /// 根节点使用屏幕可用空间；Fit 维度返回 0，由内容反向决定。
     /// </summary>
-    protected Size GetInnerSpace() => new(FitWidth ? 0f : InnerBounds.Width, FitHeight ? 0f : InnerBounds.Height);
-
-    /// <summary>
-    /// 获取父容器可用空间；根节点退化为屏幕可用空间。
-    /// </summary>
-    protected Size GetParentInnerSpace() => Parent?.GetInnerSpace() ?? GraphicsDeviceHelper.GetBackBufferSizeByUIScale();
+    protected Size GetAvailableSize()
+    {
+        var parent = Parent;
+        if (parent == null)
+            return GraphicsDeviceHelper.GetBackBufferSizeByUIScale();
+        return new Size(parent.FitWidth ? 0f : parent.InnerBounds.Width, parent.FitHeight ? 0f : parent.InnerBounds.Height);
+    }
 
     public virtual void UpdateLayout()
     {
         if (!LayoutIsDirty) return;
 
-        var availableSize = GetParentInnerSpace();
+        var availableSize = GetAvailableSize();
         Measure(availableSize.Width, availableSize.Height);
         RecalculateHeight();
         CleanupDirtyMark();

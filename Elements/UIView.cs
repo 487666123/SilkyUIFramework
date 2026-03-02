@@ -45,9 +45,8 @@ public partial class UIView
         LayoutIsDirty = true;
         MarkPositionDirty();
 
-        // 如果元素是自由定位的，则不需要通知父元素
         if (Positioning.IsOutOfFlow) return;
-        Parent?.NotifyParentChildDirty();
+        Parent?.MarkLayoutDirty();
     }
 
     /// <summary>
@@ -78,7 +77,7 @@ public partial class UIView
     /// </summary>
     public bool IsInsideTree => SilkyUI != null;
 
-    public UIElementGroup Parent { get; protected internal set; }
+    public UIElementGroup Parent { get; internal set; }
 
     public virtual void RemoveFromParent() => Parent?.RemoveChild(this);
 
@@ -143,14 +142,14 @@ public partial class UIView
         set
         {
             if (field == value) return;
-            var isFree = field.IsOutOfFlow == value.IsOutOfFlow;
-
+            if (field.IsOutOfFlow == value.IsOutOfFlow)
+            {
+                field = value;
+                MarkPositionDirty();
+                return;
+            }
             field = value;
-            MarkPositionDirty();
-
-            if (isFree) return;
-            LayoutIsDirty = true;
-            Parent?.NotifyParentChildDirty();
+            MarkLayoutDirty();
         }
     }
 
