@@ -16,12 +16,20 @@ public class SilkyUIRenderSystem(SilkyUIRegistrar silkyUIRegistrar)
         _gameGroups = games.AsReadOnly();
     }
 
-    public void ReloadGameGroups()
+    public void Clear()
     {
-        foreach (var (layerNode, group) in _gameGroups)
+        foreach (var (_, group) in _gameGroups)
         {
             group.Clear();
+        }
+    }
 
+    public void ReloadGameGroups()
+    {
+        Clear();
+
+        foreach (var (layerNode, group) in _gameGroups)
+        {
             if (!_silkyUIRegistrar.BodyTypesForGameUI.TryGetValue(layerNode, out var types)) continue;
 
             foreach (var type in types)

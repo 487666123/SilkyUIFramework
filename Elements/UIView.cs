@@ -60,16 +60,28 @@ public partial class UIView
 
     public UIElementGroup GetAncestor()
     {
-        if (Parent == null) return null;
+        var node = Parent;
+        if (node == null) return null;
 
-        var ancestor = Parent;
-
-        while (ancestor.Parent != null)
+        while (node.Parent != null)
         {
-            ancestor = ancestor.Parent;
+            node = node.Parent;
         }
 
-        return ancestor;
+        return node;
+    }
+
+    public T GetAncestor<T>() where T : UIElementGroup
+    {
+        var node = Parent;
+
+        while (node != null)
+        {
+            if (node is T t) return t;
+            node = node.Parent;
+        }
+
+        return null;
     }
 
     /// <summary>

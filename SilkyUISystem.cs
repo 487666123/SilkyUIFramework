@@ -37,6 +37,11 @@ public partial class SilkyUISystem : ModSystem
 
     public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers) =>
         SilkyUIManager.ModifyInterfaceLayers(layers);
+
+    public override void PreSaveAndQuit()
+    {
+
+    }
 }
 
 public class SilkyUIPlayer : ModPlayer
