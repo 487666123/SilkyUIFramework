@@ -178,6 +178,9 @@ public partial class UIView
         var parent = Parent;
         if (parent == null)
             return GraphicsDeviceHelper.GetBackBufferSizeByUIScale();
+
+        if (Positioning.IsOutOfFlow)
+            return parent.InnerBounds.Size;
         return new Size(parent.FitWidth ? 0f : parent.InnerBounds.Width, parent.FitHeight ? 0f : parent.InnerBounds.Height);
     }
 
