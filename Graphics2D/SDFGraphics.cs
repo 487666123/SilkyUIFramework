@@ -45,11 +45,11 @@ public static class SDFGraphics
     }
 
     /// 绘制叉号
-    public static void HasBorderCross(Vector2 position, float size, float borderRadius, Color backgroundColor,
+    public static void HasBorderCross(Vector2 position, Vector2 size, float borderRadius, Color backgroundColor,
         float border, Color borderColor, Matrix matrix)
     {
         var effect = PrepareEffect(matrix);
-        effect.Parameters["uSizeOver2"].SetValue(new Vector2(size) / 2f);
+        effect.Parameters["uSizeOver2"].SetValue(size / 2f);
         effect.Parameters["uBorder"].SetValue(border);
         effect.Parameters["uRound"].SetValue(borderRadius);
         effect.Parameters["uBorderColor"].SetValue(borderColor.ToVector4());
@@ -57,7 +57,7 @@ public static class SDFGraphics
         const float root2Over2 = 1.414213562373f / 2f;
         effect.Parameters["uSmoothstepRange"].SetValue(new Vector2(-root2Over2, root2Over2) / Main.UIScale);
         effect.CurrentTechnique.Passes["HasBorderCross"].Apply();
-        DrawRectanglePrimitives(position, new Vector2(size));
+        DrawRectanglePrimitives(position, size);
     }
 
     public static void HasBorderRound(Vector2 position, float size, Color background, float border, Color borderColor,

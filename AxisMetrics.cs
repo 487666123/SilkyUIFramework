@@ -29,27 +29,29 @@ public struct AxisMetrics
     /// 根据 BoxSizing 与边距参数，计算当前轴在声明/Inner/Outer 三套约束下的最小/最大值。
     /// </summary>
     public void UpdateConstraints(
-        Dimension minDimension, Dimension maxDimension, float availableSize,
-        BoxSizing boxSizing, float paddingSpan, float border, float marginSpan)
+        Dimension min, Dimension max, float available,
+        BoxSizing boxSizing, float padding, float border, float margin)
     {
+        var sum = padding + border * 2;
+
         switch (boxSizing)
         {
             default:
             case BoxSizing.Border:
-                Min = Math.Max(minDimension.CalculateSize(availableSize), paddingSpan + border * 2);
-                Max = Math.Max(maxDimension.CalculateSize(availableSize), paddingSpan + border * 2);
-                MinInner = Min - border * 2 - paddingSpan;
-                MaxInner = Max - border * 2 - paddingSpan;
-                MinOuter = Min + marginSpan;
-                MaxOuter = Max + marginSpan;
+                Min = min.CalculateSize(available);
+                Max = max.CalculateSize(available);
+                MinInner = Min - sum;
+                MaxInner = Max - sum;
+                MinOuter = Min + margin;
+                MaxOuter = Max + margin;
                 break;
             case BoxSizing.Content:
-                Min = minDimension.CalculateSize(availableSize);
-                Max = maxDimension.CalculateSize(availableSize);
-                MinInner = Min;
-                MaxInner = Max;
-                MinOuter = Min + border * 2 + paddingSpan + marginSpan;
-                MaxOuter = Max + border * 2 + paddingSpan + marginSpan;
+                MinInner = min.CalculateSize(available);
+                MaxInner = max.CalculateSize(available);
+                Min = MinInner + sum;
+                Max = MaxInner + sum;
+                MinOuter = Min + margin;
+                MaxOuter = Max + margin;
                 break;
         }
     }

@@ -1,9 +1,9 @@
-using Terraria.UI.Chat;
+ï»¿using Terraria.UI.Chat;
 
 namespace SilkyUIFramework;
 
 /// <summary>
-/// ÊäÈë¿ò¹â±ê
+/// è¾“å…¥æ¡†å…‰æ ‡
 /// </summary>
 public class CursorSnippet(SUIEditText editText) : TextSnippet(" ")
 {
@@ -11,18 +11,18 @@ public class CursorSnippet(SUIEditText editText) : TextSnippet(" ")
     public DynamicSpriteFont Font { get; set; }
 
     /// <summary>
-    /// ÌØÊâÊÊÅä¸ß¶È£¬ÎÒÒ²²»ÏëÕâÃ´Ð´£¬µ«ÊÇÕâ¸öµ×²ã¼Ü¹¹ÎÒ»¹ÄÜÔõÃ´°ì£¬°¡°¡°¡°¡°¡°¡°¡°¡°¡
+    /// ç‰¹æ®Šé€‚é…é«˜åº¦ï¼Œæˆ‘ä¹Ÿä¸æƒ³è¿™ä¹ˆå†™ï¼Œä½†æ˜¯è¿™ä¸ªåº•å±‚æž¶æž„æˆ‘è¿˜èƒ½æ€Žä¹ˆåŠžï¼Œå•Šå•Šå•Šå•Šå•Šå•Šå•Šå•Šå•Š
     /// </summary>
     public float TrueHeight { get; set; }
 
-    // ¿í¶È¼ÆËã
+    // å®½åº¦è®¡ç®—
     public override float GetStringLength(DynamicSpriteFont font) => 0f;
 
-    // Ô­°æµÄ Snippet Ê¹ÓÃ Draw ·½·¨À´¼ÆËã´óÐ¡
-    // ÓÃÒ»¸ö bool justCheckingString ²ÎÊýÀ´Çø·ÖÊÇÔÚ¼ÆËã»¹ÊÇÔÚ»æÖÆ
-    // Èç¹ûÄãÖ»ÊÇÔÚ¼ÆËã´óÐ¡, Ò²ÐèÒª´«ÈëÒ»¶ÑÎÞ¹ØµÄ»æÖÆ²ÎÊý
-    // ÄãÒ²Ðí»áÏëÕâ¶Ñ²ÎÊý»òÐí»áÓ°Ïì¼ÆËã½á¹û£¿Êµ¼ÊËûÃÇ×Ô¼º²¢Ã»ÓÐÕâ×ö¹ý
-    // ²¢ÇÒÈç¹ûÕæÈÃ»æÖÆ²ÎÊýÀ´Ó°Ïì¼ÆËã½á¹û, ÄÇÒ²ÊÇÒ»¸öºÜ²îµÄÊµ¼ù, ËùÒÔËûÃÇ²»¸ÃÕâÑù×ö, Ò²²»¸ÃÈÃÎÒÃÇ¿¼ÂÇÕâ¼þÊÂ
+    // åŽŸç‰ˆçš„ Snippet ä½¿ç”¨ Draw æ–¹æ³•æ¥è®¡ç®—å¤§å°
+    // ç”¨ä¸€ä¸ª bool justCheckingString å‚æ•°æ¥åŒºåˆ†æ˜¯åœ¨è®¡ç®—è¿˜æ˜¯åœ¨ç»˜åˆ¶
+    // å¦‚æžœä½ åªæ˜¯åœ¨è®¡ç®—å¤§å°, ä¹Ÿéœ€è¦ä¼ å…¥ä¸€å †æ— å…³çš„ç»˜åˆ¶å‚æ•°
+    // ä½ ä¹Ÿè®¸ä¼šæƒ³è¿™å †å‚æ•°æˆ–è®¸ä¼šå½±å“è®¡ç®—ç»“æžœï¼Ÿå®žé™…ä»–ä»¬è‡ªå·±å¹¶æ²¡æœ‰è¿™åšè¿‡
+    // å¹¶ä¸”å¦‚æžœçœŸè®©ç»˜åˆ¶å‚æ•°æ¥å½±å“è®¡ç®—ç»“æžœ, é‚£ä¹Ÿæ˜¯ä¸€ä¸ªå¾ˆå·®çš„å®žè·µ, æ‰€ä»¥ä»–ä»¬ä¸è¯¥è¿™æ ·åš, ä¹Ÿä¸è¯¥è®©æˆ‘ä»¬è€ƒè™‘è¿™ä»¶äº‹
     public override bool UniqueDraw(bool justCheckingString,
         out Vector2 size, SpriteBatch spriteBatch, Vector2 position = default, Color color = default, float scale = 1)
     {
