@@ -116,6 +116,8 @@ public class UITextView : UIView
     public Vector2 TextAlign { get; set; } = Vector2.Zero;
     public bool IgnoreTextColor { get; set; } = false;
 
+    public float TextRotation { get; set; }
+
     #endregion
 
     protected readonly List<TextSnippet> IntermediateSnippets = [];
@@ -191,11 +193,12 @@ public class UITextView : UIView
         var textSize = TextSize * TextScale;
 
         var textPosition = InnerBounds.Position + TextOffset + TextPercentOffset * innerSize
-            + TextAlign * (innerSize - textSize) - TextPercentOrigin * textSize;
+            + TextAlign * (innerSize - textSize);
+        var textOrigin = TextPercentOrigin * textSize;
         textPosition.Y += TextScale * GetFontOffset();
 
-        SnippetModule.DrawTextShadow(spriteBatch, Font, textPosition, TextBorderColor, 0f, Vector2.Zero, new(TextScale), TextBorder);
-        SnippetModule.DrawText(spriteBatch, Font, textPosition, TextColor, 0f, Vector2.Zero, new(TextScale), out var snippet, IgnoreTextColor);
+        SnippetModule.DrawTextShadow(spriteBatch, Font, textPosition, TextBorderColor, TextRotation, textOrigin, new(TextScale), TextBorder);
+        SnippetModule.DrawText(spriteBatch, Font, textPosition, TextColor, TextRotation, textOrigin, new(TextScale), out var snippet, IgnoreTextColor);
         snippet?.OnHover();
     }
 
