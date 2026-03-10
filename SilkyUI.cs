@@ -36,6 +36,7 @@ public class SilkyUI
 
         RootNode?.HandleExitTree();
         RootNode = baseBody;
+        RootNode.Initialize();
         RootNode?.HandleEnterTree(this);
     }
 

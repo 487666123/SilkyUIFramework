@@ -1,5 +1,3 @@
-global using SilkyUIFramework;
-
 namespace SilkyUIFramework;
 
 public enum MouseButtonType : int
