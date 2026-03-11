@@ -28,9 +28,9 @@ public class SilkyUIManager(IServiceProvider provider, SilkyUIRenderSystem rende
 
     public void HandleIME() => _inputState.HandleIME();
 
-    public void Draw(GameTime gameTime)
+    public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
-        _renderSystem.Draw(gameTime);
+        _renderSystem.Draw(gameTime, spriteBatch);
         _inputState.HandleInput(Main.spriteBatch);
     }
 

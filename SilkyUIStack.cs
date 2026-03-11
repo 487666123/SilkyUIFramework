@@ -2,12 +2,12 @@
 
 [Service(ServiceLifetime.Transient)]
 /// <summary>
-/// 管理当前模组注册的全部 <see cref="SilkyUI"/>，并负责排序、更新与绘制分发。
+/// 管理当前模组注册的全部 <see cref="SilkyUI"/>，并负责排序、置顶与命中测试。
 /// </summary>
 public class SilkyUIStack
 {
     /// <summary>
-    /// UI 栈中的原始元素。每次排序后会回写，保证后续操作基于最新层级顺序。
+    /// UI 栈中的原始元素顺序。
     /// </summary>
     private readonly List<SilkyUI> _stackItems = [];
 
@@ -17,14 +17,30 @@ public class SilkyUIStack
     private readonly List<SilkyUI> _orderedStackItems = [];
 
     /// <summary>
+    /// 指示当前排序缓存是否需要刷新。
+    /// </summary>
+    private bool _isOrderDirty;
+
+    /// <summary>
     /// 当前排序结果只读视图。
     /// </summary>
-    public IReadOnlyList<SilkyUI> OrderedUIs => _orderedStackItems;
+    public IReadOnlyList<SilkyUI> OrderedUIs
+    {
+        get
+        {
+            EnsureOrdered();
+            return _orderedStackItems;
+        }
+    }
 
     /// <summary>
     /// 将一个 UI 压入栈尾。
     /// </summary>
-    public void Push(SilkyUI ui) => _stackItems.Add(ui);
+    public void Push(SilkyUI ui)
+    {
+        _stackItems.Add(ui);
+        _isOrderDirty = true;
+    }
 
     /// <summary>
     /// 清空全部 UI，并先断开其 Body 引用。
@@ -38,6 +54,7 @@ public class SilkyUIStack
 
         _stackItems.Clear();
         _orderedStackItems.Clear();
+        _isOrderDirty = false;
     }
 
     /// <summary>
@@ -48,42 +65,43 @@ public class SilkyUIStack
         if (_stackItems.Remove(ui))
         {
             _stackItems.Insert(0, ui);
+            _isOrderDirty = true;
         }
     }
 
     /// <summary>
-    /// 按优先级重排 UI（高优先级在前），并将结果回写到原始集合。
+    /// 在需要时按优先级重排 UI（高优先级在前）。
     /// </summary>
-    private void RefreshOrder()
+    private void EnsureOrdered()
     {
+        if (!_isOrderDirty) return;
+
         _orderedStackItems.Clear();
         _orderedStackItems.AddRange(_stackItems.OrderByDescending(value => value.Priority));
-
-        _stackItems.Clear();
-        _stackItems.AddRange(_orderedStackItems);
+        _isOrderDirty = false;
     }
 
     /// <summary>
     /// 从前到后查找当前鼠标悬停命中的 UI 与元素。
     /// </summary>
-    public void GetHoverTarget(out SilkyUI silkyUI, out UIView element)
+    public bool TryGetHoverTarget(out SilkyUI silkyUI, out UIView element)
     {
-        RefreshOrder();
+        EnsureOrdered();
 
-        foreach (var ui in OrderedUIs)
+        foreach (var ui in _orderedStackItems)
         {
             var target = ui.GetHoverElement();
             if (target != null)
             {
                 silkyUI = ui;
                 element = target;
-                return;
+                return true;
             }
         }
 
         silkyUI = null;
         element = null;
-        return;
+        return false;
     }
 
     /// <summary>
@@ -91,50 +109,11 @@ public class SilkyUIStack
     /// </summary>
     public void Update(GameTime gameTime)
     {
+        EnsureOrdered();
+
         foreach (var ui in _orderedStackItems.Where(ui => ui != null))
         {
             ui.Update(gameTime);
-        }
-    }
-
-    /// <summary>
-    /// 将普通 UI 图层插入 Terraria 接口层列表。
-    /// </summary>
-    public void ModifyInterfaceLayers(List<GameInterfaceLayer> layers, int index)
-    {
-        RefreshOrder();
-
-        foreach (var silkyUI in _orderedStackItems)
-        {
-            if (silkyUI.RootNode.GetType().GetCustomAttribute<RegisterUIAttribute>() is not { } registerUI) continue;
-
-            var silkyUILayer = new SilkyUILayer(silkyUI, registerUI.Name, registerUI.InterfaceScaleType);
-
-            layers.Insert(index + 1, silkyUILayer);
-        }
-    }
-
-    /// <summary>
-    /// 绘制标记为全局 UI 的元素，按层级从后向前回放。
-    /// </summary>
-    public void Draw(GameTime gameTime)
-    {
-        RefreshOrder();
-
-        var reversedList = new List<SilkyUI>(_orderedStackItems);
-        reversedList.Reverse();
-
-        foreach (var ui in reversedList.Where(ui => ui.RootNode.GetType().IsDefined(typeof(RegisterGlobalUIAttribute))))
-        {
-            ui.TransformMatrix = Main.UIScaleMatrix;
-
-            Main.spriteBatch.ReBegin(SpriteSortMode.Deferred,
-                null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, ui.TransformMatrix);
-
-            ui.Draw(gameTime, Main.spriteBatch);
-
-            Main.spriteBatch.ReBegin(SpriteSortMode.Deferred,
-                null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, ui.TransformMatrix);
         }
     }
 }

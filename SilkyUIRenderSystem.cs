@@ -9,7 +9,7 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
     private readonly SilkyUIRegistrar _registrar = silkyUIRegistrar;
 
     private SilkyUIStack _globalStack;
-    private Dictionary<string, SilkyUIStack> _gameStacksByLayer;
+    private Dictionary<string, SilkyUIStack> _gameStacksByLayer = [];
     private readonly List<string> _layerOrder = [];
 
     public void Initialize()
@@ -23,8 +23,6 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
             silkyUI.SetBody(_provider.GetRequiredService(type) as BaseBody);
             _globalStack.Push(silkyUI);
         }
-
-        _gameStacksByLayer = [];
 
         foreach (var (layerNode, _) in _registrar.GameUIBodyTypesByLayer)
         {
@@ -64,7 +62,27 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
         }
     }
 
-    public void Draw(GameTime gameTime) => _globalStack?.Draw(gameTime);
+    public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
+    {
+        if (_globalStack == null) return;
+
+        var orderedUIs = _globalStack.OrderedUIs;
+        for (int i = orderedUIs.Count - 1; i >= 0; i--)
+        {
+            var ui = orderedUIs[i];
+            if (!ui.RootNode.GetType().IsDefined(typeof(RegisterGlobalUIAttribute))) continue;
+
+            ui.TransformMatrix = Main.UIScaleMatrix;
+
+            spriteBatch.ReBegin(SpriteSortMode.Deferred,
+                null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, ui.TransformMatrix);
+
+            ui.Draw(gameTime, Main.spriteBatch);
+
+            spriteBatch.ReBegin(SpriteSortMode.Deferred,
+                null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, ui.TransformMatrix);
+        }
+    }
 
     public void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
     {
@@ -74,30 +92,30 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
         foreach (var (layerNode, stack) in _gameStacksByLayer)
         {
             int index = layers.FindIndex(l => l.Name.Equals(layerNode));
-            if (index >= 0) stack.ModifyInterfaceLayers(layers, index);
+            if (index < 0) continue;
+
+            foreach (var silkyUI in stack.OrderedUIs)
+            {
+                if (silkyUI.RootNode.GetType().GetCustomAttribute<RegisterUIAttribute>() is not { } registerUI) continue;
+
+                layers.Insert(index + 1, new SilkyUILayer(silkyUI, registerUI.Name, registerUI.InterfaceScaleType));
+            }
         }
     }
 
     public void GetHoverTarget(out SilkyUIStack silkyUIStack, out SilkyUI silkyUI, out UIView element)
     {
-        if (_globalStack != null)
+        if (_globalStack != null && _globalStack.TryGetHoverTarget(out silkyUI, out element))
         {
-            _globalStack.GetHoverTarget(out silkyUI, out element);
-
-            if (element != null)
-            {
-                silkyUIStack = _globalStack;
-                return;
-            }
+            silkyUIStack = _globalStack;
+            return;
         }
 
         if (!Main.gameMenu)
         {
             foreach (var stack in OrderedStacks())
             {
-                stack.GetHoverTarget(out silkyUI, out element);
-
-                if (element != null)
+                if (stack.TryGetHoverTarget(out silkyUI, out element))
                 {
                     silkyUIStack = stack;
                     return;

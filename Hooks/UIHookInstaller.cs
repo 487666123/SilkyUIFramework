@@ -1,11 +1,14 @@
-﻿using MonoMod.Cil;
+﻿using log4net;
+using MonoMod.Cil;
 
 namespace SilkyUIFramework.Hooks;
 
-internal class UIHookInstaller : ILoadable
+class UIHookInstaller : ILoadable
 {
+    static ILog _logger;
     public void Load(Mod mod)
     {
+        _logger = mod.Logger;
         On_Main.UpdateUIStates += (orig, self) =>
         {
             SilkyUISystem.Instance?.SilkyUIManager?.Update(Main.gameTimeCache);
@@ -14,42 +17,20 @@ internal class UIHookInstaller : ILoadable
 
         On_Main.DrawThickCursor += (orig, smart) =>
         {
-            SilkyUISystem.Instance?.SilkyUIManager?.Draw(Main.gameTimeCache);
+            SilkyUISystem.Instance?.SilkyUIManager?.Draw(Main.gameTimeCache, Main.spriteBatch);
             return orig(smart);
         };
 
-        //On_Main.DoDraw += (orig, self, gameTime) =>
-        //{
-        //    RuntimeSafeHelper.SafeInvoke(static delegate { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); });
-        //    orig(self, gameTime);
-        //};
-
-        IL_Main.DoDraw += (ILContext il) =>
+        IL_Main.DoDraw += static (il) =>
         {
             var c = new ILCursor(il);
 
             c.EmitDelegate(() =>
             {
-                try { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); } catch { }
+                try { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); }
+                catch (Exception ex) { _logger.Error(ex); }
             });
         };
-
-        //On_Main.DrawInterface += (orig, self, gametime) =>
-        //{
-        //    orig(self, gametime);
-        //};
-
-        //IL_Main.DrawMenu += il =>
-        //{
-        //    var c = new ILCursor(il);
-
-        //    if (!c.TryGotoNext(MoveType.Before, i => i.MatchCall<Main>(nameof(Main.DrawThickCursor)))) return;
-        //    if (!c.TryGotoPrev(MoveType.Before, i => i.MatchLdcI4(0))) return;
-
-        //    SilkyUIFramework.Instance.Logger?.Info("IL_Main.DrawMenu success!");
-
-        //    c.EmitDelegate(HandleInput);
-        //};
     }
 
     public void Unload() { }
