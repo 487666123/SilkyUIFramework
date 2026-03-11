@@ -43,15 +43,15 @@ public class SilkyUI
     }
 
     /// <summary>
-    /// 获取鼠标当前悬停的可交互元素。
+    /// 对当前 UI 树执行命中测试，返回最上层可交互元素。
     /// </summary>
-    public UIView GetHoverElement()
+    public UIView HitTest(Vector2 position)
     {
         if (RootNode is not { Enabled: true, IsInteractable: true }) return null;
 
         PlayerInputHelper.SetZoom(TransformMatrix);
 
-        return RootNode.GetElementAt(SilkyUIInputState.MousePosition);
+        return RootNode.GetElementAt(position);
     }
 
     /// <summary>

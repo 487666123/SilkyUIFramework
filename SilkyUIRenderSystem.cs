@@ -103,29 +103,44 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
         }
     }
 
-    public void GetHoverTarget(out SilkyUIStack silkyUIStack, out SilkyUI silkyUI, out UIView element)
+    public UIView HitTest(Vector2 position)
     {
-        if (_globalStack != null && _globalStack.TryGetHoverTarget(out silkyUI, out element))
+        if (_globalStack != null)
         {
-            silkyUIStack = _globalStack;
-            return;
+            var target = _globalStack.HitTest(position);
+            if (target != null) return target;
         }
 
         if (!Main.gameMenu)
         {
             foreach (var stack in OrderedStacks())
             {
-                if (stack.TryGetHoverTarget(out silkyUI, out element))
-                {
-                    silkyUIStack = stack;
-                    return;
-                }
+                var target = stack.HitTest(position);
+                if (target != null) return target;
             }
         }
 
-        silkyUIStack = null;
-        silkyUI = null;
-        element = null;
+        return null;
+    }
+
+    public void Activate(UIView element)
+    {
+        var silkyUI = element?.SilkyUI;
+        if (silkyUI == null) return;
+
+        if (_globalStack != null && ContainsUI(_globalStack, silkyUI))
+        {
+            _globalStack.BringToFront(silkyUI);
+            return;
+        }
+
+        foreach (var stack in _gameStacksByLayer.Values)
+        {
+            if (!ContainsUI(stack, silkyUI)) continue;
+
+            stack.BringToFront(silkyUI);
+            return;
+        }
     }
 
     public bool TryGetInstance<TBody>(out TBody body) where TBody : BaseBody
@@ -177,4 +192,7 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
         => _layerOrder.Select(layer => _gameStacksByLayer.TryGetValue(layer, out var v) ? v : null)
                        .Where(v => v != null)
                        .Reverse();
+
+    private static bool ContainsUI(SilkyUIStack stack, SilkyUI silkyUI)
+        => stack.OrderedUIs.Contains(silkyUI);
 }

@@ -82,26 +82,22 @@ public class SilkyUIStack
     }
 
     /// <summary>
-    /// 从前到后查找当前鼠标悬停命中的 UI 与元素。
+    /// 从前到后查找当前坐标命中的最上层元素。
     /// </summary>
-    public bool TryGetHoverTarget(out SilkyUI silkyUI, out UIView element)
+    public UIView HitTest(Vector2 position)
     {
         EnsureOrdered();
 
         foreach (var ui in _orderedStackItems)
         {
-            var target = ui.GetHoverElement();
+            var target = ui.HitTest(position);
             if (target != null)
             {
-                silkyUI = ui;
-                element = target;
-                return true;
+                return target;
             }
         }
 
-        silkyUI = null;
-        element = null;
-        return false;
+        return null;
     }
 
     /// <summary>

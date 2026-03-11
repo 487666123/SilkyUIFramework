@@ -48,16 +48,6 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     public UIView PreviousHoveredElement { get; private set; }
 
     /// <summary>
-    /// 悬停元素所属 UI 栈（用于点击时置顶）。
-    /// </summary>
-    private SilkyUIStack _hoveredStack;
-
-    /// <summary>
-    /// 悬停元素所属 UI 实例（用于点击时置顶）。
-    /// </summary>
-    private SilkyUI _hoveredSilkyUI;
-
-    /// <summary>
     /// 每个鼠标按键在按下瞬间对应的元素。
     /// 用于抬起时判断事件目标与 Click 判定。
     /// </summary>
@@ -121,7 +111,7 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     /// </summary>
     internal void UpdateHoverTarget()
     {
-        _renderSystem.GetHoverTarget(out _hoveredStack, out _hoveredSilkyUI, out var element);
+        var element = _renderSystem.HitTest(MousePosition);
 
         PreviousHoveredElement = HoveredElement;
 
@@ -171,10 +161,7 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
         PressedElements[buttonType] = hoveredElement;
         if (hoveredElement == null) return;
 
-        if (_hoveredStack != null && _hoveredSilkyUI != null)
-        {
-            _hoveredStack.BringToFront(_hoveredSilkyUI);
-        }
+        _renderSystem.Activate(hoveredElement);
 
         switch (buttonType)
         {
