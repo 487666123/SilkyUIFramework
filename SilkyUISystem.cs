@@ -2,23 +2,36 @@
 
 namespace SilkyUIFramework;
 
+public record ModLoadedTypes(Mod Mod, Type[] LoadedTypes);
+
 public partial class SilkyUISystem : ModSystem
 {
     public static SilkyUISystem Instance => ModContent.GetInstance<SilkyUISystem>();
-
     public static IServiceProvider ServiceProvider { get; private set; }
 
     public SilkyUIManager SilkyUIManager { get; private set; }
     private SilkyUIRegistrar SilkyUIRegistrar { get; set; }
 
-    private IReadOnlyList<Assembly> Assemblies { get; set; }
-    private IEnumerable<Type[]> GetLoadableTypes() => Assemblies.Select(AssemblyManager.GetLoadableTypes);
+    private ModLoadedTypes[] _modsWithLoadedTypes;
+
+
+    void CollectLoadedTypes()
+    {
+        var mods = ModLoader.Mods.AsSpan();
+        _modsWithLoadedTypes = new ModLoadedTypes[mods.Length];
+
+        for (int i = 0; i < mods.Length; i++)
+        {
+            var mod = mods[i];
+            _modsWithLoadedTypes[i] = new ModLoadedTypes(mod, AssemblyManager.GetLoadableTypes(mod.Code));
+        }
+    }
 
     public override void Load()
     {
-        Assemblies = [.. ModLoader.Mods.Select(m => m.Code)];
+        CollectLoadedTypes();
 
-        ServiceProvider = ServiceProviderBuilder.BuildServiceProvider(GetLoadableTypes());
+        ServiceProvider = ServiceProviderBuilder.BuildServiceProvider(_modsWithLoadedTypes);
 
         SilkyUIManager = ServiceProvider.GetRequiredService<SilkyUIManager>();
         SilkyUIRegistrar = ServiceProvider.GetRequiredService<SilkyUIRegistrar>();
@@ -28,7 +41,7 @@ public partial class SilkyUISystem : ModSystem
 
     public override void PostSetupContent()
     {
-        SilkyUIRegistrar.RegisterUI(GetLoadableTypes());
+        SilkyUIRegistrar.CollectFrom(_modsWithLoadedTypes);
         SilkyUIManager.Initialize();
     }
 
@@ -45,8 +58,6 @@ public class SilkyUIPlayer : ModPlayer
 {
     public override void OnEnterWorld()
     {
-        if (SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUIRenderSystem>() is not { } renderSystem) return;
-
-        renderSystem.ReloadGameGroups();
+        if (SilkyUIRenderSystem.Instance is { } rs) rs.ReloadSilkyUIGroups();
     }
 }

@@ -1,37 +1,45 @@
 ﻿namespace SilkyUIFramework;
 
 [Service]
-public class SilkyUIRenderSystem(SilkyUIRegistrar silkyUIRegistrar)
+public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar silkyUIRegistrar)
 {
-    private readonly SilkyUIRegistrar _silkyUIRegistrar = silkyUIRegistrar;
+    public static SilkyUIRenderSystem Instance => SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUIRenderSystem>();
 
-    private SilkyUIGroup _globalGroup;
-    private IReadOnlyDictionary<string, SilkyUIGroup> _gameGroups;
+    private readonly IServiceProvider _provider = provider;
+    private readonly SilkyUIRegistrar _registrar = silkyUIRegistrar;
 
-    private readonly List<string> _layerOrders = [];
+    private SilkyUIGroup _global;
+    private Dictionary<string, SilkyUIGroup> _game;
+    private readonly List<string> _layerOrder = [];
 
-    public void SetGroups(SilkyUIGroup global, Dictionary<string, SilkyUIGroup> games)
+    public void Initialize()
     {
-        _globalGroup = global;
-        _gameGroups = games.AsReadOnly();
-    }
+        _global = _provider.GetRequiredService<SilkyUIGroup>();
 
-    public void Clear()
-    {
-        foreach (var (_, group) in _gameGroups)
+        foreach (var type in _registrar.GlobalUIBodyTypes)
         {
-            group.Clear();
+            var silkyUI = _provider.GetRequiredService<SilkyUI>();
+            silkyUI.Priority = type.GetCustomAttribute<RegisterGlobalUIAttribute>()!.Priority;
+            silkyUI.SetBody(_provider.GetRequiredService(type) as BaseBody);
+            _global.Add(silkyUI);
         }
+
+        _game = [];
+
+        foreach (var (layerNode, _) in _registrar.GameUIBodyTypesByLayer)
+        {
+            _game[layerNode] = _provider.GetRequiredService<SilkyUIGroup>();
+        }
+
     }
 
-    public void ReloadGameGroups()
+    public void ReloadSilkyUIGroups()
     {
-        Clear();
-
-        foreach (var (layerNode, group) in _gameGroups)
+        foreach (var (layerNode, group) in _game)
         {
-            if (!_silkyUIRegistrar.BodyTypesForGameUI.TryGetValue(layerNode, out var types)) continue;
+            if (!_registrar.GameUIBodyTypesByLayer.TryGetValue(layerNode, out var types)) continue;
 
+            group.Clear();
             foreach (var type in types)
             {
                 var ui = SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUI>();
@@ -46,7 +54,7 @@ public class SilkyUIRenderSystem(SilkyUIRegistrar silkyUIRegistrar)
 
     public void Update(GameTime gameTime)
     {
-        _globalGroup?.UpdateUI(gameTime);
+        _global?.UpdateUI(gameTime);
 
         if (Main.gameMenu) return;
 
@@ -56,14 +64,14 @@ public class SilkyUIRenderSystem(SilkyUIRegistrar silkyUIRegistrar)
         }
     }
 
-    public void Draw(GameTime gameTime) => _globalGroup?.Draw(gameTime);
+    public void Draw(GameTime gameTime) => _global?.Draw(gameTime);
 
     public void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
     {
-        _layerOrders.Clear();
-        _layerOrders.AddRange(layers.Select(l => l.Name));
+        _layerOrder.Clear();
+        _layerOrder.AddRange(layers.Select(l => l.Name));
 
-        foreach (var (layerNode, group) in _gameGroups)
+        foreach (var (layerNode, group) in _game)
         {
             int index = layers.FindIndex(l => l.Name.Equals(layerNode));
             if (index >= 0) group.ModifyInterfaceLayers(layers, index);
@@ -72,13 +80,13 @@ public class SilkyUIRenderSystem(SilkyUIRegistrar silkyUIRegistrar)
 
     public void GetHoverTarget(out SilkyUIGroup silkyUIGroup, out SilkyUI silkyUI, out UIView element)
     {
-        if (_globalGroup != null)
+        if (_global != null)
         {
-            _globalGroup.GetHoverTarget(out silkyUI, out element);
+            _global.GetHoverTarget(out silkyUI, out element);
 
             if (element != null)
             {
-                silkyUIGroup = _globalGroup;
+                silkyUIGroup = _global;
                 return;
             }
         }
@@ -104,12 +112,12 @@ public class SilkyUIRenderSystem(SilkyUIRegistrar silkyUIRegistrar)
 
     public bool TryGetInstance<TBody>(out TBody body) where TBody : BaseBody
     {
-        foreach (var ui in _globalGroup?.SilkyUIs ?? [])
+        foreach (var ui in _global?.SilkyUIs ?? [])
         {
             if (ui.RootNode is TBody tBody) { body = tBody; return true; }
         }
 
-        foreach (var group in _gameGroups.Values)
+        foreach (var group in _game.Values)
         {
             foreach (var ui in group.SilkyUIs)
             {
@@ -122,7 +130,7 @@ public class SilkyUIRenderSystem(SilkyUIRegistrar silkyUIRegistrar)
     }
 
     private IEnumerable<SilkyUIGroup> OrderedGroups()
-        => _layerOrders.Select(layer => _gameGroups.TryGetValue(layer, out var v) ? v : null)
+        => _layerOrder.Select(layer => _game.TryGetValue(layer, out var v) ? v : null)
                        .Where(v => v != null)
                        .Reverse();
 }
