@@ -147,6 +147,32 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
         return false;
     }
 
+    public List<TBody> GetInstances<TBody>() where TBody : BaseBody
+    {
+        var bodys = new List<TBody>();
+
+        foreach (var ui in _globalStack?.OrderedUIs ?? [])
+        {
+            if (ui.RootNode is TBody tBody)
+            {
+                bodys.Add(tBody);
+            }
+        }
+
+        foreach (var (_, stack) in _gameStacksByLayer)
+        {
+            foreach (var ui in stack.OrderedUIs)
+            {
+                if (ui.RootNode is TBody tBody)
+                {
+                    bodys.Add(tBody);
+                }
+            }
+        }
+
+        return bodys;
+    }
+
     private IEnumerable<SilkyUIStack> OrderedStacks()
         => _layerOrder.Select(layer => _gameStacksByLayer.TryGetValue(layer, out var v) ? v : null)
                        .Where(v => v != null)
