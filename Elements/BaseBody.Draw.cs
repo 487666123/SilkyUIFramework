@@ -111,14 +111,14 @@ public abstract partial class BaseBody
             device.Clear(Color.Transparent);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
-                SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
+                SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
 
             DrawBodyCore(gameTime, spriteBatch);
             spriteBatch.End();
             device.RestoreRenderTargets(original);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
-                SilkyUI.RasterizerStateForOverflowHidden, null, RenderTargetMatrix);
+                SilkyUI.ScissorRasterizerState, null, RenderTargetMatrix);
             spriteBatch.Draw(renderTarget, Vector2.Zero, null, Color.White * Opacity, 0f, Vector2.Zero, Vector2.One, 0, 0);
 
             if (captureScreenshot)
@@ -184,7 +184,7 @@ public abstract partial class BaseBody
 
         spriteBatch.End();
         BlurMakeSystem.KawaseBlur();
-        spriteBatch.Begin(0, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, transformMatrix);
+        spriteBatch.Begin(0, null, null, null, SilkyUI.ScissorRasterizerState, null, transformMatrix);
     }
 
     /// <summary>

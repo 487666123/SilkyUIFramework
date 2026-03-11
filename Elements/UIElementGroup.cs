@@ -317,7 +317,7 @@ public partial class UIElementGroup : UIView
                 device.ScissorRectangle = new Rectangle(0, 0, scissorRectangle.Width, scissorRectangle.Height);
 
                 sb.Begin(SpriteSortMode.Deferred, null, null, null,
-                    SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
+                    SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
 
                 // 先做一层粗略裁剪：仅绘制与容器 InnerBounds 相交的子元素，减少无效绘制。
                 foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
@@ -338,7 +338,7 @@ public partial class UIElementGroup : UIView
                     // 将离屏结果绘制回主目标后，恢复正常批次继续后续绘制流程。
                     DrawRenderTarget(sb, renderTarget, scissorRectangle.Position);
                     sb.Begin(SpriteSortMode.Deferred, null, null, null,
-                        SilkyUI.RasterizerStateForOverflowHidden, null, SilkyUI.TransformMatrix);
+                        SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
                 }
                 finally
                 {
@@ -351,7 +351,7 @@ public partial class UIElementGroup : UIView
 
         // 不启用独立 RenderTarget 时，直接使用设备裁剪矩形进行绘制。
         device.ScissorRectangle = scissorRectangle;
-        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
+        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.ScissorRasterizerState, null,
             SilkyUI.TransformMatrix);
 
         foreach (var child in ElementsInOrder.Where(el => el.OuterBounds.Intersects(InnerBounds)))
@@ -362,7 +362,7 @@ public partial class UIElementGroup : UIView
         sb.End();
 
         device.ScissorRectangle = originalScissor;
-        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null,
+        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.ScissorRasterizerState, null,
             SilkyUI.TransformMatrix);
     }
 

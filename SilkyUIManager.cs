@@ -1,9 +1,8 @@
 ﻿namespace SilkyUIFramework;
 
 [Service]
-public class SilkyUIManager(IServiceProvider provider, SilkyUIRenderSystem renderSystem, SilkyUIInputState inputState)
+public class SilkyUIManager(SilkyUIRenderSystem renderSystem, SilkyUIInputState inputState)
 {
-    private readonly IServiceProvider _provider = provider;
     private readonly SilkyUIRenderSystem _renderSystem = renderSystem;
     private readonly SilkyUIInputState _inputState = inputState;
 

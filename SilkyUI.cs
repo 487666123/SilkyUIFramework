@@ -9,7 +9,7 @@ public class SilkyUI
     /// <summary>
     /// UI 实例优先级。通常由管理器按该值排序决定更新/绘制顺序。
     /// </summary>
-    public int Priority { get; set; }
+    public int ScenePriority { get; set; }
 
     /// <summary>
     /// 当前 UI 树根节点。可能为 <see langword="null"/>。
@@ -27,7 +27,7 @@ public class SilkyUI
     /// 设置并切换根节点。
     /// 会触发旧节点退出树（ExitTree）与新节点进入树（EnterTree）的生命周期回调。
     /// </summary>
-    public void SetBody(BaseBody baseBody)
+    public void SetRoot(BaseBody baseBody)
     {
         if (RootNode == baseBody) return;
 
@@ -98,7 +98,7 @@ public class SilkyUI
     /// OverflowHidden 裁剪所用的光栅化状态。
     /// 开启 ScissorTest 并关闭剔除，避免 UI 平面元素被背面剔除。
     /// </summary>
-    public static RasterizerState RasterizerStateForOverflowHidden { get; } = new RasterizerState
+    public static RasterizerState ScissorRasterizerState { get; } = new RasterizerState
     {
         CullMode = CullMode.None,
         ScissorTestEnable = true,

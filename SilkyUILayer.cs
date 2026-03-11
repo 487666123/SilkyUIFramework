@@ -16,7 +16,7 @@ public class SilkyUILayer(SilkyUI silkyUI, string name, InterfaceScaleType scale
         };
 
         sb.End();
-        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, matrix);
+        sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.ScissorRasterizerState, null, matrix);
 
         SilkyUI.TransformMatrix = matrix;
         SilkyUI.Draw(Main.gameTimeCache, Main.spriteBatch);

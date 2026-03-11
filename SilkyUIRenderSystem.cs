@@ -8,25 +8,25 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
     private readonly IServiceProvider _provider = provider;
     private readonly SilkyUIRegistrar _registrar = silkyUIRegistrar;
 
-    private SilkyUIStack _globalStack;
-    private Dictionary<string, SilkyUIStack> _gameStacksByLayer = [];
+    private SilkyUISceneStack _globalStack;
+    private Dictionary<string, SilkyUISceneStack> _gameStacksByLayer = [];
     private readonly List<string> _layerOrder = [];
 
     public void Initialize()
     {
-        _globalStack = _provider.GetRequiredService<SilkyUIStack>();
+        _globalStack = _provider.GetRequiredService<SilkyUISceneStack>();
 
         foreach (var type in _registrar.GlobalUIBodyTypes)
         {
             var silkyUI = _provider.GetRequiredService<SilkyUI>();
-            silkyUI.Priority = type.GetCustomAttribute<RegisterGlobalUIAttribute>()!.Priority;
-            silkyUI.SetBody(_provider.GetRequiredService(type) as BaseBody);
+            silkyUI.ScenePriority = type.GetCustomAttribute<RegisterGlobalUIAttribute>()!.Priority;
+            silkyUI.SetRoot(_provider.GetRequiredService(type) as BaseBody);
             _globalStack.Push(silkyUI);
         }
 
         foreach (var (layerNode, _) in _registrar.GameUIBodyTypesByLayer)
         {
-            _gameStacksByLayer[layerNode] = _provider.GetRequiredService<SilkyUIStack>();
+            _gameStacksByLayer[layerNode] = _provider.GetRequiredService<SilkyUISceneStack>();
         }
 
     }
@@ -42,8 +42,8 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
             {
                 var ui = SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUI>();
 
-                ui.Priority = type.GetCustomAttribute<RegisterUIAttribute>()!.Priority;
-                ui.SetBody(SilkyUISystem.ServiceProvider.GetRequiredService(type) as BaseBody);
+                ui.ScenePriority = type.GetCustomAttribute<RegisterUIAttribute>()!.Priority;
+                ui.SetRoot(SilkyUISystem.ServiceProvider.GetRequiredService(type) as BaseBody);
 
                 stack.Push(ui);
             }
@@ -75,12 +75,12 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
             ui.TransformMatrix = Main.UIScaleMatrix;
 
             spriteBatch.ReBegin(SpriteSortMode.Deferred,
-                null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, ui.TransformMatrix);
+                null, null, null, SilkyUI.ScissorRasterizerState, null, ui.TransformMatrix);
 
             ui.Draw(gameTime, Main.spriteBatch);
 
             spriteBatch.ReBegin(SpriteSortMode.Deferred,
-                null, null, null, SilkyUI.RasterizerStateForOverflowHidden, null, ui.TransformMatrix);
+                null, null, null, SilkyUI.ScissorRasterizerState, null, ui.TransformMatrix);
         }
     }
 
@@ -188,11 +188,11 @@ public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar sil
         return bodys;
     }
 
-    private IEnumerable<SilkyUIStack> OrderedStacks()
+    private IEnumerable<SilkyUISceneStack> OrderedStacks()
         => _layerOrder.Select(layer => _gameStacksByLayer.TryGetValue(layer, out var v) ? v : null)
                        .Where(v => v != null)
                        .Reverse();
 
-    private static bool ContainsUI(SilkyUIStack stack, SilkyUI silkyUI)
+    private static bool ContainsUI(SilkyUISceneStack stack, SilkyUI silkyUI)
         => stack.OrderedUIs.Contains(silkyUI);
 }

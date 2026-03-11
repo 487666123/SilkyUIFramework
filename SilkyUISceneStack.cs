@@ -4,7 +4,7 @@
 /// <summary>
 /// 管理当前模组注册的全部 <see cref="SilkyUI"/>，并负责排序、置顶与命中测试。
 /// </summary>
-public class SilkyUIStack
+public class SilkyUISceneStack
 {
     /// <summary>
     /// UI 栈中的原始元素顺序。
@@ -49,7 +49,7 @@ public class SilkyUIStack
     {
         foreach (var ui in _stackItems)
         {
-            ui.SetBody(null);
+            ui.SetRoot(null);
         }
 
         _stackItems.Clear();
@@ -77,7 +77,7 @@ public class SilkyUIStack
         if (!_isOrderDirty) return;
 
         _orderedStackItems.Clear();
-        _orderedStackItems.AddRange(_stackItems.OrderByDescending(value => value.Priority));
+        _orderedStackItems.AddRange(_stackItems.OrderByDescending(value => value.ScenePriority));
         _isOrderDirty = false;
     }
 
