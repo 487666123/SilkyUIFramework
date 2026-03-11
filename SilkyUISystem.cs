@@ -58,6 +58,6 @@ public class SilkyUIPlayer : ModPlayer
 {
     public override void OnEnterWorld()
     {
-        if (SilkyUIRenderSystem.Instance is { } rs) rs.ReloadSilkyUIGroups();
+        if (SilkyUIRenderSystem.Instance is { } rs) rs.ReloadSilkyUIStacks();
     }
 }

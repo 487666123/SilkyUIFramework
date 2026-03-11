@@ -4,62 +4,63 @@
 /// <summary>
 /// 管理当前模组注册的全部 <see cref="SilkyUI"/>，并负责排序、更新与绘制分发。
 /// </summary>
-public class SilkyUIGroup
+public class SilkyUIStack
 {
     /// <summary>
-    /// UI 原始集合。每次排序后会回写，保证后续操作基于最新层级顺序。
+    /// UI 栈中的原始元素。每次排序后会回写，保证后续操作基于最新层级顺序。
     /// </summary>
-    private readonly List<SilkyUI> _originalSilkyUIs = [];
+    private readonly List<SilkyUI> _stackItems = [];
 
     /// <summary>
-    /// 排序后的缓存集合，用于当前帧遍历。
+    /// 排序后的栈元素缓存，用于当前帧遍历。
     /// </summary>
-    private readonly List<SilkyUI> _silkyUIs = [];
+    private readonly List<SilkyUI> _orderedStackItems = [];
 
     /// <summary>
     /// 当前排序结果只读视图。
     /// </summary>
-    public IReadOnlyList<SilkyUI> SilkyUIs => _silkyUIs;
+    public IReadOnlyList<SilkyUI> OrderedUIs => _orderedStackItems;
 
     /// <summary>
-    /// 注册一个 UI 到集合末尾。
+    /// 将一个 UI 压入栈尾。
     /// </summary>
-    public void Add(SilkyUI ui) => _originalSilkyUIs.Add(ui);
+    public void Push(SilkyUI ui) => _stackItems.Add(ui);
 
     /// <summary>
     /// 清空全部 UI，并先断开其 Body 引用。
     /// </summary>
     public void Clear()
     {
-        foreach (var ui in _originalSilkyUIs)
+        foreach (var ui in _stackItems)
         {
             ui.SetBody(null);
         }
 
-        _originalSilkyUIs.Clear();
+        _stackItems.Clear();
+        _orderedStackItems.Clear();
     }
 
     /// <summary>
-    /// 将指定 UI 提升到最前层。
+    /// 将指定 UI 提升到栈顶。
     /// </summary>
-    public void MoveToTop(SilkyUI ui)
+    public void BringToFront(SilkyUI ui)
     {
-        if (_originalSilkyUIs.Remove(ui))
+        if (_stackItems.Remove(ui))
         {
-            _originalSilkyUIs.Insert(0, ui);
+            _stackItems.Insert(0, ui);
         }
     }
 
     /// <summary>
     /// 按优先级重排 UI（高优先级在前），并将结果回写到原始集合。
     /// </summary>
-    private void Order()
+    private void RefreshOrder()
     {
-        _silkyUIs.Clear();
-        _silkyUIs.AddRange(_originalSilkyUIs.OrderByDescending(value => value.Priority));
+        _orderedStackItems.Clear();
+        _orderedStackItems.AddRange(_stackItems.OrderByDescending(value => value.Priority));
 
-        _originalSilkyUIs.Clear();
-        _originalSilkyUIs.AddRange(_silkyUIs);
+        _stackItems.Clear();
+        _stackItems.AddRange(_orderedStackItems);
     }
 
     /// <summary>
@@ -67,9 +68,9 @@ public class SilkyUIGroup
     /// </summary>
     public void GetHoverTarget(out SilkyUI silkyUI, out UIView element)
     {
-        Order();
+        RefreshOrder();
 
-        foreach (var ui in SilkyUIs)
+        foreach (var ui in OrderedUIs)
         {
             var target = ui.GetHoverElement();
             if (target != null)
@@ -88,9 +89,9 @@ public class SilkyUIGroup
     /// <summary>
     /// 更新全部已排序 UI。
     /// </summary>
-    public void UpdateUI(GameTime gameTime)
+    public void Update(GameTime gameTime)
     {
-        foreach (var ui in _silkyUIs.Where(ui => ui != null))
+        foreach (var ui in _orderedStackItems.Where(ui => ui != null))
         {
             ui.Update(gameTime);
         }
@@ -101,9 +102,9 @@ public class SilkyUIGroup
     /// </summary>
     public void ModifyInterfaceLayers(List<GameInterfaceLayer> layers, int index)
     {
-        Order();
+        RefreshOrder();
 
-        foreach (var silkyUI in _silkyUIs)
+        foreach (var silkyUI in _orderedStackItems)
         {
             if (silkyUI.RootNode.GetType().GetCustomAttribute<RegisterUIAttribute>() is not { } registerUI) continue;
 
@@ -118,9 +119,9 @@ public class SilkyUIGroup
     /// </summary>
     public void Draw(GameTime gameTime)
     {
-        Order();
+        RefreshOrder();
 
-        var reversedList = new List<SilkyUI>(_silkyUIs);
+        var reversedList = new List<SilkyUI>(_orderedStackItems);
         reversedList.Reverse();
 
         foreach (var ui in reversedList.Where(ui => ui.RootNode.GetType().IsDefined(typeof(RegisterGlobalUIAttribute))))

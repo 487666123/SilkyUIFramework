@@ -48,14 +48,14 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     public UIView PreviousHoveredElement { get; private set; }
 
     /// <summary>
-    /// 悬停元素所属 UI 组（用于点击时置顶）。
+    /// 悬停元素所属 UI 栈（用于点击时置顶）。
     /// </summary>
-    private SilkyUIGroup _silkyUIGroup;
+    private SilkyUIStack _hoveredStack;
 
     /// <summary>
     /// 悬停元素所属 UI 实例（用于点击时置顶）。
     /// </summary>
-    private SilkyUI _silkyUI;
+    private SilkyUI _hoveredSilkyUI;
 
     /// <summary>
     /// 每个鼠标按键在按下瞬间对应的元素。
@@ -121,7 +121,7 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     /// </summary>
     internal void UpdateHoverTarget()
     {
-        _renderSystem.GetHoverTarget(out _silkyUIGroup, out _silkyUI, out var element);
+        _renderSystem.GetHoverTarget(out _hoveredStack, out _hoveredSilkyUI, out var element);
 
         PreviousHoveredElement = HoveredElement;
 
@@ -167,25 +167,25 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     /// <param name="buttonType">触发的鼠标按键。</param>
     private void HandleMouseDown(MouseButtonType buttonType)
     {
-        var hoverEdElement = HoveredElement;
-        PressedElements[buttonType] = hoverEdElement;
-        if (hoverEdElement == null) return;
+        var hoveredElement = HoveredElement;
+        PressedElements[buttonType] = hoveredElement;
+        if (hoveredElement == null) return;
 
-        if (_silkyUIGroup != null && _silkyUI != null)
+        if (_hoveredStack != null && _hoveredSilkyUI != null)
         {
-            _silkyUIGroup.MoveToTop(_silkyUI);
+            _hoveredStack.BringToFront(_hoveredSilkyUI);
         }
 
         switch (buttonType)
         {
             case MouseButtonType.Left:
-                hoverEdElement.OnLeftMouseDown(new(hoverEdElement, MousePosition));
+                hoveredElement.OnLeftMouseDown(new(hoveredElement, MousePosition));
                 break;
             case MouseButtonType.Middle:
-                hoverEdElement.OnMiddleMouseDown(new(hoverEdElement, MousePosition));
+                hoveredElement.OnMiddleMouseDown(new(hoveredElement, MousePosition));
                 break;
             case MouseButtonType.Right:
-                hoverEdElement.OnRightMouseDown(new(hoverEdElement, MousePosition));
+                hoveredElement.OnRightMouseDown(new(hoveredElement, MousePosition));
                 break;
             default: return;
         }
