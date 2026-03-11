@@ -35,16 +35,12 @@ public class SilkyUIManager(IServiceProvider provider, SilkyUIRegistrar registra
     {
         if (Main.hideUI) return;
 
-        UpdateInput();
-        _renderSystem.Update(gameTime);
-    }
-
-    private void UpdateInput()
-    {
         _inputState.UpdateMouseStatus();
         _inputState.UpdateHoverTarget();
         _inputState.UpdateMouseEvent();
         _inputState.UpdateScrollEvent();
+
+        _renderSystem.Update(gameTime);
     }
 
     public void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
