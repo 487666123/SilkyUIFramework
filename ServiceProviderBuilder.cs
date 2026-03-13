@@ -51,6 +51,7 @@ internal static class ServiceProviderBuilder
     /// </summary>
     static void RegisterCoreServices(IServiceCollection services)
     {
+        services.AddSingleton(_ => SilkyUIFramework.Instance);
         services.AddSingleton(_ => SilkyUIFramework.Instance.Logger);
         services.AddSingleton(_ => SilkyUISystem.Instance);
     }

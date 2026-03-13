@@ -10,11 +10,13 @@ public partial class SilkyUISystem : ModSystem
     public static IServiceProvider ServiceProvider { get; private set; }
 
     public SilkyUIManager SilkyUIManager { get; private set; }
-    private SilkyUIRegistrar SilkyUIRegistrar { get; set; }
+    SilkyUIRegistrar SilkyUIRegistrar { get; set; }
 
-    private ModLoadedTypes[] _modsWithLoadedTypes;
+    ModLoadedTypes[] _modsWithLoadedTypes;
 
-
+    /// <summary>
+    /// 收集 Mod 已加载的类型
+    /// </summary>
     void CollectLoadedTypes()
     {
         var mods = ModLoader.Mods.AsSpan();
@@ -29,6 +31,8 @@ public partial class SilkyUISystem : ModSystem
 
     public override void Load()
     {
+        if (Main.netMode == NetmodeID.Server) return;
+
         CollectLoadedTypes();
 
         ServiceProvider = ServiceProviderBuilder.BuildServiceProvider(_modsWithLoadedTypes);
@@ -41,6 +45,8 @@ public partial class SilkyUISystem : ModSystem
 
     public override void PostSetupContent()
     {
+        if (Main.netMode == NetmodeID.Server) return;
+
         SilkyUIRegistrar.CollectFrom(_modsWithLoadedTypes);
         SilkyUIManager.Initialize();
     }

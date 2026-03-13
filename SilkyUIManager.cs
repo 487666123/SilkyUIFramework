@@ -12,11 +12,7 @@ public class SilkyUIManager(SilkyUIRenderSystem renderSystem, SilkyUIInputState 
     {
         if (Main.hideUI) return;
 
-        _inputState.UpdateMouseStatus();
-        _inputState.UpdateHoverTarget();
-        _inputState.UpdateMouseEvent();
-        _inputState.UpdateScrollEvent();
-
+        _inputState.Update();
         _renderSystem.Update(gameTime);
     }
 
