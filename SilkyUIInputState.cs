@@ -4,13 +4,6 @@ using ReLogic.OS;
 
 namespace SilkyUIFramework;
 
-public struct HitInfo
-{
-    public UIView HitElement;
-    public SilkyUI HitScence;
-    public SilkyUISceneStack HitScenceStack;
-}
-
 /// <summary>
 /// UI 输入状态管理器。
 /// 负责在每帧中维护鼠标状态、悬停目标、焦点目标，并分发鼠标与输入法相关事件。
@@ -57,6 +50,36 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
         UpdateHoverTarget();
         UpdateButtonEvent();
         UpdateScrollEvent();
+    }
+
+    /// <summary>驱动输入法状态更新。仅焦点目标声明占用输入时生效。</summary>
+    internal void HandleIME()
+    {
+        if (FocusTarget is not { OccupyPlayerInput: true }) return;
+
+        PlayerInput.WritingText = true;
+        Main.instance.HandleIME();
+    }
+
+    /// <summary>处理键盘/输入法输入并转发到焦点目标。</summary>
+    /// <param name="spriteBatch">当前绘制批次，用于输入面板绘制前后的 ReBegin。</param>
+    internal void HandleInput(SpriteBatch spriteBatch)
+    {
+        if (FocusTarget is not { OccupyPlayerInput: true }) return;
+
+        if (!Main.hasFocus) return; // 焦点不在游戏
+
+        Main.oldInputText = Main.inputText;
+        Main.inputText = Keyboard.GetState();
+
+        spriteBatch.ReBegin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
+
+        var imeService = Platform.Get<IImeService>();
+        Main.instance.DrawWindowsIMEPanel(FocusTarget.InputMethodPosition);
+
+        FocusTarget.HandlePlayerInput(imeService.CandidateCount > 0);
+
+        spriteBatch.ReBegin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
     }
 
     /// <summary>刷新鼠标状态缓存：将当前状态写入上一帧，再采样本帧状态。</summary>
@@ -210,35 +233,5 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
                 break;
             default: return;
         }
-    }
-
-    /// <summary>驱动输入法状态更新。仅焦点目标声明占用输入时生效。</summary>
-    internal void HandleIME()
-    {
-        if (FocusTarget is not { OccupyPlayerInput: true }) return;
-
-        PlayerInput.WritingText = true;
-        Main.instance.HandleIME();
-    }
-
-    /// <summary>处理键盘/输入法输入并转发到焦点目标。</summary>
-    /// <param name="spriteBatch">当前绘制批次，用于输入面板绘制前后的 ReBegin。</param>
-    internal void HandleInput(SpriteBatch spriteBatch)
-    {
-        if (FocusTarget is not { OccupyPlayerInput: true }) return;
-
-        if (!Main.hasFocus) return; // 焦点不在游戏
-
-        Main.oldInputText = Main.inputText;
-        Main.inputText = Keyboard.GetState();
-
-        spriteBatch.ReBegin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
-
-        var imeService = Platform.Get<IImeService>();
-        Main.instance.DrawWindowsIMEPanel(FocusTarget.InputMethodPosition);
-
-        FocusTarget.HandlePlayerInput(imeService.CandidateCount > 0);
-
-        spriteBatch.ReBegin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
     }
 }
