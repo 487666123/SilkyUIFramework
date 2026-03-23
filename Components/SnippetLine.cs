@@ -3,7 +3,7 @@ using Terraria.UI.Chat;
 namespace SilkyUIFramework.Components;
 
 /// <summary>
-/// ��¼һ�е��ı�Ƭ�κͿ���, �����߼�����
+/// 记录一个文本片断和空格, 或者逻辑运算
 /// </summary>
 public class SnippetLine()
 {

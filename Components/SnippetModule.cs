@@ -14,31 +14,23 @@ public sealed class SnippetModule
     /// <summary>
     /// 获取或设置字体。
     /// </summary>
-    public DynamicSpriteFont Font
-    {
-        get;
-        set
-        {
-            if (value == null || field == value) return;
-            field = value;
-        }
-    }
+    private DynamicSpriteFont _font;
 
     /// <summary>
     /// 获取或设置最大宽度。
     /// </summary>
-    public float MaxWidth { get; set; }
+    private float _maxWidth;
 
     /// <summary>
     /// 获取或设置最大行数。设置为 0 或负数表示不限制行数。
     /// </summary>
-    public int MaxLines { get; set; }
+    private int _maxLines;
 
     public void UpdateProperties(DynamicSpriteFont font, float maxWidth, int maxLines)
     {
-        Font = font;
-        MaxWidth = maxWidth;
-        MaxLines = maxLines;
+        _font = font;
+        _maxWidth = maxWidth;
+        _maxLines = maxLines;
     }
 
     #endregion
@@ -49,7 +41,7 @@ public sealed class SnippetModule
     /// <returns>是否添加成功</returns>
     private bool TryAdd()
     {
-        if (MaxLines > 0 && _lines.Count >= MaxLines)
+        if (_maxLines > 0 && _lines.Count >= _maxLines)
             return false;
 
         _lines.Add(new SnippetLine());
@@ -63,7 +55,7 @@ public sealed class SnippetModule
     {
         var line = _lines[^1];
         if (line.Snippets.Count == 0) return true;
-        return line.Width + Font.CharacterSpacing + width <= MaxWidth;
+        return line.Width + _font.CharacterSpacing + width <= _maxWidth;
     }
 
     private bool TryAdd(TextSnippet snippet, float width)
@@ -71,18 +63,18 @@ public sealed class SnippetModule
         var current = _lines[^1];
         if (current.Snippets.Count == 0)
         {
-            current.Add(snippet, Font.CharacterSpacing, width);
+            current.Add(snippet, _font.CharacterSpacing, width);
             return true;
         }
 
-        if (current.Width + Font.CharacterSpacing + width > MaxWidth)
+        if (current.Width + _font.CharacterSpacing + width > _maxWidth)
         {
             if (!TryAdd())
                 return false;
             current = _lines[^1];
         }
 
-        current.Add(snippet, Font.CharacterSpacing, width);
+        current.Add(snippet, _font.CharacterSpacing, width);
         return true;
     }
 
@@ -96,18 +88,18 @@ public sealed class SnippetModule
         var current = _lines[^1];
         if (current.Snippets.Count == 0)
         {
-            current.Add(snippet, Font.CharacterSpacing, width);
+            current.Add(snippet, _font.CharacterSpacing, width);
             return true;
         }
 
-        if (current.Width + Font.CharacterSpacing + width > MaxWidth)
+        if (current.Width + _font.CharacterSpacing + width > _maxWidth)
         {
             if (!TryAdd())
                 return false;
             current = _lines[^1];
         }
 
-        current.Add(snippet, Font.CharacterSpacing, width);
+        current.Add(snippet, _font.CharacterSpacing, width);
         return true;
     }
 
@@ -115,9 +107,9 @@ public sealed class SnippetModule
     {
         _lines.Clear();
         TryAdd();
-        if (Font == null) return;
+        if (_font == null) return;
 
-        var spacing = Font.CharacterSpacing;
+        var spacing = _font.CharacterSpacing;
 
         foreach (var snippet in snippets)
         {
@@ -140,7 +132,7 @@ public sealed class SnippetModule
                     else
                     {
                         if (width > 0) width += spacing;
-                        width += Font.GetCharacterMetrics(c).KernedWidth;
+                        width += _font.GetCharacterMetrics(c).KernedWidth;
                     }
                 }
 
@@ -165,14 +157,14 @@ public sealed class SnippetModule
     {
         _lines.Clear();
 
-        if (Font == null) return;
+        if (_font == null) return;
 
         TryAdd();
 
         if (snippets is null || snippets.Count == 0) return;
 
-        var font = Font;
-        var token = new SnippetToken(MaxWidth, font.CharacterSpacing);
+        var font = _font;
+        var token = new SnippetToken(_maxWidth, font.CharacterSpacing);
 
         // 循环中有 Snippet 三种情况
         // 1. CursorSnippet 光标，SilkyUI 中最特殊的 Snippet
@@ -298,7 +290,7 @@ public sealed class SnippetModule
                 var uniquePosition = currentPosition;
                 if (snippet is CursorSnippet cursor)
                 {
-                    cursor.Font = Font;
+                    cursor.Font = _font;
                     cursor.TrueHeight = lineHeight;
                 }
 
@@ -316,7 +308,7 @@ public sealed class SnippetModule
                     }
                 }
 
-                currentPosition.X += Font.CharacterSpacing * scale.X + snippetSize.X;
+                currentPosition.X += _font.CharacterSpacing * scale.X + snippetSize.X;
             }
 
             currentPosition.X = position.X;

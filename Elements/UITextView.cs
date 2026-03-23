@@ -166,7 +166,7 @@ public class UITextView : UIView
     {
         IntermediateSnippets.Parse(Text, Color.White).ConvertPlainSnippet();
 
-        SnippetModule.UpdateProperties(Font, maxWidth, MaxLines);
+        SnippetModule.UpdateProperties(Font, TextScale > 0 ? maxWidth / TextScale : float.MaxValue, MaxLines);
 
         if (WordWrap)
         {

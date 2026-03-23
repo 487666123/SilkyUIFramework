@@ -3,6 +3,7 @@ using Terraria.UI.Chat;
 
 namespace SilkyUIFramework.Elements;
 
+
 [XmlElementMapping("EditText")]
 public class SUIEditText : UITextView
 {
@@ -50,7 +51,7 @@ public class SUIEditText : UITextView
         IntermediateSnippets.Add(CursorSnippet);
         IntermediateSnippets.AddRange(IntermediateSnippets2);
 
-        SnippetModule.UpdateProperties(Font, maxWidth, MaxLines);
+        SnippetModule.UpdateProperties(Font, TextScale > 0 ? maxWidth / TextScale : float.MaxValue, MaxLines);
 
         if (WordWrap) SnippetModule.WordWrapSnippets(IntermediateSnippets);
         else SnippetModule.FromSnippets(IntermediateSnippets);
