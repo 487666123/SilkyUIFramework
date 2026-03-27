@@ -20,6 +20,7 @@ public enum AnimationTimerStatus
 /// 这样做也不是没有好处，好处就是可以在编译期就找到问题<br/>
 /// 但是你踏马的难用啊！要是用到别人定义的类我踏马怎么办！
 /// </summary>
+[Obsolete]
 public interface IInterpolable<TSelf> : IEquatable<TSelf>
 {
     TSelf Lerp(TSelf target, float t);
@@ -28,6 +29,7 @@ public interface IInterpolable<TSelf> : IEquatable<TSelf>
 /// <summary>
 /// 不推荐使用!
 /// </summary>
+[Obsolete]
 public class AutoAnimation<T> where T : IInterpolable<T>
 {
     private readonly AnimationTimer _timer = new();
