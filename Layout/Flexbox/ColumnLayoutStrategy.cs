@@ -29,7 +29,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
     {
         if (context.Parent.CrossContentAlignment == CrossContentAlignment.Stretch)
         {
-            var remaining = context.Parent.InnerBounds.Width - UpdateCrossSize(context, context.Parent.Gap.Width);
+            var remaining = context.Parent.InnerBounds.Width - FlexboxHelper.CalculateCrossSize(context.Lines, context.Parent.Gap.Width);
             if (remaining > 0)
             {
                 var share = remaining / context.Lines.Count;
@@ -83,7 +83,15 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
         foreach (var line in context.Lines)
             line.UpdateMainAlignment(context.Parent.MainAlignment, innerBounds.Height, context.Parent.Gap.Height);
 
-        UpdateCrossContentAlignment(context, innerBounds.Width, context.Parent.Gap.Width);
+        FlexboxHelper.UpdateCrossContentAlignment(
+            context.Lines,
+            innerBounds.Width,
+            context.Parent.Gap.Width,
+            context.Parent.CrossContentAlignment,
+            out var crossGapCache,
+            out var crossOffsetCache);
+        context.CrossGapCache = crossGapCache;
+        context.CrossOffsetCache = crossOffsetCache;
     }
 
     /// <inheritdoc />
@@ -97,7 +105,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
 
             foreach (var el in line.Elements)
             {
-                var itemCrossOffset = CalculateCrossOffset(line.CrossSize, el.OuterBounds.Width, context.Parent.CrossAlignment);
+                var itemCrossOffset = FlexboxHelper.CalculateCrossOffset(line.CrossSize, el.OuterBounds.Width, context.Parent.CrossAlignment);
                 el.SetLayoutOffset(crossStart + itemCrossOffset, top);
                 top += el.OuterBounds.Height + line.MainGap;
             }
@@ -108,13 +116,13 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
 
     #region 私有方法
 
-    private void SingleColumn(FlexboxContext context)
+    private static void SingleColumn(FlexboxContext context)
     {
         context.ClearLines();
         context.AddLine(FlexLine.CreateSingleColumn(context.Parent.InFlowChildren, context.Parent.Gap.Height));
     }
 
-    private void WrapColumn(FlexboxContext context)
+    private static void WrapColumn(FlexboxContext context)
     {
         var height = context.Parent.InnerBounds.Height;
         var vGap = context.Parent.Gap.Height;
@@ -141,7 +149,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
         }
     }
 
-    private void MeasureSize(FlexboxContext context, float gap, out float mainSize, out float crossSize)
+    private static void MeasureSize(FlexboxContext context, float gap, out float mainSize, out float crossSize)
     {
         mainSize = 0f;
         crossSize = (context.Lines.Count - 1) * gap;
@@ -153,13 +161,13 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
         }
     }
 
-    private void ColumnGrowOrShrink(FlexboxContext context)
+    private static void ColumnGrowOrShrink(FlexboxContext context)
     {
-        var height = context.Parent.InnerBounds.Height;
+        var mainSize = context.Parent.InnerBounds.Height;
 
         foreach (var line in context.Lines)
         {
-            var remaining = height - line.MainSize;
+            var remaining = mainSize - line.MainSize;
 
             switch (remaining)
             {
@@ -216,61 +224,6 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
             }
         }
     }
-
-    private float UpdateCrossSize(FlexboxContext context, float gap)
-    {
-        var crossContent = context.Lines.Sum(line => line.CrossSize);
-        return crossContent + (context.Lines.Count - 1) * gap;
-    }
-
-    private void UpdateCrossContentAlignment(FlexboxContext context, float availableSize, float gap)
-    {
-        var crossContent = context.Lines.Sum(line => line.CrossSize);
-        var crossSize = crossContent + (context.Lines.Count - 1) * gap;
-
-        switch (context.Parent.CrossContentAlignment)
-        {
-            default:
-            case CrossContentAlignment.Start:
-            case CrossContentAlignment.Stretch:
-            {
-                context.CrossGapCache = gap;
-                context.CrossOffsetCache = 0f;
-                return;
-            }
-            case CrossContentAlignment.Center:
-            {
-                context.CrossGapCache = gap;
-                context.CrossOffsetCache = (availableSize - crossSize) / 2f;
-                return;
-            }
-            case CrossContentAlignment.End:
-            {
-                context.CrossGapCache = gap;
-                context.CrossOffsetCache = availableSize - crossSize;
-                return;
-            }
-            case CrossContentAlignment.SpaceEvenly:
-            {
-                context.CrossGapCache = (availableSize - crossContent) / (context.Lines.Count + 1);
-                context.CrossOffsetCache = context.CrossGapCache;
-                return;
-            }
-            case CrossContentAlignment.SpaceBetween:
-            {
-                context.CrossGapCache = context.Lines.Count > 1 ? (availableSize - crossContent) / (context.Lines.Count - 1) : 0f;
-                context.CrossOffsetCache = 0f;
-                return;
-            }
-        }
-    }
-
-    private float CalculateCrossOffset(float availableSize, float itemCrossSize, CrossAlignment alignment) => alignment switch
-    {
-        CrossAlignment.Center => (availableSize - itemCrossSize) / 2f,
-        CrossAlignment.End => availableSize - itemCrossSize,
-        CrossAlignment.Stretch or CrossAlignment.Start or _ => 0f,
-    };
 
     #endregion
 }

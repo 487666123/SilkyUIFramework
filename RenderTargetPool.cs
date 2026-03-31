@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace SilkyUIFramework;
+﻿namespace SilkyUIFramework;
 
 //public readonly struct CanvasSize(int width, int height) : IEquatable<CanvasSize>
 //{

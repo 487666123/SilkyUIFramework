@@ -62,19 +62,4 @@ public class FlexboxContext(UIElementGroup parent)
         return max;
     }
 
-    /// <summary>
-    /// 计算交叉轴总尺寸
-    /// </summary>
-    /// <param name="gap">间距</param>
-    /// <returns>交叉轴总尺寸</returns>
-    public float CalculateCrossSize(float gap)
-    {
-        if (Lines.Count == 0) return 0f;
-        float crossContent = 0f;
-        foreach (var line in Lines)
-        {
-            crossContent += line.CrossSize;
-        }
-        return crossContent + (Lines.Count - 1) * gap;
-    }
 }
