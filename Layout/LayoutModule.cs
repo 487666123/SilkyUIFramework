@@ -53,7 +53,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// <summary>
     /// 用于 PreMeasure 阶段直接设置 OuterBounds.Width
     /// </summary>
-    protected static void SetInnerWidthClamped(UIView target, float width)
+    public static void SetInnerWidthClamped(UIView target, float width)
     {
         target.SetInnerBoundsWidthRaw(target.WidthMertrics.ClampInner(width));
     }
@@ -61,7 +61,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// <summary>
     /// 用于 PreMeasure 阶段直接设置 OuterBounds.Height
     /// </summary>
-    protected static void SetInnerHeightClamped(UIView target, float height)
+    public static void SetInnerHeightClamped(UIView target, float height)
     {
         target.SetInnerBoundsHeightRaw(target.HeightMertrics.ClampInner(height));
     }
@@ -69,7 +69,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// <summary>
     /// 通常用于 OnResizeChildrenWidth 阶段直接设置 OuterBounds.Width
     /// </summary>
-    protected static void SetOuterWidthClamped(UIView target, float width)
+    public static void SetOuterWidthClamped(UIView target, float width)
     {
         target.SetOuterBoundsWidthRaw(target.WidthMertrics.ClampOuter(width));
     }
@@ -77,7 +77,7 @@ public abstract class LayoutModule(UIElementGroup parent)
     /// <summary>
     /// 通常用于 OnResizeChildrenHeight 阶段直接设置 OuterBounds.Height
     /// </summary>
-    protected static void SetOuterHeightClamped(UIView target, float height)
+    public static void SetOuterHeightClamped(UIView target, float height)
     {
         target.SetOuterBoundsHeightRaw(target.HeightMertrics.ClampOuter(height));
     }
