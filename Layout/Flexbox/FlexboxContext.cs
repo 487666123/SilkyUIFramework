@@ -4,10 +4,9 @@ namespace SilkyUIFramework.Layout.Flexbox;
 /// Flexbox 布局上下文，包含共享数据和状态
 /// </summary>
 /// <remarks>
-/// 创建新的布局上下文，使用现有的布局线列表
+/// 创建新的布局上下文，包含空的布局线列表
 /// </remarks>
 /// <param name="parent">父容器</param>
-/// <param name="lines">现有的布局线列表</param>
 public class FlexboxContext(UIElementGroup parent)
 {
     /// <summary>
@@ -16,26 +15,31 @@ public class FlexboxContext(UIElementGroup parent)
     public UIElementGroup Parent { get; } = parent;
 
     /// <summary>
-    /// 布局线集合
+    /// 布局线集合（可变内部存储）
     /// </summary>
-    public List<FlexLine> Lines { get; } = [];
+    private readonly List<FlexLine> _lines = [];
+
+    /// <summary>
+    /// 布局线集合（只读视图）
+    /// </summary>
+    public IReadOnlyList<FlexLine> Lines => _lines;
 
     /// <summary>
     /// 交叉轴偏移缓存
     /// </summary>
-    public float CrossOffsetCache { get; set; } = 0f;
+    public float CrossOffset { get; set; } = 0f;
 
     /// <summary>
     /// 交叉轴间距缓存
     /// </summary>
-    public float CrossGapCache { get; set; } = 0f;
+    public float CrossGap { get; set; } = 0f;
 
     /// <summary>
     /// 清空布局线
     /// </summary>
     public void ClearLines()
     {
-        Lines.Clear();
+        _lines.Clear();
     }
 
     /// <summary>
@@ -44,7 +48,7 @@ public class FlexboxContext(UIElementGroup parent)
     /// <param name="line">要添加的布局线</param>
     public void AddLine(FlexLine line)
     {
-        Lines.Add(line);
+        _lines.Add(line);
     }
 
     /// <summary>

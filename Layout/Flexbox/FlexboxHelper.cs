@@ -11,7 +11,7 @@ public static class FlexboxHelper
     /// <param name="lines">布局线集合</param>
     /// <param name="gap">间距</param>
     /// <returns>交叉轴总尺寸</returns>
-    public static float CalculateCrossSize(List<FlexLine> lines, float gap)
+    public static float CalculateCrossSize(IReadOnlyList<FlexLine> lines, float gap)
     {
         if (lines.Count == 0) return 0f;
         var crossContent = lines.Sum(line => line.CrossSize);
@@ -28,7 +28,7 @@ public static class FlexboxHelper
     /// <param name="crossGapCache">输出的交叉轴间距缓存</param>
     /// <param name="crossOffsetCache">输出的交叉轴偏移缓存</param>
     public static void UpdateCrossContentAlignment(
-        List<FlexLine> lines,
+        IReadOnlyList<FlexLine> lines,
         float availableSize,
         float gap,
         CrossContentAlignment crossContentAlignment,

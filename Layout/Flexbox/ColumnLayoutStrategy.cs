@@ -90,14 +90,14 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
             context.Parent.CrossContentAlignment,
             out var crossGapCache,
             out var crossOffsetCache);
-        context.CrossGapCache = crossGapCache;
-        context.CrossOffsetCache = crossOffsetCache;
+        context.CrossGap = crossGapCache;
+        context.CrossOffset = crossOffsetCache;
     }
 
     /// <inheritdoc />
     public void UpdateChildrenLayoutPosition(FlexboxContext context)
     {
-        var crossStart = context.CrossOffsetCache;
+        var crossStart = context.CrossOffset;
 
         foreach (var line in context.Lines)
         {
@@ -110,7 +110,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
                 top += el.OuterBounds.Height + line.MainGap;
             }
 
-            crossStart += line.CrossSize + context.CrossGapCache;
+            crossStart += line.CrossSize + context.CrossGap;
         }
     }
 
