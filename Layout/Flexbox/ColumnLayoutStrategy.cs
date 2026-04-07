@@ -5,7 +5,7 @@ namespace SilkyUIFramework.Layout.Flexbox;
 /// </summary>
 public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
 {
-    public static readonly IFlexboxLayoutStrategy Instance = new ColumnLayoutStrategy();
+    public static IFlexboxLayoutStrategy Instance { get; } = new ColumnLayoutStrategy();
 
     /// <inheritdoc />
     public void MeasureChildren(FlexboxContext context)

@@ -1,4 +1,5 @@
-﻿using SilkyUIFramework.Layout;
+﻿using System.Xml.Linq;
+using SilkyUIFramework.Layout;
 
 namespace SilkyUIFramework.Elements;
 
@@ -131,8 +132,13 @@ public partial class UIElementGroup : UIView
     /// <param name="index">插入索引；为 <see langword="null"/> 时追加到末尾。</param>
     public void AddChild(UIView child, int? index = null)
     {
-        if (child == null) return;
-        if (child.Parent == this) return;
+        ArgumentNullException.ThrowIfNull(child);
+
+        for (var current = this; current != null; current = current.Parent)
+        {
+            if (ReferenceEquals(current, child))
+                throw new InvalidOperationException("Cannot add an ancestor node as a child.");
+        }
 
         if (index == null)
         {
@@ -149,6 +155,8 @@ public partial class UIElementGroup : UIView
         else return;
 
         MarkLayoutDirty();
+
+        child.RefreshDataContext();
 
         ElementsOrderIsDirty = true;
 
@@ -172,6 +180,7 @@ public partial class UIElementGroup : UIView
         if (!Elements.Remove(child)) return;
 
         child.Parent = null;
+        child.RefreshDataContext();
         MarkLayoutDirty();
         ElementsOrderIsDirty = true;
 
@@ -184,6 +193,17 @@ public partial class UIElementGroup : UIView
     /// </summary>
     /// <param name="child">已从容器移除的子元素。</param>
     protected virtual void OnRemoveChild(UIView child) { }
+
+    internal sealed override void RefreshDataContext()
+    {
+        base.RefreshDataContext();
+
+        foreach (var child in Elements)
+        {
+            if (child.LocalDataContext == null)
+                child.RefreshDataContext();
+        }
+    }
 
     /// <summary>
     /// 移除当前容器的全部直接子元素。
