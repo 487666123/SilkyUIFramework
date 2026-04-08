@@ -67,6 +67,8 @@ public partial class UIView
         LeftMouseDown?.Invoke(this, evt);
         evt.Previous = this;
         Parent?.OnLeftMouseDown(evt);
+
+        ExecuteCommand();
     }
 
     public virtual void OnLeftMouseUp(UIMouseEvent evt)

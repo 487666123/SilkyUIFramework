@@ -18,7 +18,7 @@ public partial class UIView
         {
             if (field == value) return;
             field = value;
-            MarkLayoutDirty();
+            MarkLayoutDirty(true);
 
             Parent?.ElementsOrderIsDirty = true;
         }
@@ -40,13 +40,21 @@ public partial class UIView
 
     public bool LayoutIsDirty { get; protected set; } = true;
 
-    public void MarkLayoutDirty()
+    public void MarkLayoutDirty(bool force = false)
     {
+        if (force)
+        {
+            LayoutIsDirty = true;
+            PositionIsDirty = true;
+            Parent?.MarkLayoutDirty(true);
+            return;
+        }
+
         LayoutIsDirty = true;
-        MarkPositionDirty();
+        PositionIsDirty = true;
 
         if (Positioning.IsOutOfFlow) return;
-        Parent?.MarkLayoutDirty();
+        Parent?.MarkLayoutDirty(force);
     }
 
     /// <summary>

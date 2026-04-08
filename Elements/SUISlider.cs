@@ -1,4 +1,5 @@
-﻿using SilkyUIFramework.Animation;
+﻿using System.Windows.Input;
+using SilkyUIFramework.Animation;
 
 namespace SilkyUIFramework.Elements;
 
@@ -155,11 +156,17 @@ public class SUISlider : UIElementGroup
 
     public event EventHandler<float> Drag;
 
+    public ICommand DragCommand { get; set; }
+
     protected virtual void OnDrag(float value)
     {
         if (Step > 0)
             value = SnapByStep(value, Step);
         Value = value;
+
+        if (DragCommand != null && DragCommand.CanExecute(Value))
+            DragCommand.Execute(Value);
+
         Drag?.Invoke(this, Value);
     }
 

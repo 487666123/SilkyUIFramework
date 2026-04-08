@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Windows.Input;
 using SilkyUIFramework.Caches;
 
 namespace SilkyUIFramework.Elements;
@@ -7,6 +8,28 @@ public sealed class BindingEntry
 {
     public required string SourcePropertyName { get; init; }
     public required string TargetPropertyName { get; init; }
+    public Func<object, object> SourcePropertyGetter { private get; set; }
+    public required Action<object, object> TargetPropertySetter { private get; init; }
+
+    public void SyncBinding(object source, object target)
+    {
+        if (SourcePropertyGetter is null) return;
+        TargetPropertySetter.Invoke(target, SourcePropertyGetter.Invoke(source));
+    }
+}
+
+public partial class UIView
+{
+    public ICommand Command { get; set; }
+
+    protected virtual object CommandParameter => null;
+
+    protected void ExecuteCommand()
+    {
+        if (Command == null) return;
+        var obj = CommandParameter;
+        if (Command.CanExecute(obj)) Command.Execute(obj);
+    }
 }
 
 public partial class UIView
@@ -40,10 +63,20 @@ public partial class UIView
     {
         ValidateBinding(sourcePropName, targetPropName);
 
-        var binding = new BindingEntry { TargetPropertyName = targetPropName, SourcePropertyName = sourcePropName };
+        var target = ObjectAccessorCache.GetAccessor(GetType());
+
+        var binding = new BindingEntry
+        {
+            TargetPropertyName = targetPropName,
+            SourcePropertyName = sourcePropName,
+            TargetPropertySetter = target.GetSetter(targetPropName),
+        };
         _bindings[targetPropName] = binding;
-        SyncBinding(targetPropName);
         RefreshViewModelSubscription();
+
+        if (DataContext == null) return;
+        binding.SourcePropertyGetter = ObjectAccessorCache.GetAccessor(DataContext.GetType()).GetGetter(sourcePropName);
+        binding.SyncBinding(DataContext, this);
     }
 
     private bool ShouldSubscribeViewModel => IsInsideTree && _bindings.Count > 0;
@@ -69,31 +102,14 @@ public partial class UIView
         source.GetGetter(sourcePropName);
     }
 
-    private void SyncBinding(string targetPropName)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(targetPropName);
-
-        var dataContext = DataContext;
-        if (dataContext == null) return;
-        if (!_bindings.TryGetValue(targetPropName, out var bindingEntry)) return;
-
-        var source = ObjectAccessorCache.GetAccessor(dataContext.GetType());
-        var target = ObjectAccessorCache.GetAccessor(GetType());
-
-        target[this, targetPropName] = source[dataContext, bindingEntry.SourcePropertyName];
-    }
-
     private void SyncAllBindings()
     {
         var dataContext = DataContext;
         if (dataContext == null) return;
 
-        var source = ObjectAccessorCache.GetAccessor(dataContext.GetType());
-        var target = ObjectAccessorCache.GetAccessor(GetType());
-
         foreach (var (targetPropName, bindingEntry) in _bindings)
         {
-            target[this, targetPropName] = source[dataContext, bindingEntry.SourcePropertyName];
+            bindingEntry.SyncBinding(dataContext, this);
         }
     }
 
@@ -106,20 +122,24 @@ public partial class UIView
 
         foreach (var (_, entry) in _bindings)
         {
-            if (!entry.SourcePropertyName.Equals(eventArgs.PropertyName)) continue;
-
-            var source = ObjectAccessorCache.GetAccessor(sender.GetType());
-            var target = ObjectAccessorCache.GetAccessor(GetType());
-
-            target[this, entry.TargetPropertyName] = source[sender, entry.SourcePropertyName];
+            if (entry.SourcePropertyName != eventArgs.PropertyName) continue;
+            entry.SyncBinding(DataContext, this);
         }
     }
 
     private void SubscribeViewModel()
     {
-        if (_subscribed) return;
-        _subscribed = true;
-        DataContext?.PropertyChanged += OnDataContextPropertyChanged;
+        if (DataContext is null) return;
+        if (_subscribed) return; _subscribed = true;
+
+        DataContext.PropertyChanged += OnDataContextPropertyChanged;
+
+        var target = ObjectAccessorCache.GetAccessor(DataContext.GetType());
+
+        foreach (var (_, entry) in _bindings)
+        {
+            entry.SourcePropertyGetter = target.GetGetter(entry.SourcePropertyName);
+        }
     }
 
     private void UnsubscribeViewModel()

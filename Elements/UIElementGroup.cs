@@ -1,5 +1,4 @@
-﻿using System.Xml.Linq;
-using SilkyUIFramework.Layout;
+﻿using SilkyUIFramework.Layout;
 
 namespace SilkyUIFramework.Elements;
 
@@ -432,7 +431,6 @@ public partial class UIElementGroup : UIView
     {
         ElementsCache.Clear();
         ElementsCache.AddRange(Elements.Where(el => !el.Invalid));
-
         OutOfFlowElements.Clear();
         InFlowElements.Clear();
 
