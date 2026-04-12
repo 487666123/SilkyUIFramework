@@ -155,7 +155,7 @@ public partial class UIElementGroup : UIView
 
         MarkLayoutDirty();
 
-        child.RefreshDataContext();
+        child.UpdateDataContext();
 
         ElementsOrderIsDirty = true;
 
@@ -179,7 +179,7 @@ public partial class UIElementGroup : UIView
         if (!Elements.Remove(child)) return;
 
         child.Parent = null;
-        child.RefreshDataContext();
+        child.UpdateDataContext();
         MarkLayoutDirty();
         ElementsOrderIsDirty = true;
 
@@ -193,14 +193,14 @@ public partial class UIElementGroup : UIView
     /// <param name="child">已从容器移除的子元素。</param>
     protected virtual void OnRemoveChild(UIView child) { }
 
-    internal sealed override void RefreshDataContext()
+    internal sealed override void UpdateDataContext()
     {
-        base.RefreshDataContext();
+        base.UpdateDataContext();
 
         foreach (var child in Elements)
         {
             if (child.LocalDataContext == null)
-                child.RefreshDataContext();
+                child.UpdateDataContext();
         }
     }
 

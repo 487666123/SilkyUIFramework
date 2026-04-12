@@ -1,4 +1,4 @@
-namespace SilkyUIFramework.Caches;
+namespace SilkyUIFramework.Common.Reflection;
 
 public static class ObjectAccessorCache
 {

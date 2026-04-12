@@ -132,8 +132,7 @@ public partial class UIView
     {
         if (SilkyUI != null || silkyUI == null) return;
         SilkyUI = silkyUI;
-        RefreshViewModelSubscription();
-        SyncAllBindings();
+        SubscribeDataContext();
         OnEnterTree();
     }
 
@@ -141,7 +140,7 @@ public partial class UIView
     {
         if (SilkyUI == null) return;
         SilkyUI = null;
-        RefreshViewModelSubscription();
+        UnsubscribeDataContext();
         OnExitTree();
     }
 
