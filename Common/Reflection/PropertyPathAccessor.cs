@@ -46,9 +46,9 @@ public sealed class PropertyPathAccessor
     /// <param name="rootType">根类型</param>
     /// <param name="propertyPath">属性段列表</param>
     /// <returns>嵌套属性访问器实例</returns>
-    public static PropertyPathAccessor Create(Type rootType, string[] propertyPath)
+    public static PropertyPathAccessor Create(object rootObject, string[] propertyPath)
     {
-        ArgumentNullException.ThrowIfNull(rootType);
+        ArgumentNullException.ThrowIfNull(rootObject);
         ArgumentNullException.ThrowIfNull(propertyPath);
 
         if (propertyPath.Length == 0)
@@ -57,18 +57,19 @@ public sealed class PropertyPathAccessor
         var propertyPathString = string.Join(".", propertyPath);
 
         var getters = new List<Func<object, object>>(propertyPath.Length);
-        var currentType = rootType;
+
+        var currentObj = rootObject;
 
         foreach (var segment in propertyPath)
         {
-            var accessor = ObjectAccessorCache.GetAccessor(currentType);
+            var accessor = ObjectAccessorCache.GetAccessor(currentObj);
             var getter = accessor.GetGetter(segment);
             var propertyInfo = accessor.GetPropertyInfo(segment);
 
             getters.Add(getter);
-            currentType = propertyInfo.PropertyType;
+            currentObj = getter.Invoke(currentObj);
         }
 
-        return new PropertyPathAccessor(rootType, propertyPath, getters);
+        return new PropertyPathAccessor(rootObject.GetType(), propertyPath, getters);
     }
 }

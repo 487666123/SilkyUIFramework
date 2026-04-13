@@ -17,12 +17,12 @@ public static class BindingEntryHelper
         if (bindingEntry.SourcePropertyPath.Length > 1)
         {
             bindingEntry.SourcePropertyGetter =
-                PropertyPathAccessor.Create(source.GetType(), bindingEntry.SourcePropertyPath).GetValue;
+                PropertyPathAccessor.Create(source, bindingEntry.SourcePropertyPath).GetValue;
         }
         else
         {
             bindingEntry.SourcePropertyGetter =
-                ObjectAccessorCache.GetAccessor(source.GetType()).GetGetter(bindingEntry.SourcePropertyPath[0]);
+                ObjectAccessorCache.GetAccessor(source).GetGetter(bindingEntry.SourcePropertyPath[0]);
         }
     }
 }

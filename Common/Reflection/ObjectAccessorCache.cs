@@ -4,9 +4,10 @@ public static class ObjectAccessorCache
 {
     private static readonly Dictionary<Type, ObjectAccessor> _accessorCache = [];
 
-    public static ObjectAccessor GetAccessor(Type type)
+    public static ObjectAccessor GetAccessor(object obj)
     {
-        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(obj);
+        var type = obj.GetType();
         if (type.IsValueType)
             throw new NotSupportedException($"不支持为值类型 {type.FullName} 创建对象访问器。");
 

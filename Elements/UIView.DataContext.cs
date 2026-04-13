@@ -89,7 +89,7 @@ public partial class UIView
         {
             TargetPropertyName = targetPropName,
             SourcePropertyPath = PropertyPathParser.Parse(sourcePropName),
-            TargetPropertySetter = ObjectAccessorCache.GetAccessor(GetType()).GetSetter(targetPropName),
+            TargetPropertySetter = ObjectAccessorCache.GetAccessor(this).GetSetter(targetPropName),
         };
 
         if (ShouldSubscribeViewModel) SubscribeDataContext();
