@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Windows.Input;
 using SilkyUIFramework.Bindings;
@@ -36,16 +37,13 @@ public partial class UIView
 /// </summary>
 public partial class UIView
 {
-    // 是否需要订阅视图模型变更事件
-    private bool ShouldSubscribeViewModel => IsInsideTree && _bindings.Count > 0;
-
-    // 是否已订阅数据上下文变更事件
-    private bool _subscribed = false;
     // 绑定集合，键为目标属性名称
     private readonly Dictionary<string, BindingEntry> _bindings = [];
 
+    #region LocalDataContext & DataContext
+
     /// <summary>
-    /// 本地数据上下文，优先级高于继承自父元素的数据上下文
+    /// 本地数据上下文，优先级高于继承自父元素的数据上下文（你不应该频繁变更他）
     /// </summary>
     public object LocalDataContext
     {
@@ -67,13 +65,12 @@ public partial class UIView
             if (ReferenceEquals(field, value)) return;
             UnsubscribeDataContext();
             field = value;
-
-            // 必须在 UI 树中订阅
-            // 如果此时未订阅，则在进入树时会订阅
-            if (ShouldSubscribeViewModel) SubscribeDataContext();
+            if (IsInsideTree) SubscribeDataContext();
             else UnsubscribeDataContext();
         }
     }
+
+    #endregion
 
     /// <summary>
     /// 创建源属性到目标属性的绑定
@@ -85,33 +82,14 @@ public partial class UIView
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePropName);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPropName);
 
-        var bindingEntry = _bindings[targetPropName] = new BindingEntry
+        if (_bindings.TryGetValue(targetPropName, out var binding))
         {
-            TargetPropertyName = targetPropName,
-            SourcePropertyPath = PropertyPathParser.Parse(sourcePropName),
-            TargetPropertySetter = ObjectAccessorCache.GetAccessor(this).GetSetter(targetPropName),
-        };
-
-        if (ShouldSubscribeViewModel) SubscribeDataContext();
-
-        if (DataContext == null) return;
-
-        bindingEntry.UpdateSourcePropertyGetter(DataContext);
-        bindingEntry.SyncBinding(DataContext, this);
-    }
-
-    /// <summary>
-    /// 同步所有绑定的值
-    /// </summary>
-    private void SyncAllBindings()
-    {
-        var dataContext = DataContext;
-        if (dataContext == null) return;
-
-        foreach (var (_, bindingEntry) in _bindings)
-        {
-            bindingEntry.SyncBinding(dataContext, this);
+            binding.Source = null;
         }
+
+        binding = _bindings[targetPropName] = new BindingEntry(PropertyPathParser.Parse(sourcePropName), this, targetPropName);
+
+        if (IsInsideTree) binding.Source = DataContext;
     }
 
     /// <summary>
@@ -119,13 +97,12 @@ public partial class UIView
     /// </summary>
     private void SubscribeDataContext()
     {
-        if (DataContext is null) return;
-        if (_subscribed) return; _subscribed = true;
+        if (DataContext == null) return;
 
-        if (DataContext is INotifyPropertyChanged notifyPropertyChanged)
-            notifyPropertyChanged.PropertyChanged += OnDataContextPropertyChanged;
-
-        UpdateBindingsSourcePropertyGetter(DataContext);
+        foreach (var (_, value) in _bindings)
+        {
+            value.Source = DataContext;
+        }
     }
 
     /// <summary>
@@ -133,25 +110,9 @@ public partial class UIView
     /// </summary>
     private void UnsubscribeDataContext()
     {
-        _subscribed = false;
-
-        if (DataContext is INotifyPropertyChanged notifyPropertyChanged)
-            notifyPropertyChanged.PropertyChanged -= OnDataContextPropertyChanged;
-    }
-
-    /// <summary>
-    /// 数据上下文属性变更时的处理方法
-    /// </summary>
-    /// <param name="sender">事件发送者</param>
-    /// <param name="eventArgs">属性变更事件参数</param>
-    protected virtual void OnDataContextPropertyChanged(object sender, PropertyChangedEventArgs eventArgs)
-    {
-        if (string.IsNullOrWhiteSpace(eventArgs.PropertyName)) return;
-
-        foreach (var (_, bindingEntry) in _bindings)
+        foreach (var (_, value) in _bindings)
         {
-            if (!bindingEntry.MatchSourcePath(eventArgs.PropertyName)) continue;
-            bindingEntry.SyncBinding(DataContext, this);
+            value.Source = null;
         }
     }
 
@@ -160,24 +121,6 @@ public partial class UIView
     /// </summary>
     internal virtual void UpdateDataContext()
     {
-        var dataContext = LocalDataContext ?? Parent?.DataContext;
-
-        if (ReferenceEquals(DataContext, dataContext)) return;
-        DataContext = dataContext;
-
-        UpdateBindingsSourcePropertyGetter(dataContext);
-    }
-
-    /// <summary> 更新绑定员属性 getter </summary>
-    private void UpdateBindingsSourcePropertyGetter(object dataContext)
-    {
-        if (dataContext == null) return;
-
-        foreach (var (_, bindingEntry) in _bindings)
-        {
-            bindingEntry.UpdateSourcePropertyGetter(dataContext);
-        }
-
-        SyncAllBindings();
+        DataContext = LocalDataContext ?? Parent?.DataContext;
     }
 }

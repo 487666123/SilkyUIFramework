@@ -197,10 +197,10 @@ public partial class UIElementGroup : UIView
     {
         base.UpdateDataContext();
 
-        foreach (var child in Elements)
+        foreach (var element in Elements)
         {
-            if (child.LocalDataContext == null)
-                child.UpdateDataContext();
+            if (element.LocalDataContext == null)
+                element.UpdateDataContext();
         }
     }
 
