@@ -1,12 +1,49 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.ComponentModel;
 using SilkyUIFramework.Common.Reflection;
 
 namespace SilkyUIFramework.Bindings;
 
 /// <summary>绑定项，描述源属性到目标属性的绑定关系</summary>
-public sealed class BindingEntry
+public sealed class BindingEntry : IDisposable
 {
+    /// <summary>订阅节点，保存每一层的属性订阅信息</summary>
+    private sealed class SubscriptionNode : IDisposable
+    {
+        public BindingEntry BindingEntry { get; }
+        public INotifyPropertyChanged Object { get; }
+        public string PropertyName { get; }
+        public int Level { get; }
+
+        public SubscriptionNode(BindingEntry bindingEntry, INotifyPropertyChanged obj, string propertyName, int level)
+        {
+            BindingEntry = bindingEntry;
+            Object = obj;
+            PropertyName = propertyName;
+            obj.PropertyChanged += Handler;
+            Level = level;
+        }
+
+        private void Handler(object sender, PropertyChangedEventArgs e)
+        {
+            var level = Level + 1;
+
+            // 清除后续层级的订阅
+            BindingEntry.RemoveSubscriptionsFromLevel(level);
+
+            if (ObjectAccessorCache.GetAccessor(sender).GetGetter(PropertyName).Invoke(sender) is { } obj)
+            {
+                // 构建后续层级的订阅
+                BindingEntry.MountSubscriptionsFromLevel(obj, level);
+            }
+
+            // 同步最新值
+            BindingEntry.SyncBinding();
+        }
+
+        public void Dispose() => Object.PropertyChanged -= Handler;
+    }
+
     /// <summary>创建绑定项</summary>
     /// <param name="sourcePropertyPath">源属性路径</param>
     /// <param name="target">绑定目标对象</param>
@@ -20,8 +57,10 @@ public sealed class BindingEntry
         _targetPropertySetter = ObjectAccessorCache.GetAccessor(target).GetSetter(targetPropertyName);
     }
 
-    /// <summary>是否已订阅属性变化通知</summary>
-    private bool _subscribed = false;
+    #region Fields Properties
+
+    /// <summary>当前活跃的订阅链</summary>
+    private readonly List<SubscriptionNode> _subscriptionChain = [];
 
     /// <summary>绑定源对象</summary>
     public object Source
@@ -29,12 +68,12 @@ public sealed class BindingEntry
         get; set
         {
             if (ReferenceEquals(field, value)) return;
-            Unsubscribe();
+            RemoveAllSubscriptionChain();
             field = value;
             if (field == null) return;
             UpdateSourcePropertyGetter();
             SyncBinding();
-            Subscribe();
+            MountSubscriptionsFromLevel(field, 0);
         }
     }
 
@@ -53,21 +92,13 @@ public sealed class BindingEntry
     /// <summary>目标属性值设置器</summary>
     private readonly Action<object, object> _targetPropertySetter;
 
+    #endregion
+
     /// <summary>同步绑定值，将源属性值同步到目标属性</summary>
     private void SyncBinding()
     {
         if (_sourcePropertyGetter is null) return;
         _targetPropertySetter.Invoke(Target, _sourcePropertyGetter.Invoke(Source));
-    }
-
-    /// <summary>源属性变化事件处理方法</summary>
-    /// <param name="sender">事件发送者</param>
-    /// <param name="eventArgs">属性变化事件参数</param>
-    private void OnSourcePropertyChanged(object sender, PropertyChangedEventArgs eventArgs)
-    {
-        if (!string.Equals(SourcePropertyPath[0], eventArgs.PropertyName)) return;
-
-        SyncBinding();
     }
 
     /// <summary>更新绑定项的源属性获取器</summary>
@@ -82,21 +113,52 @@ public sealed class BindingEntry
         _sourcePropertyGetter = ObjectAccessorCache.GetAccessor(Source).GetGetter(SourcePropertyPath[0]);
     }
 
-    /// <summary>订阅源对象的属性变化通知</summary>
-    private void Subscribe()
+    /// <summary>从指定层级开始挂载订阅链</summary>
+    private void MountSubscriptionsFromLevel(object obj, int level)
     {
-        if (_subscribed) return; _subscribed = true;
+        for (var i = level; i < SourcePropertyPath.Length; i++)
+        {
+            var propertyName = SourcePropertyPath[i];
 
-        if (Source is not INotifyPropertyChanged notifyPropertyChanged) return;
-        notifyPropertyChanged.PropertyChanged += OnSourcePropertyChanged;
+            // 如果当前对象实现了INotifyPropertyChanged，订阅它的属性变化
+            if (obj is INotifyPropertyChanged notifyPropertyChanged)
+            {
+                _subscriptionChain.Add(new SubscriptionNode(this, notifyPropertyChanged, propertyName, i));
+            }
+
+            if (i == SourcePropertyPath.Length - 1) break;
+
+            var nextLevelGetter = ObjectAccessorCache.GetAccessor(obj).GetGetter(propertyName);
+            obj = nextLevelGetter.Invoke(obj);
+
+            if (obj == null) break; // 中间层为null，无法继续
+        }
     }
 
-    /// <summary>取消订阅源对象的属性变化通知</summary>
-    private void Unsubscribe()
+    /// <summary>清理整个订阅链</summary>
+    private void RemoveAllSubscriptionChain()
     {
-        _subscribed = false;
+        foreach (var node in _subscriptionChain)
+        {
+            node.Dispose();
+        }
 
-        if (Source is not INotifyPropertyChanged notifyPropertyChanged) return;
-        notifyPropertyChanged.PropertyChanged -= OnSourcePropertyChanged;
+        _subscriptionChain.Clear();
     }
+
+    /// <summary>从指定层级开始移除后面的所有订阅</summary>
+    private void RemoveSubscriptionsFromLevel(int level)
+    {
+        if (level < 0 || level >= _subscriptionChain.Count) return;
+
+        for (int i = level; i < _subscriptionChain.Count; i++)
+        {
+            _subscriptionChain[i].Dispose();
+        }
+
+        _subscriptionChain.RemoveRange(level, _subscriptionChain.Count - level);
+    }
+
+    /// <summary>释放所有订阅资源</summary>
+    public void Dispose() => RemoveAllSubscriptionChain();
 }

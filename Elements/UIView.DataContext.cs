@@ -1,4 +1,4 @@
-using System.Windows.Input;
+﻿using System.Windows.Input;
 using SilkyUIFramework.Bindings;
 
 namespace SilkyUIFramework.Elements;
