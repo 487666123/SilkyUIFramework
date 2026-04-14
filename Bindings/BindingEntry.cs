@@ -50,6 +50,16 @@ public sealed class BindingEntry : IDisposable
     /// <param name="targetPropertyName">目标属性名称</param>
     public BindingEntry(string[] sourcePropertyPath, object target, string targetPropertyName)
     {
+        // 参数校验
+        ArgumentNullException.ThrowIfNull(sourcePropertyPath);
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetPropertyName);
+
+        if (sourcePropertyPath.Length == 0)
+            throw new ArgumentException("Source property path cannot be empty.", nameof(sourcePropertyPath));
+        if (sourcePropertyPath.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Source property path cannot contain null or empty strings.", nameof(sourcePropertyPath));
+
         SourcePropertyPath = [.. sourcePropertyPath];
         Target = target;
         TargetPropertyName = targetPropertyName;
@@ -59,7 +69,7 @@ public sealed class BindingEntry : IDisposable
 
     #region Fields Properties
 
-    /// <summary>当前活跃的订阅链</summary>
+    /// <summary>订阅链</summary>
     private readonly List<SubscriptionNode> _subscriptionChain = [];
 
     /// <summary>绑定源对象</summary>
@@ -67,10 +77,14 @@ public sealed class BindingEntry : IDisposable
     {
         get; set
         {
-            if (ReferenceEquals(field, value)) return;
-            RemoveAllSubscriptionChain();
+            if (Equals(field, value)) return;
+            RemoveAllSubscriptionNode();
             field = value;
-            if (field == null) return;
+            if (field == null)
+            {
+                _sourcePropertyGetter = null;
+                return;
+            }
             UpdateSourcePropertyGetter();
             SyncBinding();
             MountSubscriptionsFromLevel(field, 0);
@@ -136,7 +150,7 @@ public sealed class BindingEntry : IDisposable
     }
 
     /// <summary>清理整个订阅链</summary>
-    private void RemoveAllSubscriptionChain()
+    private void RemoveAllSubscriptionNode()
     {
         foreach (var node in _subscriptionChain)
         {
@@ -149,16 +163,21 @@ public sealed class BindingEntry : IDisposable
     /// <summary>从指定层级开始移除后面的所有订阅</summary>
     private void RemoveSubscriptionsFromLevel(int level)
     {
-        if (level < 0 || level >= _subscriptionChain.Count) return;
+        if (level < 0) return;
 
-        for (int i = level; i < _subscriptionChain.Count; i++)
+        // 找到第一个Level >= 指定层级的节点索引
+        var startIndex = _subscriptionChain.FindIndex(node => node.Level >= level);
+        if (startIndex == -1) return;
+
+        // 从该索引开始移除所有后续节点
+        for (var i = startIndex; i < _subscriptionChain.Count; i++)
         {
             _subscriptionChain[i].Dispose();
         }
 
-        _subscriptionChain.RemoveRange(level, _subscriptionChain.Count - level);
+        _subscriptionChain.RemoveRange(startIndex, _subscriptionChain.Count - startIndex);
     }
 
     /// <summary>释放所有订阅资源</summary>
-    public void Dispose() => RemoveAllSubscriptionChain();
+    public void Dispose() => RemoveAllSubscriptionNode();
 }
