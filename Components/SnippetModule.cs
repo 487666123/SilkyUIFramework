@@ -228,9 +228,9 @@ public sealed class SnippetModule
             {
                 if (!TryCommitToken(ref token)) return;
 
-                var width = snippet.GetStringLength(font);
+                snippet.UniqueDraw(true, out var size, null);
 
-                if (!TryAdd(snippet, width))
+                if (!TryAdd(snippet, size.X))
                     return;
             }
         }
@@ -247,9 +247,7 @@ public sealed class SnippetModule
         foreach (var line in _lines)
         {
             size.X = Math.Max(size.X, line.Width);
-            size.Y += line.Snippets.Count > 0
-                ? font.LineSpacing * line.Snippets.Max(snippet => snippet.Scale)
-                : font.LineSpacing;
+            size.Y += font.LineSpacing;
         }
 
         return size * baseScale;
@@ -274,18 +272,16 @@ public sealed class SnippetModule
                 continue;
             }
 
-            var maxScale = line.Snippets.Max(l => l.Scale);
+            const float maxScale = 1;
             var lineHeight = font.LineSpacing * maxScale * baseScale.Y;
 
             foreach (var snippet in line.Snippets)
             {
-                snippet.Update();
-
                 var snippetColor = ignoreColors
                     ? baseColor
                     : Color.FromNonPremultiplied(snippet.GetVisibleColor().ToVector4() * baseColor.ToVector4());
 
-                var scale = snippet.Scale * baseScale;
+                var scale = baseScale;
 
                 var uniquePosition = currentPosition;
                 if (snippet is CursorSnippet cursor)

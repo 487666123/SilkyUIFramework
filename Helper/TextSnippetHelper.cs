@@ -8,7 +8,7 @@ public static class TextSnippetHelper
 {
     public static PlainSnippet Copy(this TextSnippet snippet, string text)
     {
-        return new PlainSnippet(text, snippet.Color, snippet.Scale);
+        return new PlainSnippet(text, snippet.Color);
     }
 
     public static Vector2 GetStringSize(DynamicSpriteFont font, List<TextSnippet> snippets, Vector2 baseScale,
@@ -34,8 +34,7 @@ public static class TextSnippetHelper
 
         foreach (var snippet in snippets)
         {
-            snippet.Update();
-            var snippetScale = snippet.Scale;
+            const float snippetScale = 1;
 
             // --- 处理特殊绘制的片段（例如图标） ---
             if (snippet.UniqueDraw(true, out var uniqueSnippetSize, null, Vector2.Zero, Color.White,
@@ -159,7 +158,7 @@ public static class TextSnippetHelper
             // 精确判断类型
             if (snippet.GetType() == typeof(TextSnippet))
             {
-                span[i] = new PlainSnippet(snippet.Text, snippet.Color, snippet.Scale);
+                span[i] = new PlainSnippet(snippet.Text, snippet.Color);
             }
         }
 
