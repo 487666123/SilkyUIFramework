@@ -15,9 +15,6 @@ public class CursorSnippet(SUIEditText editText) : TextSnippet(" ")
     /// </summary>
     public float TrueHeight { get; set; }
 
-    // 宽度计算
-    public override float GetStringLength(DynamicSpriteFont font) => 0f;
-
     // 原版的 Snippet 使用 Draw 方法来计算大小
     // 用一个 bool justCheckingString 参数来区分是在计算还是在绘制
     // 如果你只是在计算大小, 也需要传入一堆无关的绘制参数

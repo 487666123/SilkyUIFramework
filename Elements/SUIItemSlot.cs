@@ -84,7 +84,7 @@ public class SUIItemSlot : UIView
         if (ItemInteractive && Main.playerInventory && (Main.mouseItem.NotAir() || Item.NotAir()))
         {
             // 物品相同: 未堆叠满堆叠入物品栏
-            if (Main.mouseItem.IsTheSameAs(Item) && Item.NotAir() && Item.NotFull())
+            if (!Main.mouseItem.IsNotTheSameAs(Item) && Item.NotAir() && Item.NotFull())
             {
                 TryStackItem(Item, Main.mouseItem, out var numTransferred);
                 if (numTransferred > 0)
@@ -138,7 +138,7 @@ public class SUIItemSlot : UIView
         else
         {
             // 鼠标上有物品
-            if (Item.IsTheSameAs(Main.mouseItem))
+            if (!Item.IsNotTheSameAs(Main.mouseItem))
             {
                 switch (RightMousePressedTimer)
                 {
@@ -194,7 +194,7 @@ public class SUIItemSlot : UIView
 
     public static bool ItemSameAndCanStack(Item destination, Item source)
     {
-        return destination.IsTheSameAs(source) && ItemLoader.CanStack(destination, source);
+        return !destination.IsNotTheSameAs(source) && ItemLoader.CanStack(destination, source);
     }
 
     #region Draw

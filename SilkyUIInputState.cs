@@ -67,7 +67,7 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     {
         if (FocusTarget is not { OccupyPlayerInput: true }) return;
 
-        if (!Main.hasFocus) return; // 焦点不在游戏
+        // if (!Main.hasFocus) return; // 焦点不在游戏
 
         Main.oldInputText = Main.inputText;
         Main.inputText = Keyboard.GetState();
@@ -75,7 +75,8 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
         spriteBatch.ReBegin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
 
         var imeService = Platform.Get<IImeService>();
-        Main.instance.DrawWindowsIMEPanel(FocusTarget.InputMethodPosition);
+        Main.instance.SetIMEPanelAnchor(FocusTarget.InputMethodPosition, 0);
+        Main.instance.DrawIMEPanel();
 
         FocusTarget.HandlePlayerInput(imeService.CandidateCount > 0);
 

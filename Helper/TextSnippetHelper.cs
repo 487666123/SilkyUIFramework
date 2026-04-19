@@ -8,7 +8,7 @@ public static class TextSnippetHelper
 {
     public static PlainSnippet Copy(this TextSnippet snippet, string text)
     {
-        return new PlainSnippet(text, snippet.Color, snippet.Scale);
+        return new PlainSnippet(text, snippet.Color);
     }
 
     public static Vector2 GetStringSize(DynamicSpriteFont font, List<TextSnippet> snippets, Vector2 baseScale,
@@ -34,12 +34,8 @@ public static class TextSnippetHelper
 
         foreach (var snippet in snippets)
         {
-            snippet.Update();
-            var snippetScale = snippet.Scale;
-
             // --- 处理特殊绘制的片段（例如图标） ---
-            if (snippet.UniqueDraw(true, out var uniqueSnippetSize, null, Vector2.Zero, Color.White,
-                    baseScale.X * snippetScale))
+            if (snippet.UniqueDraw(true, out var uniqueSnippetSize, null, Vector2.Zero, Color.White, baseScale.X))
             {
                 currentPosition.X += uniqueSnippetSize.X;
                 totalSize.X = Math.Max(totalSize.X, currentPosition.X);
@@ -56,12 +52,12 @@ public static class TextSnippetHelper
                         // 在单词之间添加空格的宽度
                         if (wordIndex > 0)
                         {
-                            currentPosition.X += baseSpaceWidth * baseScale.X * snippetScale;
+                            currentPosition.X += baseSpaceWidth * baseScale.X;
                         }
 
                         // 【优化点1】: 只调用一次 MeasureString
                         var unscaledWordSize = font.MeasureString(words[wordIndex]);
-                        var scaledWordWidth = unscaledWordSize.X * baseScale.X * snippetScale;
+                        var scaledWordWidth = unscaledWordSize.X * baseScale.X;
 
                         // --- 检查是否需要自动换行 ---
                         if (maxWidth > 0f && currentPosition.X + scaledWordWidth > maxWidth && currentPosition.X > 0f)
@@ -70,15 +66,12 @@ public static class TextSnippetHelper
                             HandleNewLine();
                         }
 
-                        // 更新当前行的最大缩放比例
-                        maxScaleOnCurrentLine = Math.Max(maxScaleOnCurrentLine, snippetScale);
-
                         // 累加当前单词的尺寸
                         currentPosition.X += scaledWordWidth;
 
                         // 更新文本总尺寸
                         totalSize.X = Math.Max(totalSize.X, currentPosition.X);
-                        var scaledWordHeight = unscaledWordSize.Y * baseScale.Y * snippetScale;
+                        var scaledWordHeight = unscaledWordSize.Y * baseScale.Y;
                         totalSize.Y = Math.Max(totalSize.Y, currentPosition.Y + scaledWordHeight);
                     }
 
@@ -159,7 +152,7 @@ public static class TextSnippetHelper
             // 精确判断类型
             if (snippet.GetType() == typeof(TextSnippet))
             {
-                span[i] = new PlainSnippet(snippet.Text, snippet.Color, snippet.Scale);
+                span[i] = new PlainSnippet(snippet.Text, snippet.Color);
             }
         }
 
