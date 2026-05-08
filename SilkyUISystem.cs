@@ -1,4 +1,5 @@
-﻿using Terraria.ModLoader.Core;
+﻿using SilkyUIFramework.Interfaces;
+using Terraria.ModLoader.Core;
 
 namespace SilkyUIFramework;
 
@@ -14,28 +15,51 @@ public partial class SilkyUISystem : ModSystem
 
     ModLoadedTypes[] _modsWithLoadedTypes;
 
+    public ISilkyUIAssetProvider AssetProvider { get; private set; }
+
     /// <summary>
     /// 收集 Mod 已加载的类型
     /// </summary>
     void CollectLoadedTypes()
     {
         var mods = ModLoader.Mods.AsSpan();
-        _modsWithLoadedTypes = new ModLoadedTypes[mods.Length];
+
+
+        bool containsSUI = false;
+        for (int i = 0; i < mods.Length; i++)
+        {
+            if (mods[i].Name is nameof(SilkyUIFramework)) 
+            {
+                containsSUI = true;
+                break;
+            }
+        }
+
+        _modsWithLoadedTypes = new ModLoadedTypes[containsSUI ? mods.Length : (mods.Length + 1)];
+
 
         for (int i = 0; i < mods.Length; i++)
         {
             var mod = mods[i];
             _modsWithLoadedTypes[i] = new ModLoadedTypes(mod, AssemblyManager.GetLoadableTypes(mod.Code));
         }
+
+        if (!containsSUI) 
+        {
+            var mod = ModContent.GetInstance<SilkyUIFramework>();
+            _modsWithLoadedTypes[^1] = new ModLoadedTypes(mod, AssemblyManager.GetLoadableTypes(mod.Code));
+        }
     }
 
     public override void Load()
     {
         if (Main.netMode == NetmodeID.Server) return;
-
+        
         CollectLoadedTypes();
 
         ServiceProvider = ServiceProviderBuilder.BuildServiceProvider(_modsWithLoadedTypes);
+
+        AssetProvider = ServiceProvider.GetService<ISilkyUIAssetProvider>() ?? new SilkyUIAssetProvider();
 
         SilkyUIManager = ServiceProvider.GetRequiredService<SilkyUIManager>();
         SilkyUIRegistrar = ServiceProvider.GetRequiredService<SilkyUIRegistrar>();

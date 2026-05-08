@@ -62,9 +62,7 @@ public static class BlurHelper
         float[] offsets, BlurMixingNumber blurType = BlurMixingNumber.Three)
     {
         if (offsets.Length == 0) return;
-
-        var effect = ModAsset.BlurEffect.Value;
-        if (effect == null) return;
+        if (SilkyUISystem.Instance.AssetProvider?.BlurEffect?.Value is not { } effect) return;
 
         var device = Main.graphics.GraphicsDevice;
         var batch = Main.spriteBatch;
@@ -74,7 +72,7 @@ public static class BlurHelper
         var renderTargetPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
         var renderTargetSwap = renderTargetPool.Rent(renderTarget.Width, renderTarget.Height);
 
-        ModAsset.BlurEffect.Value.Parameters["uPixelSize"]
+        effect.Parameters["uPixelSize"]
             .SetValue(Vector2.One / new Vector2(renderTarget.Width, renderTarget.Height));
 
         SelectBlurEffectPasses(blurType, out var blurX, out var blurY);
@@ -106,7 +104,7 @@ public static class BlurHelper
 
     private static void SelectBlurEffectPasses(BlurMixingNumber blurType, out EffectPass blurX, out EffectPass blurY)
     {
-        var effect = ModAsset.BlurEffect.Value;
+        var effect = SilkyUISystem.Instance.AssetProvider.BlurEffect.Value;
         switch (blurType)
         {
             default:

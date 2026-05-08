@@ -17,7 +17,8 @@ public static class SDFRectangle
     /// <summary>
     /// SDF 矩形着色器实例。
     /// </summary>
-    private static Effect Effect => ModAsset.SDFRectangle.Value;
+    private static Effect Effect => SilkyUISystem.Instance.AssetProvider.SDFRectangle.Value;
+
 
     /// <summary>
     /// 绘制带描边的圆角矩形。

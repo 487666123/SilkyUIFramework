@@ -39,7 +39,7 @@ public static class SDFGraphics
     {
         matrix = MatrixHelper.Transform2SDFMatrix(matrix);
 
-        var effect = ModAsset.SDFGraphics.Value;
+        var effect = SilkyUISystem.Instance.AssetProvider.SDFGraphics.Value;
         effect.Parameters["uTransform"].SetValue(matrix);
         return effect;
     }
