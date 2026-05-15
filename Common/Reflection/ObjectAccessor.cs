@@ -1,44 +1,24 @@
 ﻿using System.Linq.Expressions;
 
-namespace SilkyUIFramework.Caches;
+namespace SilkyUIFramework.Common.Reflection;
 
 public sealed class ObjectAccessor
 {
     private readonly Type _type;
     private readonly IReadOnlyDictionary<string, Func<object, object>> _getters;
     private readonly IReadOnlyDictionary<string, Action<object, object>> _setters;
+    private readonly IReadOnlyDictionary<string, PropertyInfo> _propertyInfos;
 
     private ObjectAccessor(
         Type type,
         IReadOnlyDictionary<string, Func<object, object>> getters,
-        IReadOnlyDictionary<string, Action<object, object>> setters)
+        IReadOnlyDictionary<string, Action<object, object>> setters,
+        IReadOnlyDictionary<string, PropertyInfo> propertyInfos)
     {
         _type = type;
         _getters = getters;
         _setters = setters;
-    }
-
-    public static ObjectAccessor Create(Type type)
-    {
-        ArgumentNullException.ThrowIfNull(type);
-
-        if (type.IsValueType) throw new NotSupportedException($"不支持为值类型 {type.FullName} 创建对象访问器。");
-
-        Dictionary<string, Func<object, object>> getters = [];
-        Dictionary<string, Action<object, object>> setters = [];
-
-        foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
-        {
-            if (property.GetIndexParameters().Length != 0) continue;
-
-            if (property.GetMethod is { } getMethod)
-                getters[property.Name] = CreateGetter(type, getMethod);
-
-            if (property.SetMethod is { } setMethod)
-                setters[property.Name] = CreateSetter(type, property.PropertyType, setMethod);
-        }
-
-        return new ObjectAccessor(type, getters, setters);
+        _propertyInfos = propertyInfos;
     }
 
     public object this[object obj, string propName]
@@ -61,36 +41,47 @@ public sealed class ObjectAccessor
 
     public Func<object, object> GetGetter(string propName)
     {
-        if (TryGetGetter(propName, out var getter)) return getter;
-
-        var property = GetProperty(propName);
-        if (property.GetIndexParameters().Length != 0)
-            throw new NotSupportedException($"不支持访问索引器属性 {_type.FullName}.{propName}。");
-
+        if (_getters.TryGetValue(propName, out var getter)) return getter;
         throw new InvalidOperationException($"属性 {_type.FullName}.{propName} 没有公开 getter。");
     }
 
     public Action<object, object> GetSetter(string propName)
     {
-        if (TryGetSetter(propName, out var setter)) return setter;
-
-        var property = GetProperty(propName);
-        if (property.GetIndexParameters().Length != 0)
-            throw new NotSupportedException($"不支持访问索引器属性 {_type.FullName}.{propName}。");
-
+        if (_setters.TryGetValue(propName, out var setter)) return setter;
         throw new InvalidOperationException($"属性 {_type.FullName}.{propName} 没有公开 setter。");
     }
 
-    public bool TryGetGetter(string propName, out Func<object, object> getter)
+    public PropertyInfo GetPropertyInfo(string propName)
     {
-        ArgumentException.ThrowIfNullOrEmpty(propName);
-        return _getters.TryGetValue(propName, out getter);
+        if (_propertyInfos.TryGetValue(propName, out var propertyInfo)) return propertyInfo;
+
+        throw new InvalidOperationException($"没有可用的 {propName} 属性");
     }
 
-    public bool TryGetSetter(string propName, out Action<object, object> setter)
+    public static ObjectAccessor Create(Type type)
     {
-        ArgumentException.ThrowIfNullOrEmpty(propName);
-        return _setters.TryGetValue(propName, out setter);
+        ArgumentNullException.ThrowIfNull(type);
+
+        if (type.IsValueType) throw new NotSupportedException($"不支持为值类型 {type.FullName} 创建对象访问器。");
+
+        var getters = new Dictionary<string, Func<object, object>>();
+        var setters = new Dictionary<string, Action<object, object>>();
+        var propertyInfos = new Dictionary<string, PropertyInfo>();
+
+        foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            if (property.GetIndexParameters().Length != 0) continue;
+
+            propertyInfos[property.Name] = property;
+
+            if (property.GetMethod is { } getMethod)
+                getters[property.Name] = CreateGetter(type, getMethod);
+
+            if (property.SetMethod is { } setMethod)
+                setters[property.Name] = CreateSetter(type, property.PropertyType, setMethod);
+        }
+
+        return new ObjectAccessor(type, getters, setters, propertyInfos);
     }
 
     private static Func<object, object> CreateGetter(Type type, MethodInfo getMethod)
@@ -114,12 +105,5 @@ public sealed class ObjectAccessor
         var assign = Expression.Call(typedTarget, setMethod, typedValue);
 
         return Expression.Lambda<Action<object, object>>(assign, targetParameter, valueParameter).Compile();
-    }
-
-    private PropertyInfo GetProperty(string propName)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(propName);
-        return _type.GetProperty(propName, BindingFlags.Instance | BindingFlags.Public)
-            ?? throw new InvalidOperationException($"类型 {_type.FullName} 上不存在属性 {propName}。");
     }
 }
