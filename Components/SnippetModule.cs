@@ -272,8 +272,7 @@ public sealed class SnippetModule
                 continue;
             }
 
-            const float maxScale = 1;
-            var lineHeight = font.LineSpacing * maxScale * baseScale.Y;
+            var lineHeight = font.LineSpacing * baseScale.Y;
 
             foreach (var snippet in line.Snippets)
             {
