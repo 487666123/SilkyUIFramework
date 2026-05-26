@@ -75,7 +75,6 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
 
         var imeService = Platform.Get<IImeService>();
         Main.instance.SetIMEPanelAnchor(FocusTarget.InputMethodPosition, 0);
-        Main.instance.DrawIMEPanel();
 
         FocusTarget.HandlePlayerInput(imeService.CandidateCount > 0);
 
