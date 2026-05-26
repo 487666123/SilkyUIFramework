@@ -67,11 +67,10 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     {
         if (FocusTarget is not { OccupyPlayerInput: true }) return;
 
-        // if (!Main.hasFocus) return; // 焦点不在游戏
+        if (!FocusHelper.AllowUIInputs) return; // 焦点不在游戏
 
         Main.oldInputText = Main.inputText;
         Main.inputText = Keyboard.GetState();
-
         spriteBatch.ReBegin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
 
         var imeService = Platform.Get<IImeService>();

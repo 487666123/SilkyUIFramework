@@ -228,7 +228,8 @@ public sealed class SnippetModule
             {
                 if (!TryCommitToken(ref token)) return;
 
-                snippet.UniqueDraw(true, out var size, Main.spriteBatch);
+                snippet.UniqueDraw(true, out var size, null);
+
                 if (!TryAdd(snippet, size.X))
                     return;
             }
