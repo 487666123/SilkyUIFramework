@@ -1,10 +1,12 @@
-﻿namespace SilkyUIFramework;
+namespace SilkyUIFramework;
 
 [Service]
 public class SilkyUIManager(SilkyUIRenderSystem renderSystem, SilkyUIInputState inputState)
 {
     private readonly SilkyUIRenderSystem _renderSystem = renderSystem;
     private readonly SilkyUIInputState _inputState = inputState;
+
+    public static SilkyUIManager Instance => SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUIManager>();
 
     public void Initialize() => _renderSystem.Initialize();
 

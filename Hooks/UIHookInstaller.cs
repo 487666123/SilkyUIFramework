@@ -1,5 +1,6 @@
 ﻿using log4net;
 using MonoMod.Cil;
+using SilkyUIFramework.Tweening;
 
 namespace SilkyUIFramework.Hooks;
 
@@ -27,7 +28,11 @@ class UIHookInstaller : ILoadable
 
             c.EmitDelegate(() =>
             {
-                try { SilkyUISystem.Instance?.SilkyUIManager?.HandleIME(); }
+                try
+                {
+                    TweenManager.Instance.Update(Main.gameTimeCache.TotalGameTime);
+                    SilkyUISystem.Instance?.SilkyUIManager?.HandleIME();
+                }
                 catch (Exception ex) { _logger.Error(ex); }
             });
         };

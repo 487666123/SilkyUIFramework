@@ -78,9 +78,9 @@ public class SilkyUI
 
         if (!RootNode.Enabled) return;
 
-        RootNode.UpdateLayout();
-        RootNode.UpdatePosition();
-        RootNode.UpdateElementsOrder();
+        //RootNode.UpdateLayout();
+        //RootNode.UpdatePosition();
+        //RootNode.UpdateElementsOrder();
 
         // 更新 UI 的各类运行状态（例如动画），状态变化可能影响后续布局与显示。
         RootNode.HandleUpdateStatus(gameTime);

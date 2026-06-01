@@ -13,6 +13,10 @@ public readonly struct Dimension(float pixels = 0f, float percent = 0f) : IEquat
     public Dimension With(float? pixels = null, float? percent = null) =>
         new(pixels ?? Pixels, percent ?? Percent);
 
+    public static Dimension Lerp(Dimension a, Dimension b, float t) =>
+        new(MathHelper.Lerp(a.Pixels, b.Pixels, t),
+            MathHelper.Lerp(a.Percent, b.Percent, t));
+
     public static bool operator ==(Dimension left, Dimension right) => left.Equals(right);
     public static bool operator !=(Dimension left, Dimension right) => !left.Equals(right);
 

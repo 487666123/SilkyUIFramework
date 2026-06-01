@@ -1,6 +1,6 @@
 using System;
 
-namespace SilkyUIFramework.Tween;
+namespace SilkyUIFramework.Tweening;
 
 /// <summary>
 /// 回调条目。在延迟到期后触发一次回调即完成。

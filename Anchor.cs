@@ -33,6 +33,11 @@ public readonly struct Anchor(float pixels = 0f, float percent = 0f, float align
     }
 
     //========= 运算符重载 =========//
+    public static Anchor Lerp(Anchor a, Anchor b, float t) =>
+        new(MathHelper.Lerp(a.Pixels, b.Pixels, t),
+            MathHelper.Lerp(a.Percent, b.Percent, t),
+            MathHelper.Lerp(a.Alignment, b.Alignment, t));
+
     public static bool operator ==(Anchor left, Anchor right) => left.Equals(right);
     public static bool operator !=(Anchor left, Anchor right) => !left.Equals(right);
 

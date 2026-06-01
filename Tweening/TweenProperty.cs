@@ -1,6 +1,6 @@
 using System;
 
-namespace SilkyUIFramework.Tween;
+namespace SilkyUIFramework.Tweening;
 
 /// <summary>
 /// 属性插值条目。由 <see cref="Tween.TweenProperty{T}"/> 内部创建，用户不直接实例化。
@@ -62,6 +62,13 @@ internal sealed class TweenProperty : TweenEntry
         {
             _from = _getter();
             _fromCaptured = true;
+        }
+
+        if (Duration <= 0f)
+        {
+            _setter(_to);
+            IsCompleted = true;
+            return;
         }
 
         float rawT = Math.Clamp((Elapsed - Delay) / Duration, 0f, 1f);

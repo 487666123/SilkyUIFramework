@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
-namespace SilkyUIFramework.Tween;
+namespace SilkyUIFramework.Tweening;
 
 /// <summary>
 /// Tween 生命周期状态。
@@ -14,10 +15,8 @@ public enum TweenState
     Playing = 1,
     /// <summary>已暂停</summary>
     Paused = 2,
-    /// <summary>已完成（所有循环结束）</summary>
-    Completed = 3,
-    /// <summary>被手动停止</summary>
-    Stopped = 4,
+    /// <summary>已结束（自然完成或被 Kill），不可恢复</summary>
+    Finished = 3,
 }
 
 /// <summary>
@@ -34,15 +33,12 @@ public enum TweenState
 /// </code>
 /// </example>
 /// </summary>
-public class Tween : IDisposable
+public class Tween
 {
     private sealed class TweenStep
     {
         /// <summary>Step 内的条目列表，同时并行执行</summary>
         public readonly List<TweenEntry> Entries = [];
-
-        /// <summary>Step 是否已全部执行完毕</summary>
-        public bool Completed;
     }
 
     #region 字段
@@ -57,10 +53,10 @@ public class Tween : IDisposable
     private bool _isParallel;
 
     /// <summary>总循环次数（1=默认，-1=无限）</summary>
-    private int _totalLoops = 1;
+    private int _loopCount = 1;
 
     /// <summary>已完成的循环次数</summary>
-    private int _loopsCompleted;
+    private int _completedLoops;
 
     #endregion
 
@@ -72,18 +68,21 @@ public class Tween : IDisposable
     /// <summary>是否正在播放</summary>
     public bool IsPlaying => State == TweenState.Playing;
 
-    /// <summary>本次播放累计时间（不含已完成循环的时间）</summary>
-    public float TotalElapsed { get; private set; }
+    /// <summary>是否已结束</summary>
+    public bool IsFinished => State == TweenState.Finished;
+
+    /// <summary>
+    /// 有效性检查委托。返回 false 时 <see cref="TweenManager"/> 会自动 Kill 此 Tween。
+    /// 用于绑定 UI 元素生命周期（如 <c>() => view.SilkyUI != null</c>）。
+    /// </summary>
+    public Func<bool> ValidityCheck { get; set; }
 
     #endregion
 
     #region 事件
 
-    /// <summary>所有循环完成时触发</summary>
-    public event Action OnCompleted;
-
-    /// <summary>被 Stop() 停止时触发</summary>
-    public event Action OnStopped;
+    /// <summary>进入 Finished 状态时触发（自然完成或 Kill 均触发）</summary>
+    public event Action OnFinished;
 
     #endregion
 
@@ -133,7 +132,7 @@ public class Tween : IDisposable
         Action<T> setter, Func<T> getter, T to, float duration,
         Func<T, T, float, T> lerpFunc)
     {
-        var entry = global::SilkyUIFramework.Tween.TweenProperty.Create(setter, getter, to, duration, lerpFunc);
+        var entry = Tweening.TweenProperty.Create(setter, getter, to, duration, lerpFunc);
         AddEntry(entry);
         return entry;
     }
@@ -165,10 +164,14 @@ public class Tween : IDisposable
     /// <summary>
     /// 设置循环次数。
     /// </summary>
-    /// <param name="count">1 = 默认（播放一次），-1 = 无限循环</param>
+    /// <param name="count">1 = 默认（播放一次），-1 = 无限循环；其他值必须大于 0</param>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="count"/> 不是 -1 且小于 1 时抛出。</exception>
     public Tween SetLoops(int count)
     {
-        _totalLoops = count;
+        if (count != -1 && count < 1)
+            throw new ArgumentOutOfRangeException(nameof(count), count, "Loop count must be -1 or greater than 0.");
+
+        _loopCount = count;
         return this;
     }
 
@@ -177,65 +180,42 @@ public class Tween : IDisposable
     #region 生命周期控制
 
     /// <summary>
-    /// 开始播放。从 Idle/Completed/Stopped 状态调用会重置并重新开始；
-    /// 从 Paused 状态调用会恢复播放。
+    /// 开始播放。仅从 Idle 或 Paused 状态有效。
+    /// 如果没有任何条目，下一次 Update 会直接进入 Finished。
     /// </summary>
     public void Play()
     {
         switch (State)
         {
             case TweenState.Playing:
+            case TweenState.Finished:
                 return;
             case TweenState.Paused:
                 State = TweenState.Playing;
                 return;
-            default:
-                // Idle、Completed、Stopped → 重置后开始
-                ResetSteps();
-                _loopsCompleted = 0;
-                TotalElapsed = 0;
+            default: // Idle
                 State = TweenState.Playing;
                 break;
         }
     }
 
-    /// <summary>暂停播放。之后可用 <see cref="Resume"/> 或 <see cref="Play"/> 继续。</summary>
+    /// <summary>暂停播放。之后可用 <see cref="Play"/> 恢复。</summary>
     public void Pause()
     {
         if (State == TweenState.Playing)
             State = TweenState.Paused;
     }
 
-    /// <summary>从暂停状态恢复播放。</summary>
-    public void Resume()
-    {
-        if (State == TweenState.Paused)
-            State = TweenState.Playing;
-    }
-
     /// <summary>
-    /// 停止播放。保留当前属性值不变（不 snap 到终点）。
-    /// 停止后可通过 <see cref="Play"/> 重新开始。
+    /// 终止 Tween。从任何状态调用均有效，进入 <see cref="TweenState.Finished"/>。
+    /// <see cref="TweenManager"/> 会在下一帧自动回收。
     /// </summary>
-    public void Stop()
+    public void Kill()
     {
-        if (State is TweenState.Playing or TweenState.Paused)
-        {
-            State = TweenState.Stopped;
-            OnStopped?.Invoke();
-        }
-    }
-
-    /// <summary>
-    /// 完全重置所有状态。清空累计时间、循环计数，回到 Idle。
-    /// 之后需要调用 <see cref="Play"/> 重新开始。
-    /// </summary>
-    public void Reset()
-    {
-        State = TweenState.Idle;
-        ResetSteps();
-        _loopsCompleted = 0;
-        TotalElapsed = 0;
+        if (State == TweenState.Finished)
+            return;
+        State = TweenState.Finished;
+        OnFinished?.Invoke();
     }
 
     #endregion
@@ -251,17 +231,15 @@ public class Tween : IDisposable
         if (State != TweenState.Playing)
             return;
 
-        TotalElapsed += deltaSeconds;
-
         // 全部 Step 已完成
         if (_currentStepIndex >= _steps.Count)
         {
-            HandleLoopOrComplete();
+            AdvanceLoop();
             return;
         }
 
         var step = _steps[_currentStepIndex];
-        bool allDone = true;
+        var allDone = true;
 
         foreach (var entry in step.Entries)
         {
@@ -273,11 +251,10 @@ public class Tween : IDisposable
 
         if (allDone)
         {
-            step.Completed = true;
             _currentStepIndex++;
 
             if (_currentStepIndex >= _steps.Count)
-                HandleLoopOrComplete();
+                AdvanceLoop();
         }
     }
 
@@ -285,54 +262,25 @@ public class Tween : IDisposable
 
     #region 内部方法
 
-    private void HandleLoopOrComplete()
+    /// <summary> 推进循环 </summary>
+    private void AdvanceLoop()
     {
-        _loopsCompleted++;
+        _completedLoops++;
 
-        bool shouldLoop = _totalLoops == -1 || _loopsCompleted < _totalLoops;
-
-        if (shouldLoop)
+        if (_loopCount == -1)
         {
-            ResetSteps();
-            _currentStepIndex = 0;
+            ResetSteps(); return;
         }
-        else
-        {
-            Complete();
-        }
-    }
 
-    private void Complete()
-    {
-        State = TweenState.Completed;
-        OnCompleted?.Invoke();
+        if (_completedLoops < _loopCount) ResetSteps();
+        else Kill();
     }
 
     private void ResetSteps()
     {
         _currentStepIndex = 0;
-        foreach (var step in _steps)
-        {
-            step.Completed = false;
-            foreach (var entry in step.Entries)
-                entry.Reset();
-        }
-    }
-
-    #endregion
-
-    #region 释放
-
-    /// <summary>
-    /// 释放事件引用，防止 GC 无法回收。
-    /// 调用后 Tween 仍可使用，但事件已清空。
-    /// </summary>
-#pragma warning disable CA1816 // Dispose 方法应调用 SuppressFinalize
-    void IDisposable.Dispose()
-#pragma warning restore CA1816 // Dispose 方法应调用 SuppressFinalize
-    {
-        OnCompleted = null;
-        OnStopped = null;
+        foreach (var entry in _steps.SelectMany(s => s.Entries))
+            entry.Reset();
     }
 
     #endregion

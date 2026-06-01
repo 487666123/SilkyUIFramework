@@ -1,4 +1,19 @@
-namespace SilkyUIFramework.Tween;
+namespace SilkyUIFramework.Tweening;
+
+/// <summary>
+/// 缓动方向。
+/// </summary>
+public enum EaseType
+{
+    /// <summary>缓入：起始缓慢，末尾加速</summary>
+    In = 0,
+    /// <summary>缓出：起始快速，末尾减速</summary>
+    Out = 1,
+    /// <summary>缓入缓出：两端缓慢，中间加速</summary>
+    InOut = 2,
+    /// <summary>缓出缓入：两端加速，中间缓慢</summary>
+    OutIn = 3,
+}
 
 /// <summary>
 /// Tween 条目的抽象基类。每个条目代表一个可被编排的动画单元（属性插值或回调）。
@@ -76,13 +91,15 @@ public abstract class TweenEntry
     /// </code>
     /// </summary>
     /// <param name="t">归一化时间 [0,1]</param>
-    /// <param name="trans">过渡曲线类型</param>
-    /// <param name="ease">缓动方向</param>
+    /// <param name="transType">过渡曲线类型</param>
+    /// <param name="easeType">缓动方向</param>
     /// <returns>缓动后的输出值 [0,1]</returns>
-    internal static float ApplyEasing(float t, TransitionType trans, EaseType ease)
+    internal static float ApplyEasing(float t, TransitionType transType, EaseType easeType)
     {
-        var curve = Transition.Map[(int)trans];
-        return ease switch
+        if (transType == TransitionType.Linear) return t;
+
+        var curve = Transition.Get(transType);
+        return easeType switch
         {
             EaseType.In => curve(t),
             EaseType.Out => 1 - curve(1 - t),

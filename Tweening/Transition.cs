@@ -1,4 +1,4 @@
-namespace SilkyUIFramework.Tween;
+namespace SilkyUIFramework.Tweening;
 
 /// <summary>
 /// 过渡曲线类型。
@@ -32,7 +32,7 @@ public enum TransitionType
 }
 
 /// <summary>
-/// 各曲线族的缓入方向函数。缓出与缓入缓出方向由 <see cref="Ease"/> 组合子统一生成。
+/// 各曲线族的缓入方向函数。缓出与缓入缓出方向由 <c>ApplyEasing</c> 组合子统一生成。
 /// </summary>
 internal static class Transition
 {
@@ -108,15 +108,18 @@ internal static class Transition
         return -MathF.Pow(2, 10 * t - 10) * MathF.Sin((t * 10 - 10.75f) * (2 * MathF.PI / 3));
     }
 
-    /// <summary>分段抛物线模拟反弹，此为缓出形态，缓入由组合子推导</summary>
+    /// <summary>分段抛物线模拟反弹</summary>
     public static float Bounce(float t)
     {
+        float x = 1 - t;
         const float n = 7.5625f;
         const float d = 2.75f;
-        if (t < 1 / d) return n * t * t;
-        if (t < 2 / d) return n * (t -= 1.5f / d) * t + 0.75f;
-        if (t < 2.5f / d) return n * (t -= 2.25f / d) * t + 0.9375f;
-        return n * (t -= 2.625f / d) * t + 0.984375f;
+        float b;
+        if (x < 1 / d) b = n * x * x;
+        else if (x < 2 / d) { x -= 1.5f / d; b = n * x * x + 0.75f; }
+        else if (x < 2.5f / d) { x -= 2.25f / d; b = n * x * x + 0.9375f; }
+        else { x -= 2.625f / d; b = n * x * x + 0.984375f; }
+        return 1 - b;
     }
 
     /// <summary><c>1 − e^(−7t)·cos(4.5π·t)</c></summary>

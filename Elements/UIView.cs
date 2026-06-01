@@ -1,4 +1,6 @@
-﻿namespace SilkyUIFramework.Elements;
+﻿using SilkyUIFramework.Tweening;
+
+namespace SilkyUIFramework.Elements;
 
 [XmlElementMapping("View")]
 public partial class UIView
@@ -96,6 +98,17 @@ public partial class UIView
     /// 元素是否在 UI 树中
     /// </summary>
     public bool IsInsideTree => SilkyUI != null;
+
+    /// <summary>
+    /// 创建一个自动绑定到此元素生命周期的 Tween。
+    /// 元素退出 UI 树时自动 Kill，无需手动管理。
+    /// </summary>
+    public Tween CreateTween()
+    {
+        var tween = TweenManager.Instance.CreateTween();
+        tween.ValidityCheck = () => SilkyUI != null;
+        return tween;
+    }
 
     public UIElementGroup Parent { get; internal set; }
 
