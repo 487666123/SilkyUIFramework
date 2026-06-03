@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SilkyUIFramework.Tweening;
+namespace SilkyUIFramework.Common.Tweening;
 
 /// <summary>
 /// Tween 全局管理器。负责创建、更新和回收 Tween。
@@ -69,7 +69,7 @@ public class TweenManager
             _lastTime = time;
             return;
         }
-        float delta = (float)(time - _lastTime.Value).TotalSeconds;
+        float delta = Math.Clamp((float)(time - _lastTime.Value).TotalSeconds, 0f, float.MaxValue);
         _lastTime = time;
 
         // 合并待注册的 tween

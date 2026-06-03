@@ -1,4 +1,4 @@
-namespace SilkyUIFramework.Tweening;
+namespace SilkyUIFramework.Common.Tweening;
 
 /// <summary>
 /// 缓动方向。
@@ -20,11 +20,22 @@ public enum EaseType
 /// </summary>
 public abstract class TweenEntry
 {
+    private float _duration;
+    private float _delay;
+
     /// <summary>动画持续时间（秒）</summary>
-    public float Duration { get; set; }
+    public float Duration
+    {
+        get => _duration;
+        set => _duration = Math.Clamp(value, 0f, float.MaxValue);
+    }
 
     /// <summary>延迟时间（秒），到期后才开始执行</summary>
-    public float Delay { get; set; }
+    public float Delay
+    {
+        get => _delay;
+        set => _delay = Math.Clamp(value, 0f, float.MaxValue);
+    }
 
     /// <summary>缓动方向</summary>
     public EaseType EaseType { get; set; } = EaseType.InOut;
@@ -64,14 +75,14 @@ public abstract class TweenEntry
         return this;
     }
 
-    /// <summary>设置延迟时间</summary>
+    /// <summary>设置延迟时间。负数会被限制为 0。</summary>
     public TweenEntry SetDelay(float d)
     {
         Delay = d;
         return this;
     }
 
-    /// <summary>设置持续时间</summary>
+    /// <summary>设置持续时间。负数会被限制为 0。</summary>
     public TweenEntry SetDuration(float d)
     {
         Duration = d;

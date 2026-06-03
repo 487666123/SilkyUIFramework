@@ -332,7 +332,7 @@ public partial class UIElementGroup : UIView
                 device.Clear(Color.Transparent);
 
                 device.Viewport = device.Viewport.WithXy(-scissorRectangle.X, -scissorRectangle.Y)
-                    .IncreaseSize(scissorRectangle.X, scissorRectangle.Y);
+                    .WithSize(scissorRectangle.Right, scissorRectangle.Bottom);
                 device.ScissorRectangle = new Rectangle(0, 0, scissorRectangle.Width, scissorRectangle.Height);
 
                 sb.Begin(SpriteSortMode.Deferred, null, null, null,
@@ -348,12 +348,12 @@ public partial class UIElementGroup : UIView
             }
             finally
             {
-                device.RestoreRenderTargets(bindings);
-                device.Viewport = viewport;
-                device.ScissorRectangle = originalScissor;
-
                 try
                 {
+                    device.RestoreRenderTargets(bindings);
+                    device.Viewport = viewport;
+                    device.ScissorRectangle = originalScissor;
+
                     // 将离屏结果绘制回主目标后，恢复正常批次继续后续绘制流程。
                     DrawRenderTarget(sb, renderTarget, scissorRectangle.Position);
                     sb.Begin(SpriteSortMode.Deferred, null, null, null,

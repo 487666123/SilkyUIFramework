@@ -1,4 +1,4 @@
-﻿using SilkyUIFramework.Tweening;
+﻿using SilkyUIFramework.Common.Tweening;
 
 namespace SilkyUIFramework.Elements;
 

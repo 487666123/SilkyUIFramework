@@ -41,7 +41,11 @@ public partial class SilkyUISystem : ModSystem
         SilkyUIRegistrar = ServiceProvider.GetRequiredService<SilkyUIRegistrar>();
     }
 
-    public override void Unload() => ServiceProvider = null;
+    public override void Unload()
+    {
+        ServiceProvider = null;
+        SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>().Dispose();
+    }
 
     public override void PostSetupContent()
     {

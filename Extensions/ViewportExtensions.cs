@@ -42,5 +42,26 @@ public static class ViewportExtensions
             viewport.Y = other.Y + y;
             return viewport;
         }
+
+        public Viewport WithSize(int width, int height)
+        {
+            viewport.Width = width;
+            viewport.Height = height;
+            return viewport;
+        }
+
+        public Viewport WithSize(Viewport other)
+        {
+            viewport.Width = other.Width;
+            viewport.Height = other.Height;
+            return viewport;
+        }
+
+        public Viewport WithSize(Viewport other, int width, int height)
+        {
+            viewport.Width = other.Width + width;
+            viewport.Height = other.Height + height;
+            return viewport;
+        }
     }
 }

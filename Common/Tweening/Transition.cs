@@ -1,4 +1,4 @@
-namespace SilkyUIFramework.Tweening;
+namespace SilkyUIFramework.Common.Tweening;
 
 /// <summary>
 /// 过渡曲线类型。

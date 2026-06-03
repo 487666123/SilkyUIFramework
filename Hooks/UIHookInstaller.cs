@@ -1,6 +1,6 @@
 ﻿using log4net;
 using MonoMod.Cil;
-using SilkyUIFramework.Tweening;
+using SilkyUIFramework.Common.Tweening;
 
 namespace SilkyUIFramework.Hooks;
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SilkyUIFramework.Tweening;
+namespace SilkyUIFramework.Common.Tweening;
 
 /// <summary>
 /// Tween 生命周期状态。
@@ -25,7 +25,7 @@ public enum TweenState
 /// 基本用法：
 /// <code>
 /// var tween = new Tween();
-/// tween.TweenProperty&lt;float&gt;(v => obj.X = v, 0f, 100f, 0.5f, (a, b, t) => a + (b - a) * t)
+/// tween.TweenProperty&lt;float&gt;(v => obj.X = v, () => obj.X, 100f, 0.5f, (a, b, t) => a + (b - a) * t)
 ///      .SetEase(EaseType.Out).SetTrans(TransitionType.Quad);
 /// tween.Play();
 /// // 每帧调用:
@@ -230,6 +230,8 @@ public class Tween
     {
         if (State != TweenState.Playing)
             return;
+
+        deltaSeconds = Math.Clamp(deltaSeconds, 0f, float.MaxValue);
 
         // 全部 Step 已完成
         if (_currentStepIndex >= _steps.Count)
