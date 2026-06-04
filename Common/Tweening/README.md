@@ -6,7 +6,7 @@
 
 - `Tween`: 动画编排器。Step 之间顺序执行，同一个 Step 内的条目并行执行。
 - `TweenEntry`: 动画条目的基类，提供 `SetEase`、`SetTrans`、`SetDelay`、`SetDuration` 等链式配置。
-- `TweenProperty`: 属性插值条目，由 `Tween.TweenProperty<T>` 内部创建，外部不直接实例化。
+- `TweenProperty`: 属性插值条目，由 `Tween.TweenProperty<TTarget, TValue>` 内部创建，外部不直接实例化。
 - `TweenCallback`: 回调条目，延迟到期后执行一次回调并完成。
 - `TweenManager`: 可选的管理器，负责创建、注册、更新和回收 `Tween`。
 - `TransitionType`: 过渡曲线类型，例如 `Linear`、`Quad`、`Cubic`、`Sine`、`Bounce` 等。
@@ -19,12 +19,13 @@
 ```csharp
 var tween = new Tween();
 
-tween.TweenProperty<float>(
-        v => obj.X = v,
-        () => obj.X,
+tween.TweenProperty(
+        obj,
+        static (target, value) => target.X = value,
+        static target => target.X,
         100f,
         0.25f,
-        (from, to, t) => from + (to - from) * t)
+        static (from, to, t) => from + (to - from) * t)
     .SetEase(EaseType.Out)
     .SetTrans(TransitionType.Quad);
 
@@ -47,15 +48,16 @@ TweenManager.Instance.Update(totalTime);
 
 ## 属性补间
 
-`TweenProperty<T>` 会在延迟到期时调用一次 `getter` 获取起始值，然后每帧使用 `lerpFunc` 从起始值插值到目标值。属性条目内部保留具体的泛型类型，值类型补间不会在每帧经过 `object` 装箱路径。
+`TweenProperty<TTarget, TValue>` 会在延迟到期时调用一次 `getter` 获取起始值，然后每帧使用 `lerpFunc` 从起始值插值到目标值。属性条目内部保留具体的目标类型和值类型，值类型补间不会在每帧经过 `object` 装箱路径。
 
 ```csharp
-tween.TweenProperty<float>(
-        v => obj.Scale = v,
-        () => obj.Scale,
+tween.TweenProperty(
+        obj,
+        static (target, value) => target.Scale = value,
+        static target => target.Scale,
         1.5f,
         0.4f,
-        (from, to, t) => from + (to - from) * t)
+        static (from, to, t) => from + (to - from) * t)
     .SetEase(EaseType.InOut)
     .SetTrans(TransitionType.Sine);
 ```
@@ -78,22 +80,49 @@ tween.TweenCallback(() =>
 默认是顺序模式：每次添加的条目各自成为一个 Step，按添加顺序执行。
 
 ```csharp
-tween.TweenProperty<float>(v => obj.X = v, () => obj.X, 100f, 0.2f, (from, to, t) => from + (to - from) * t);
-tween.TweenProperty<float>(v => obj.Y = v, () => obj.Y, 50f, 0.2f, (from, to, t) => from + (to - from) * t);
+tween.TweenProperty(obj, static (target, value) => target.X = value, static target => target.X, 100f, 0.2f, static (from, to, t) => from + (to - from) * t);
+tween.TweenProperty(obj, static (target, value) => target.Y = value, static target => target.Y, 50f, 0.2f, static (from, to, t) => from + (to - from) * t);
 ```
 
 调用 `Parallel()` 后，后续条目会加入同一个新 Step，并行执行。调用 `Sequential()` 可切回顺序模式。
 
 ```csharp
 tween.Parallel();
-tween.TweenProperty<float>(v => obj.X = v, () => obj.X, 100f, 0.2f, (from, to, t) => from + (to - from) * t);
-tween.TweenProperty<float>(v => obj.Y = v, () => obj.Y, 50f, 0.2f, (from, to, t) => from + (to - from) * t);
+tween.TweenProperty(obj, static (target, value) => target.X = value, static target => target.X, 100f, 0.2f, static (from, to, t) => from + (to - from) * t);
+tween.TweenProperty(obj, static (target, value) => target.Y = value, static target => target.Y, 50f, 0.2f, static (from, to, t) => from + (to - from) * t);
 
 tween.Sequential();
 tween.TweenCallback(OnMoveFinished);
 ```
 
 `TweenProperty` 和 `TweenCallback` 返回的是 `TweenEntry`，用于配置这个条目；如果还要继续添加其他条目，请保留并使用 `Tween` 变量。
+
+`Tween.SetEase` 和 `Tween.SetTrans` 会设置后续添加条目的默认缓动配置，已经添加的条目不受影响。`TweenEntry.SetEase` 和 `TweenEntry.SetTrans` 只覆盖当前这一条动画。
+
+```csharp
+tween.TweenProperty(obj, static (target, value) => target.X = value, static target => target.X, 100f, 0.2f, static (from, to, t) => from + (to - from) * t);
+
+tween.SetTrans(TransitionType.Sine)
+    .SetEase(EaseType.Out);
+
+tween.TweenProperty(obj, static (target, value) => target.Y = value, static target => target.Y, 100f, 0.2f, static (from, to, t) => from + (to - from) * t);
+
+tween.TweenProperty(obj, static (target, value) => target.Scale = value, static target => target.Scale, 2f, 0.2f, static (from, to, t) => from + (to - from) * t)
+    .SetTrans(TransitionType.Back)
+    .SetEase(EaseType.In);
+```
+
+不需要目标对象时，也可以显式传入空目标：
+
+```csharp
+tween.TweenProperty<object, float>(
+        null,
+        static (_, value) => SomeStaticValue = value,
+        static _ => SomeStaticValue,
+        1f,
+        0.2f,
+        static (from, to, t) => from + (to - from) * t);
+```
 
 ## 循环与生命周期
 
@@ -128,14 +157,37 @@ tween.SetLoops(3);
 ```csharp
 var tween = CreateTween();
 
-tween.TweenProperty<float>(
-        v => Opacity = v,
-        () => Opacity,
-        1f,
-        0.25f,
-        MathHelper.Lerp)
+tween.FadeTo(this, 1f, 0.25f)
     .SetEase(EaseType.Out)
     .SetTrans(TransitionType.Quad);
 ```
+
+SilkyUI 层提供的是 `Tween` 扩展方法，例如 `FadeTo`、`BackgroundColorTo`、`BorderColorTo`。这些方法只向已有 Tween 添加条目并返回 `TweenEntry`，方便继续配置这个条目。
+
+```csharp
+tween.BackgroundColorTo(view, Color.White, 0.2f)
+    .SetTrans(TransitionType.Sine);
+```
+
+扩展层还提供基于成员名的补间，适合配置化或工具化场景：
+
+```csharp
+tween.MemberTo(view, nameof(view.BackgroundColor), Color.White, 0.2f);
+tween.MemberTo(body, nameof(body.Opacity), 1f, 0.25f);
+```
+
+`MemberTo` 默认通过 `TweenLerpRegistry` 按成员真实类型查找插值函数。默认注册了 `float`、`Vector2`、`Vector3`、`Vector4`、`Color`。其他类型可以手动注册：
+
+```csharp
+TweenLerpRegistry.Register<MyValue>(static (from, to, t) => MyValue.Lerp(from, to, t));
+```
+
+也可以在调用时显式传入插值函数：
+
+```csharp
+tween.MemberTo(view, "CustomValue", targetValue, 0.2f, CustomLerp);
+```
+
+反射成员补间支持目标对象上的实例属性和字段，不支持嵌套路径。性能敏感或需要编译期检查的动画，优先使用强类型 `TweenProperty` 或 SilkyUI 的专用扩展方法。
 
 全局 `TweenManager` 的更新时间由项目接入层负责。本项目中，`UIHookInstaller` 会调用 `TweenManager.Instance.Update(Main.gameTimeCache.TotalGameTime)`。

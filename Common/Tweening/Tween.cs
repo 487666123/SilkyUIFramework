@@ -25,7 +25,8 @@ public enum TweenState
 /// 基本用法：
 /// <code>
 /// var tween = new Tween();
-/// tween.TweenProperty&lt;float&gt;(v => obj.X = v, () => obj.X, 100f, 0.5f, (a, b, t) => a + (b - a) * t)
+/// tween.TweenProperty(obj, static (target, value) => target.X = value, static target => target.X,
+///     100f, 0.5f, static (a, b, t) => a + (b - a) * t)
 ///      .SetEase(EaseType.Out).SetTrans(TransitionType.Quad);
 /// tween.Play();
 /// // 每帧调用:
@@ -58,6 +59,12 @@ public class Tween
     /// <summary>已完成的循环次数</summary>
     private int _completedLoops;
 
+    /// <summary>后续添加条目的默认缓动方向</summary>
+    private EaseType _defaultEaseType = EaseType.InOut;
+
+    /// <summary>后续添加条目的默认过渡曲线类型</summary>
+    private TransitionType _defaultTransitionType = TransitionType.Linear;
+
     #endregion
 
     #region 属性
@@ -83,6 +90,28 @@ public class Tween
 
     /// <summary>进入 Finished 状态时触发（自然完成或 Kill 均触发）</summary>
     public event Action OnFinished;
+
+    #endregion
+
+    #region 默认条目配置
+
+    /// <summary>
+    /// 设置后续添加条目的默认缓动方向。已添加的条目不受影响。
+    /// </summary>
+    public Tween SetEase(EaseType easeType)
+    {
+        _defaultEaseType = easeType;
+        return this;
+    }
+
+    /// <summary>
+    /// 设置后续添加条目的默认过渡曲线类型。已添加的条目不受影响。
+    /// </summary>
+    public Tween SetTrans(TransitionType transitionType)
+    {
+        _defaultTransitionType = transitionType;
+        return this;
+    }
 
     #endregion
 
@@ -121,18 +150,24 @@ public class Tween
     /// 添加属性插值动画。延迟到期时通过 <paramref name="getter"/> 读取当前值作为起始值，
     /// 随后每帧插值到 <paramref name="to"/>。
     /// </summary>
-    /// <typeparam name="T">属性值类型</typeparam>
+    /// <typeparam name="TTarget">属性所属目标类型。无目标场景可传入 <see langword="null"/> 目标。</typeparam>
+    /// <typeparam name="TValue">属性值类型</typeparam>
+    /// <param name="target">属性所属目标，传递给 <paramref name="setter"/> 与 <paramref name="getter"/>。</param>
     /// <param name="setter">属性赋值委托</param>
     /// <param name="getter">起始值获取委托，延迟到期时调用一次</param>
     /// <param name="to">目标值</param>
     /// <param name="duration">持续时间（秒）</param>
     /// <param name="lerpFunc">插值函数，如 <c>(a, b, t) => a + (b - a) * t</c></param>
     /// <returns>创建的条目，支持链式配置</returns>
-    public TweenEntry TweenProperty<T>(
-        Action<T> setter, Func<T> getter, T to, float duration,
-        Func<T, T, float, T> lerpFunc)
+    public TweenEntry TweenProperty<TTarget, TValue>(
+        TTarget target,
+        Action<TTarget, TValue> setter,
+        Func<TTarget, TValue> getter,
+        TValue to,
+        float duration,
+        Func<TValue, TValue, float, TValue> lerpFunc)
     {
-        var entry = Tweening.TweenProperty.Create(setter, getter, to, duration, lerpFunc);
+        var entry = Tweening.TweenProperty.Create(target, setter, getter, to, duration, lerpFunc);
         AddEntry(entry);
         return entry;
     }
@@ -151,6 +186,8 @@ public class Tween
 
     private void AddEntry(TweenEntry entry)
     {
+        entry.SetTrans(_defaultTransitionType).SetEase(_defaultEaseType);
+
         if (_isParallel && _steps.Count > 0)
             _steps[^1].Entries.Add(entry);
         else

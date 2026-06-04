@@ -22,6 +22,8 @@ public abstract class TweenEntry
 {
     private float _duration;
     private float _delay;
+    private EaseType _easeType = EaseType.InOut;
+    private TransitionType _transitionType = TransitionType.Linear;
 
     /// <summary>动画持续时间（秒）</summary>
     public float Duration
@@ -36,12 +38,6 @@ public abstract class TweenEntry
         get => _delay;
         set => _delay = Math.Clamp(value, 0f, float.MaxValue);
     }
-
-    /// <summary>缓动方向</summary>
-    public EaseType EaseType { get; set; } = EaseType.InOut;
-
-    /// <summary>过渡曲线类型</summary>
-    public TransitionType TransitionType { get; set; } = TransitionType.Linear;
 
     /// <summary>已累计的时间（内部使用）</summary>
     internal float Elapsed;
@@ -64,14 +60,14 @@ public abstract class TweenEntry
     /// <summary>设置缓动方向</summary>
     public TweenEntry SetEase(EaseType t)
     {
-        EaseType = t;
+        _easeType = t;
         return this;
     }
 
     /// <summary>设置过渡曲线</summary>
     public TweenEntry SetTrans(TransitionType t)
     {
-        TransitionType = t;
+        _transitionType = t;
         return this;
     }
 
@@ -123,4 +119,6 @@ public abstract class TweenEntry
             _ => t,
         };
     }
+
+    protected float ApplyEasing(float t) => ApplyEasing(t, _transitionType, _easeType);
 }

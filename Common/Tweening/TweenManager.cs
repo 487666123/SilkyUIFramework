@@ -10,7 +10,7 @@ namespace SilkyUIFramework.Common.Tweening;
 /// <code>
 /// var manager = new TweenManager();
 /// var tween = manager.CreateTween();
-/// tween.TweenProperty&lt;float&gt;(v => obj.X = v, () => obj.X, 100f, 0.5f, Lerp)
+/// tween.TweenProperty(obj, static (target, value) => target.X = value, static target => target.X, 100f, 0.5f, Lerp)
 ///      .SetEase(EaseType.Out);
 /// // 每帧调用:
 /// manager.Update(gameTime.TotalGameTime);
