@@ -96,10 +96,14 @@ public abstract partial class BaseBody
 
         var captureScreenshot = _captureRequested;
         var device = Main.graphics.GraphicsDevice;
-        var backBufferWidth = device.PresentationParameters.BackBufferWidth;
-        var backBufferHeight = device.PresentationParameters.BackBufferHeight;
         var renderTargetPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
-        var renderTarget = renderTargetPool.Rent(backBufferWidth, backBufferHeight);
+
+        var rect = TransformBoundsToClipping(OuterBounds, SilkyUI.TransformMatrix);
+        var renderTarget = renderTargetPool.Rent(rect.Width, rect.Height);
+
+        //var backBufferWidth = device.PresentationParameters.BackBufferWidth;
+        //var backBufferHeight = device.PresentationParameters.BackBufferHeight;
+        //var renderTarget = renderTargetPool.Rent(backBufferWidth, backBufferHeight);
 
         try
         {
@@ -110,16 +114,19 @@ public abstract partial class BaseBody
             device.SetRenderTarget(renderTarget);
             device.Clear(Color.Transparent);
 
+            device.Viewport = new Viewport(-rect.X, -rect.Y, rect.Right, rect.Bottom);
+
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
                 SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
 
             DrawBodyCore(gameTime, spriteBatch);
             spriteBatch.End();
+
             device.RestoreRenderTargets(original);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
                 SilkyUI.ScissorRasterizerState, null, RenderTargetMatrix);
-            spriteBatch.Draw(renderTarget, Vector2.Zero, null, Color.White * Opacity, 0f, Vector2.Zero, Vector2.One, 0, 0);
+            spriteBatch.Draw(renderTarget, new Vector2(rect.X, rect.Y), null, Color.White * Opacity, 0f, Vector2.Zero, Vector2.One, 0, 0);
 
             if (captureScreenshot)
             {

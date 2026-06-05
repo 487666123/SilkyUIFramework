@@ -16,4 +16,6 @@ public static class ObjectAccessorCache
     }
 
     public static ObjectAccessor GetAccessor(object obj) => GetAccessorByType(obj.GetType());
+
+    public static ObjectAccessor GetAccessor<T>() => GetAccessorByType(typeof(T));
 }

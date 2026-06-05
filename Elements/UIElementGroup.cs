@@ -1,4 +1,4 @@
-﻿using SilkyUIFramework.Layout;
+using SilkyUIFramework.Layout;
 
 namespace SilkyUIFramework.Elements;
 
@@ -265,34 +265,44 @@ public partial class UIElementGroup : UIView
         DrawChildren(gameTime, spriteBatch);
     }
 
+    public Bounds GetVisibleArea() => HiddenBox switch
+    {
+        HiddenBox.Outer => OuterBounds,
+        HiddenBox.Inner => InnerBounds,
+        _ => Bounds,
+    };
+
     /// <summary>
     /// 计算当前容器用于裁剪的屏幕空间矩形。
     /// </summary>
     /// <remarks>
     /// 返回值会与当前设备的 ScissorRectangle 取交集，避免越界裁剪。
     /// </remarks>
-    public virtual Rectangle GetClippingRectangle(SpriteBatch spriteBatch)
+    public virtual Rectangle GetClippingRectangle(GraphicsDevice device)
     {
-        var bounds = HiddenBox switch
-        {
-            HiddenBox.Outer => OuterBounds,
-            HiddenBox.Inner => InnerBounds,
-            _ => Bounds,
-        };
+        var rectangle = TransformBoundsToClipping(GetVisibleArea(), SilkyUI.TransformMatrix);
 
-        var topLeft = Vector2.Transform(bounds.Position, SilkyUI.TransformMatrix);
-        var rightBottom = Vector2.Transform(bounds.BottomRight, SilkyUI.TransformMatrix);
-        var rectangle = new Rectangle(
-            (int)Math.Floor(topLeft.X), (int)Math.Floor(topLeft.Y),
-            (int)Math.Ceiling(rightBottom.X - topLeft.X),
-            (int)Math.Ceiling(rightBottom.Y - topLeft.Y));
-
-        var device = spriteBatch.GraphicsDevice;
         var viewport = device.Viewport;
         var scissorRectangle = device.ScissorRectangle;
         scissorRectangle.X -= viewport.X;
         scissorRectangle.Y -= viewport.Y;
         return Rectangle.Intersect(rectangle, scissorRectangle);
+    }
+
+    /// <summary>
+    /// 将布局空间中的 Bounds 按变换矩阵转换为屏幕空间的裁剪矩形。
+    /// </summary>
+    /// <param name="bounds">布局空间中的边界矩形。</param>
+    /// <param name="transformMatrix">坐标变换矩阵。</param>
+    /// <returns>屏幕空间的整数裁剪矩形，各项已使用 Floor/Ceiling 外扩以防止漏裁。</returns>
+    public static Rectangle TransformBoundsToClipping(Bounds bounds, Matrix transformMatrix)
+    {
+        var topLeft = Vector2.Transform(bounds.Position, transformMatrix);
+        var rightBottom = Vector2.Transform(bounds.BottomRight, transformMatrix);
+        return new Rectangle(
+            (int)Math.Floor(topLeft.X), (int)Math.Floor(topLeft.Y),
+            (int)Math.Ceiling(rightBottom.X - topLeft.X),
+            (int)Math.Ceiling(rightBottom.Y - topLeft.Y));
     }
 
     /// <summary>
@@ -314,15 +324,16 @@ public partial class UIElementGroup : UIView
 
         var device = sb.GraphicsDevice;
         var originalScissor = device.ScissorRectangle;
-        var scissorRectangle = GetClippingRectangle(sb);
+        var scissorRectangle = GetClippingRectangle(sb.GraphicsDevice);
 
         if (IndependentRenderTarget && scissorRectangle.Width > 0 && scissorRectangle.Height > 0)
         {
             // 在独立 RenderTarget 中完成裁剪绘制，再回贴到主目标。
             var rtPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
-            var renderTarget = rtPool.Rent(scissorRectangle.Width, scissorRectangle.Height);
 
-            // 临时替换渲染目标与视口，结束后必须完整恢复图形状态。
+            var rectangle = TransformBoundsToClipping(GetVisibleArea(), SilkyUI.TransformMatrix);
+            var renderTarget = rtPool.Rent(rectangle.Width, rectangle.Height);
+
             var bindings = device.GetRenderTargets();
             var viewport = device.Viewport;
 
@@ -333,6 +344,7 @@ public partial class UIElementGroup : UIView
 
                 device.Viewport = device.Viewport.WithXy(-scissorRectangle.X, -scissorRectangle.Y)
                     .WithSize(scissorRectangle.Right, scissorRectangle.Bottom);
+
                 device.ScissorRectangle = new Rectangle(0, 0, scissorRectangle.Width, scissorRectangle.Height);
 
                 sb.Begin(SpriteSortMode.Deferred, null, null, null,

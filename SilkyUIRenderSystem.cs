@@ -1,4 +1,4 @@
-﻿namespace SilkyUIFramework;
+namespace SilkyUIFramework;
 
 [Service]
 public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar silkyUIRegistrar)

@@ -36,6 +36,13 @@ public sealed class RenderTargetPool : IDisposable
     // 已占用渲染目标字典，按尺寸分组存储
     private readonly Dictionary<Size, HashSet<RenderTarget2D>> _occupied = [];
 
+    public int AvailableCount => _available.Count;
+    public int OccupiedCount => _occupied.Count;
+    public int TotalCount => _available.Count + _occupied.Count;
+
+    public IReadOnlyDictionary<Size, HashSet<RenderTarget2D>> Available => _available;
+    public IReadOnlyDictionary<Size, HashSet<RenderTarget2D>> Occupied => _occupied;
+
     /// <summary>
     /// 租借指定尺寸的渲染目标
     /// </summary>

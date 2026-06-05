@@ -30,6 +30,4 @@ public class SilkyUIManager(SilkyUIRenderSystem renderSystem, SilkyUIInputState 
         _renderSystem.Draw(gameTime, spriteBatch);
         _inputState.HandleInput(Main.spriteBatch);
     }
-
-    public bool TryGetInstance<TBody>(out TBody body) where TBody : BaseBody => _renderSystem.TryGetInstance(out body);
 }

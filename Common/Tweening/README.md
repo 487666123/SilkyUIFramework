@@ -2,6 +2,8 @@
 
 `SilkyUIFramework.Common.Tweening` 是一套按时间驱动的补间动画工具。它本身只负责动画编排、属性插值、回调、缓动曲线和生命周期管理；核心代码只使用 .NET 基础类型，不依赖具体 UI 框架。
 
+本文先介绍 Tweening 工具本身的核心类型、创建方式、编排规则和生命周期；随后介绍它在 SilkyUIFramework 当前项目中的接入方式，以及项目内提供的 UI 专用扩展方法和反射成员补间扩展。
+
 ## 类概览
 
 - `Tween`: 动画编排器。Step 之间顺序执行，同一个 Step 内的条目并行执行。
@@ -169,14 +171,14 @@ tween.BackgroundColorTo(view, Color.White, 0.2f)
     .SetTrans(TransitionType.Sine);
 ```
 
-扩展层还提供基于成员名的补间，适合配置化或工具化场景：
+扩展层还提供基于成员名的补间，适合需要用成员名选择目标属性或字段的场景：
 
 ```csharp
 tween.MemberTo(view, nameof(view.BackgroundColor), Color.White, 0.2f);
 tween.MemberTo(body, nameof(body.Opacity), 1f, 0.25f);
 ```
 
-`MemberTo` 默认通过 `TweenLerpRegistry` 按成员真实类型查找插值函数。默认注册了 `float`、`Vector2`、`Vector3`、`Vector4`、`Color`。其他类型可以手动注册：
+无显式插值函数的 `MemberTo<TTarget, TValue>` 会通过 `TweenLerpRegistry.Get<TValue>()` 查找插值函数，并校验 `TValue` 与成员真实类型完全一致。默认注册了 `float`、`double`、`Vector2`、`Vector3`、`Vector4`、`Color`、`Anchor`。其他类型可以手动注册：
 
 ```csharp
 TweenLerpRegistry.Register<MyValue>(static (from, to, t) => MyValue.Lerp(from, to, t));
@@ -188,6 +190,6 @@ TweenLerpRegistry.Register<MyValue>(static (from, to, t) => MyValue.Lerp(from, t
 tween.MemberTo(view, "CustomValue", targetValue, 0.2f, CustomLerp);
 ```
 
-反射成员补间支持目标对象上的实例属性和字段，不支持嵌套路径。性能敏感或需要编译期检查的动画，优先使用强类型 `TweenProperty` 或 SilkyUI 的专用扩展方法。
+反射成员补间支持目标对象上的实例属性和字段，不支持嵌套路径。`to` 的类型必须与成员类型一致；如果目标成员是 `float`，请传入 `1f` 而不是 `1`。创建条目时会解析成员名和访问器，Tick 热路径使用强类型 getter/setter。需要编译期成员检查时，优先使用强类型 `TweenProperty` 或 SilkyUI 的专用扩展方法。
 
 全局 `TweenManager` 的更新时间由项目接入层负责。本项目中，`UIHookInstaller` 会调用 `TweenManager.Instance.Update(Main.gameTimeCache.TotalGameTime)`。
