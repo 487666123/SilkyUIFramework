@@ -32,7 +32,7 @@ public class SUIScrollView : UIElementGroup
     public SUIScrollView(Direction direction = Direction.Vertical)
     {
         Direction = direction;
-        SetGap(8f);
+        Gap = new Size(8f);
 
         Mask = new SUIScrollMask(this)
         {
@@ -83,7 +83,7 @@ public class SUIScrollView : UIElementGroup
 
     public override void OnMouseWheel(UIScrollWheelEvent evt)
     {
-        if (evt.ScrollingElement != null) return;
+        if (evt.ScrollElement != null) return;
 
         switch (Direction)
         {
@@ -96,7 +96,7 @@ public class SUIScrollView : UIElementGroup
                 else if (ScrollBar.HScrolledToEnd) break;
 
                 ScrollBar.HScrollBy(-evt.ScrollDelta);
-                evt.ScrollingElement = this;
+                evt.LockScroll(this);
                 break;
             }
             default:
@@ -109,7 +109,7 @@ public class SUIScrollView : UIElementGroup
                 else if (ScrollBar.VScrolledToEnd) break;
 
                 ScrollBar.VScrollBy(-evt.ScrollDelta);
-                evt.ScrollingElement = this;
+                evt.LockScroll(this);
                 break;
             }
         }

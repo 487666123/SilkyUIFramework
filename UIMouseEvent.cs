@@ -6,7 +6,7 @@ public class UIMouseEvent(UIView source, Vector2 position)
     public UIView Source { get; } = source;
 
     /// <summary> 上一个触发事件的元素 </summary>
-    public UIView Previous { get; set; } = source;
+    public UIView Previous { get; internal set; } = source;
 
     /// <summary> 鼠标位置 </summary>
     public Vector2 MousePosition { get; } = position;
@@ -18,5 +18,11 @@ public class UIScrollWheelEvent(UIView source, Vector2 position, int scrollDelta
     public int ScrollDelta { get; } = scrollDelta;
 
     /// <summary> 应用滚动的元素 </summary>
-    public UIView ScrollingElement { get; set; }
+    public UIView ScrollElement { get; private set; }
+
+    public void LockScroll(UIView view)
+    {
+        if (ScrollElement != null) return;
+        ScrollElement = view;
+    }
 }

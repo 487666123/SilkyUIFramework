@@ -1,7 +1,5 @@
-﻿#if DEBUG && true
-
+﻿using System.Windows.Input;
 using SilkyUIFramework.Animation;
-using SilkyUIFramework.Components;
 
 namespace SilkyUIFramework.Elements;
 
@@ -16,7 +14,8 @@ public class SUISliderTrackProgress : UIView
         Width = new Dimension(0f, 0f);
         Height = new Dimension(0f, 1f);
 
-        BackgroundColor = new Color(0x33, 0xDD, 0x55);
+        BackgroundColor = Color.LightGreen;
+        //BackgroundColor = new Color(0x33, 0xCC, 0x55);
     }
 }
 
@@ -37,7 +36,8 @@ public class SUISliderTrack : UIElementGroup
 
         Border = 2f;
         BorderColor = Color.White;
-        BackgroundColor = new Color(0xDD, 0x55, 0x33);
+        BackgroundColor = Color.LightCoral;
+        //BackgroundColor = new Color(0xDD, 0x55, 0x33);
 
         ProgressBar = new SUISliderTrackProgress().Join(this);
     }
@@ -88,7 +88,7 @@ public class SUISliderThumb : UIView
 
     protected override void UpdateStatus(GameTime gameTime)
     {
-        if (LeftMousePressed) _animation.Value = new(6f);
+        if (Parent.LeftMousePressed) _animation.Value = new(6f);
         else if (IsMouseHovering) _animation.Value = new(2f);
         else _animation.Value = new(4f);
 
@@ -156,12 +156,18 @@ public class SUISlider : UIElementGroup
 
     public event EventHandler<float> Drag;
 
+    public ICommand DragCommand { get; set; }
+
     protected virtual void OnDrag(float value)
     {
         if (Step > 0)
             value = SnapByStep(value, Step);
         Value = value;
-        Drag?.Invoke(this, value);
+
+        if (DragCommand != null && DragCommand.CanExecute(Value))
+            DragCommand.Execute(Value);
+
+        Drag?.Invoke(this, Value);
     }
 
     public static float SnapByStep(float value, float step) => MathF.Round(value / step) * step;
@@ -175,40 +181,47 @@ public class SUISlider : UIElementGroup
         Thumb = new SUISliderThumb().Join(this);
     }
 
-    public float MinValue { get; set; }
-    public float MaxValue { get; set; }
-
-    public float CurrentValue { get; set; }
-
-    protected RectangleRender Slider { get; set; } = new();
-
-    private Vector2 _mousePositionWhenPressed;
-    private float _leftAlignmentWhenPressed;
+    private Vector2 _mousePositionAtPress;
+    private float _valuetAtPress;
 
     public override void OnLeftMouseDown(UIMouseEvent evt)
     {
         base.OnLeftMouseDown(evt);
 
-        if (evt.Source != Thumb) return;
+        // 支持直接点条确定位置
+        if (evt.Source != Thumb)
+        {
+            Value = GetValueAtMousePosition().X;
+        }
 
-        _leftAlignmentWhenPressed = Thumb.Left.Alignment;
-        _mousePositionWhenPressed = evt.MousePosition;
+        // 记录按下时的状态
+        _valuetAtPress = Value;
+        _mousePositionAtPress = evt.MousePosition;
     }
 
     protected override void UpdateStatus(GameTime gameTime)
     {
         base.UpdateStatus(gameTime);
 
-        if (Thumb.LeftMousePressed)
+        if (LeftMousePressed)
         {
-            var space = InnerBounds.Size - Thumb.InnerBounds.Size;
-            var offset = Main.MouseScreen - _mousePositionWhenPressed;
+            var space = InnerBounds.Size - Thumb.Bounds.Size;
+            var offset = Main.MouseScreen - _mousePositionAtPress;
 
-            var left = _leftAlignmentWhenPressed + offset.X / space.Width;
+            var value = _valuetAtPress + offset.X / space.Width;
 
-            OnDrag(left);
+            OnDrag(value);
         }
     }
-}
 
-#endif
+    /// <summary>
+    /// 根据当前鼠标位置获取 Value 理论值
+    /// </summary>
+    public Vector2 GetValueAtMousePosition()
+    {
+        var start = InnerBounds.Position + Thumb.Bounds.Size / 2f;
+        var space = InnerBounds.Size - Thumb.Bounds.Size;
+
+        return (Main.MouseScreen - start) / space;
+    }
+}

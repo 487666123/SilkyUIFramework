@@ -6,9 +6,6 @@ namespace SilkyUIFramework.Elements;
 [XmlElementMapping("TextView")]
 public class UITextView : UIView
 {
-    public static float DeathTextOffset { get; internal set; }
-    public static float MouseTextOffset { get; internal set; }
-
     public void UseDeathText() => Font = FontAssets.DeathText.Value;
     public void UseMouseText() => Font = FontAssets.MouseText.Value;
     public bool IsDeathText => Font == FontAssets.DeathText.Value;
@@ -63,10 +60,7 @@ public class UITextView : UIView
             if (MaximumCharacters > 0 && value.Length > MaximumCharacters) value = value[..MaximumCharacters];
 
             var changingEventArgs = new ContentChangingEventArgs(value, field);
-            RuntimeSafeHelper.SafeInvoke(ContentChanging, action =>
-            {
-                changingEventArgs.NewText = value = action(this, changingEventArgs);
-            });
+            ContentChanging?.Invoke(this, changingEventArgs);
 
             value = OnContentChanging(value, field);
 
@@ -76,7 +70,7 @@ public class UITextView : UIView
             MarkLayoutDirty();
 
             var changedEventArgs = new ContentChangedEventArgs(field);
-            RuntimeSafeHelper.SafeInvoke(ContentChanged, action => action(this, changedEventArgs));
+            ContentChanged?.Invoke(this, changedEventArgs);
             OnContentChanged(field);
         }
     } = string.Empty;
@@ -122,6 +116,8 @@ public class UITextView : UIView
     public Vector2 TextAlign { get; set; } = Vector2.Zero;
     public bool IgnoreTextColor { get; set; } = false;
 
+    public float TextRotation { get; set; }
+
     #endregion
 
     protected readonly List<TextSnippet> IntermediateSnippets = [];
@@ -136,41 +132,41 @@ public class UITextView : UIView
 
     public Vector2 TextSize { get; protected set; } = Vector2.Zero;
 
-    public override void PreMeasure(float? width, float? height)
+    public override void Measure(float width, float height)
     {
-        CalculateWidthConstraints(width ?? 0);
-        CalculateHeightConstraints(height ?? 0);
+        UpdateWidthConstraints(width);
+        UpdateHeightConstraints(height);
 
         if (FitWidth)
         {
-            RecalculateString(MaxInnerWidth);
-            SetInnerBoundsWidthRaw(MathHelper.Clamp(TextSize.X * TextScale, MinInnerWidth, MaxInnerWidth));
+            RecalculateString(WidthMertrics.MinInner);
+            SetInnerBoundsWidthRaw(WidthMertrics.ClampInner(TextSize.X * TextScale));
         }
         else
         {
-            CalculateBoundsWidth(width ?? 0);
+            UpdateBoundsWidth(width);
             RecalculateString(InnerBounds.Width);
         }
 
         if (FitHeight)
         {
-            SetInnerBoundsHeightRaw(MathHelper.Clamp(TextSize.Y * TextScale, MinInnerHeight, MaxInnerHeight));
+            SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(TextSize.Y * TextScale));
         }
-        else CalculateBoundsHeight(height ?? 0);
+        else UpdateBoundsHeight(height);
     }
 
     public override void RecalculateHeight()
     {
         RecalculateString(InnerBounds.Width);
 
-        if (FitHeight) SetInnerBoundsHeightRaw(MathHelper.Clamp(TextSize.Y * TextScale, MinInnerHeight, MaxInnerHeight));
+        if (FitHeight) SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(TextSize.Y * TextScale));
     }
 
     protected virtual void RecalculateString(float maxWidth)
     {
         IntermediateSnippets.Parse(Text, Color.White).ConvertPlainSnippet();
 
-        SnippetModule.UpdateProperties(Font, maxWidth, MaxLines);
+        SnippetModule.UpdateProperties(Font, TextScale > 0 ? maxWidth / TextScale : float.MaxValue, MaxLines);
 
         if (WordWrap)
         {
@@ -197,21 +193,16 @@ public class UITextView : UIView
         var textSize = TextSize * TextScale;
 
         var textPosition = InnerBounds.Position + TextOffset + TextPercentOffset * innerSize
-            + TextAlign * (innerSize - textSize) - TextPercentOrigin * textSize;
+            + TextAlign * (innerSize - textSize);
+        var textOrigin = TextPercentOrigin * textSize;
         textPosition.Y += TextScale * GetFontOffset();
 
-        SnippetModule.DrawTextShadow(spriteBatch, Font, textPosition, TextBorderColor, 0f, Vector2.Zero, new(TextScale), TextBorder);
-        SnippetModule.DrawText(spriteBatch, Font, textPosition, TextColor, 0f, Vector2.Zero, new(TextScale), out var snippet, IgnoreTextColor);
+        SnippetModule.DrawTextShadow(spriteBatch, Font, textPosition, TextBorderColor, TextRotation, textOrigin, new(TextScale), TextBorder);
+        SnippetModule.DrawText(spriteBatch, Font, textPosition, TextColor, TextRotation, textOrigin, new(TextScale), out var snippet, IgnoreTextColor);
         snippet?.OnHover();
     }
 
-    protected virtual float GetFontOffset() => GetFontOffset(Font);
-
-    public static float GetFontOffset(DynamicSpriteFont font)
-    {
-        if (font == FontAssets.DeathText.Value) return DeathTextOffset;
-        return font == FontAssets.MouseText.Value ? MouseTextOffset : 0f;
-    }
+    protected virtual float GetFontOffset() => TextDrawingHelper.GetFontOffset(Font);
 }
 
 public class ContentChangingEventArgs(string newText, string oldText) : EventArgs

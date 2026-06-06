@@ -3,3 +3,9 @@ bin/
 .vscode/
 .vs/
 .idea/
+
+.dotnet-home/
+
+.codex
+
+AGENTS.md

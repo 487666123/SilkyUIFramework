@@ -1,5 +1,3 @@
-global using SilkyUIFramework;
-
 namespace SilkyUIFramework;
 
 public enum MouseButtonType : int
@@ -62,6 +60,6 @@ public static class PositioningExtensions
 {
     extension(Positioning positioning)
     {
-        public bool IsFree => positioning is Positioning.Fixed or Positioning.Absolute;
+        public bool IsOutOfFlow => positioning is Positioning.Fixed or Positioning.Absolute;
     }
 }

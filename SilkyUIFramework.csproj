@@ -1,30 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="..\tModLoader.targets" />
+	<PropertyGroup>
+		<AssemblyName>SilkyUIFramework</AssemblyName>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<LangVersion>preview</LangVersion>
+		<TargetFramework>net8.0</TargetFramework>
+	</PropertyGroup>
 
-    <PropertyGroup>
-        <AssemblyName>SilkyUIFramework</AssemblyName>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <LangVersion>preview</LangVersion>
-    </PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\SilkyUIAnalyzer\SilkyUIAnalyzer.csproj">
+			<OutputItemType>Analyzer</OutputItemType>
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
+		<PackageReference Include="Solaestas.tModLoader.ModBuilder" Version="1.6.1" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+	</ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\SilkyUIAnalyzer\SilkyUIAnalyzer.csproj">
-            <OutputItemType>Analyzer</OutputItemType>
-            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-        </ProjectReference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
-        <PackageReference Include="Solaestas.tModLoader.ModBuilder" Version="1.6.1" />
-        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <AdditionalFiles Include="**/*.xml" Exclude="bin/**/*;obj/**/*;.git/**/*;.idea/**/*;.vs/**/*" Pack="true" ModPath="%(Identity)" />
-        <AdditionalFiles Include="**/*.txt" Exclude="bin/**/*;obj/**/*;.git/**/*;.idea/**/*;.vs/**/*" Pack="true" ModPath="%(Identity)" />
-    </ItemGroup>
+	<ItemGroup>
+		<AdditionalFiles Include="**/*.xml" Exclude="bin/**/*;obj/**/*;.git/**/*;.idea/**/*;.vs/**/*" Pack="true" ModPath="%(Identity)" />
+		<AdditionalFiles Include="**/*.txt" Exclude="bin/**/*;obj/**/*;.git/**/*;.idea/**/*;.vs/**/*" Pack="true" ModPath="%(Identity)" />
+	</ItemGroup>
 
 </Project>

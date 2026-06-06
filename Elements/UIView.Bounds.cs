@@ -170,194 +170,184 @@ public partial class UIView
     #endregion
 
     /// <summary>
-    /// 获取可用空间
+    /// 获取当前元素布局测量所用的可用尺寸。
+    /// 根节点使用屏幕可用空间；Fit 维度返回 0，由内容反向决定。
     /// </summary>
-    protected Size GetInnerSpace() =>
-        new(FitWidth ? 0 : InnerBounds.Width, FitHeight ? 0 : InnerBounds.Height);
+    protected Size GetAvailableSize()
+    {
+        var parent = Parent;
+        if (parent == null)
+            return GraphicsDeviceHelper.GetBackBufferSizeByUIScale();
 
-    /// <summary>
-    /// 给自己用的
-    /// </summary>
-    protected Size GetParentInnerSpace() =>
-        Parent?.GetInnerSpace() ?? GraphicsDeviceHelper.GetBackBufferSizeByUIScale();
+        if (Positioning.IsOutOfFlow)
+            return parent.InnerBounds.Size;
+        return new Size(parent.FitWidth ? 0f : parent.InnerBounds.Width, parent.FitHeight ? 0f : parent.InnerBounds.Height);
+    }
 
     public virtual void UpdateLayout()
     {
         if (!LayoutIsDirty) return;
 
-        var availableSize = GetParentInnerSpace();
-        PreMeasure(availableSize.Width, availableSize.Height);
+        var availableSize = GetAvailableSize();
+        Measure(availableSize.Width, availableSize.Height);
         RecalculateHeight();
         CleanupDirtyMark();
     }
 
     /// <summary>
-    /// 预测量元素宽高
+    /// 测量当前元素尺寸，并将结果写入 Outer/Bounds/Inner 三套盒模型数据。
     /// </summary>
-    public virtual void PreMeasure(float? width, float? height)
+    public virtual void Measure(float width, float height)
     {
-        CalculateWidthConstraints(width ?? 0);
-        CalculateHeightConstraints(height ?? 0);
+        UpdateWidthConstraints(width);
+        UpdateHeightConstraints(height);
 
-        if (FitWidth)
-            SetInnerBoundsWidthRaw(MathHelper.Clamp(0f, MinInnerWidth, MaxInnerWidth));
-        else
-            CalculateBoundsWidth(width ?? 0);
+        if (FitWidth) SetInnerBoundsWidthRaw(WidthMertrics.ClampInner(0f));
+        else UpdateBoundsWidth(width);
 
-        if (FitHeight)
-            SetInnerBoundsHeightRaw(MathHelper.Clamp(0f, MinInnerHeight, MaxInnerHeight));
-        else
-            CalculateBoundsHeight(height ?? 0);
+        if (FitHeight) SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(0f));
+        else UpdateBoundsHeight(height);
     }
 
-    public virtual void RefreshWidth(float availableWidth)
+    /// <summary>
+    /// 在父级宽度变化时更新当前宽度。
+    /// </summary>
+    public virtual void UpdateWidth(float availableWidth)
     {
-        CalculateWidthConstraints(availableWidth);
+        UpdateWidthConstraints(availableWidth);
 
         if (FitWidth) return;
-        CalculateBoundsWidth(availableWidth);
+
+        UpdateBoundsWidth(availableWidth);
     }
 
     public virtual void RecalculateHeight() { }
 
-    public virtual void RefreshHeight(float availableHeight)
+    /// <summary>
+    /// 在父级高度变化时更新当前高度。
+    /// </summary>
+    public virtual void UpdateHeight(float availableHeight)
     {
-        CalculateHeightConstraints(availableHeight);
+        UpdateHeightConstraints(availableHeight);
 
         if (FitHeight) return;
-        CalculateBoundsHeight(availableHeight);
+
+        UpdateBoundsHeight(availableHeight);
     }
-
-    #region 声明和计算约束
-
-    public float MinWidthValue { get; private set; }
-    public float MaxWidthValue { get; private set; }
-    public float WidthValue { get; private set; }
-
-    public float MinHeightValue { get; private set; }
-    public float MaxHeightValue { get; private set; }
-    public float HeightValue { get; private set; }
-
-    public float MinOuterWidth { get; private set; }
-    public float MaxOuterWidth { get; private set; }
-    public float MinOuterHeight { get; private set; }
-    public float MaxOuterHeight { get; private set; }
-
-    public float MinInnerWidth { get; private set; }
-    public float MaxInnerWidth { get; private set; }
-    public float MinInnerHeight { get; private set; }
-    public float MaxInnerHeight { get; private set; }
-
-    protected internal void CalculateWidthConstraints(float availableWidth)
-    {
-        switch (BoxSizing)
-        {
-            default:
-            case BoxSizing.Border:
-                MinWidthValue = Math.Max(_minWidth.CalculateSize(availableWidth), Padding.Horizontal + Border * 2);
-                MaxWidthValue = Math.Max(_maxWidth.CalculateSize(availableWidth), Padding.Horizontal + Border * 2);
-                MinInnerWidth = MinWidthValue - Border * 2 - Padding.Horizontal;
-                MaxInnerWidth = MaxWidthValue - Border * 2 - Padding.Horizontal;
-                MinOuterWidth = MinWidthValue + Margin.Horizontal;
-                MaxOuterWidth = MaxWidthValue + Margin.Horizontal;
-                break;
-            case BoxSizing.Content:
-                MinWidthValue = _minWidth.CalculateSize(availableWidth);
-                MaxWidthValue = _maxWidth.CalculateSize(availableWidth);
-                MinInnerWidth = MinWidthValue;
-                MaxInnerWidth = MaxWidthValue;
-                MinOuterWidth = MinWidthValue + Border * 2 + Padding.Horizontal + Margin.Horizontal;
-                MaxOuterWidth = MaxWidthValue + Border * 2 + Padding.Horizontal + Margin.Horizontal;
-                break;
-        }
-    }
-
-    protected internal void CalculateHeightConstraints(float availableHeight)
-    {
-        switch (BoxSizing)
-        {
-            default:
-            case BoxSizing.Border:
-                MinHeightValue = Math.Max(_minHeight.CalculateSize(availableHeight), Padding.Vertical + Border * 2);
-                MaxHeightValue = Math.Max(_maxHeight.CalculateSize(availableHeight), Padding.Vertical + Border * 2);
-                MinInnerHeight = MinHeightValue - Border * 2 - Padding.Vertical;
-                MaxInnerHeight = MaxHeightValue - Border * 2 - Padding.Vertical;
-                MinOuterHeight = MinHeightValue + Margin.Vertical;
-                MaxOuterHeight = MaxHeightValue + Margin.Vertical;
-                break;
-            case BoxSizing.Content:
-                MinHeightValue = _minHeight.CalculateSize(availableHeight);
-                MaxHeightValue = _maxHeight.CalculateSize(availableHeight);
-                MinInnerHeight = MinHeightValue;
-                MaxInnerHeight = MaxHeightValue;
-                MinOuterHeight = MinHeightValue + Border * 2 + Padding.Vertical + Margin.Vertical;
-                MaxOuterHeight = MaxHeightValue + Border * 2 + Padding.Vertical + Margin.Vertical;
-                break;
-        }
-    }
-
-    #endregion
 
     /// <summary>
-    /// 计算边界宽度<br/>
-    /// 根据 <see cref="BoxSizing"/> 决定边界宽度应用于 <see cref="Bounds"/> 还是 <see cref="InnerBounds"/>
+    /// 水平方向约束缓存（保持历史拼写以兼容外部调用）。
     /// </summary>
-    /// <param name="availableWidth">父元素可用宽度</param>
-    protected void CalculateBoundsWidth(float availableWidth)
-    {
-        WidthValue = _width.CalculateSize(availableWidth);
-        WidthValue = MathHelper.Clamp(WidthValue, MinWidthValue, MaxWidthValue);
+    public AxisMetrics WidthMertrics;
 
+    /// <summary>
+    /// 垂直方向约束缓存（保持历史拼写以兼容外部调用）。
+    /// </summary>
+    public AxisMetrics HeightMertrics;
+
+    /// <summary>
+    /// 更新宽度约束缓存。
+    /// </summary>
+    /// <param name="availableWidth">当前可用宽度。</param>
+    protected void UpdateWidthConstraints(float availableWidth)
+    {
+        WidthMertrics.UpdateConstraints(
+            _minWidth, _maxWidth, availableWidth, BoxSizing,
+            Padding.Horizontal, Border, Margin.Horizontal);
+    }
+
+    /// <summary>
+    /// 更新高度约束缓存。
+    /// </summary>
+    /// <param name="availableHeight">当前可用高度。</param>
+    protected void UpdateHeightConstraints(float availableHeight)
+    {
+        HeightMertrics.UpdateConstraints(
+            _minHeight, _maxHeight, availableHeight, BoxSizing,
+            Padding.Vertical, Border, Margin.Vertical);
+    }
+
+    /// <summary>
+    /// 按声明宽度和约束缓存计算最终宽度。
+    /// </summary>
+    /// <param name="availableWidth">当前可用宽度。</param>
+    protected void UpdateBoundsWidth(float availableWidth)
+    {
+        WidthMertrics.SetValueClamped(_width.CalculateSize(availableWidth));
+        ApplyWidthByBoxSizing(WidthMertrics.Value);
+    }
+
+    /// <summary>
+    /// 按声明高度和约束缓存计算最终高度。
+    /// </summary>
+    /// <param name="availableHeight">当前可用高度。</param>
+    protected void UpdateBoundsHeight(float availableHeight)
+    {
+        HeightMertrics.SetValueClamped(_height.CalculateSize(availableHeight));
+        ApplyHeightByBoxSizing(HeightMertrics.Value);
+    }
+
+    /// <summary>
+    /// 根据 BoxSizing 决定宽度值写入 Bounds 还是 InnerBounds。
+    /// </summary>
+    private void ApplyWidthByBoxSizing(float width)
+    {
         switch (BoxSizing)
         {
             default:
             case BoxSizing.Border:
-                SetBoundsWidthRaw(WidthValue);
+                SetBoundsWidthRaw(width);
                 break;
             case BoxSizing.Content:
-                SetInnerBoundsWidthRaw(WidthValue);
+                SetInnerBoundsWidthRaw(width);
                 break;
         }
     }
 
     /// <summary>
-    /// 计算边界高度<br/>
-    /// 根据 <see cref="BoxSizing"/> 决定边界高度应用于 <see cref="Bounds"/> 还是 <see cref="InnerBounds"/>
+    /// 根据 BoxSizing 决定高度值写入 Bounds 还是 InnerBounds。
     /// </summary>
-    /// <param name="availableHeight">父元素可用宽度</param>
-    protected void CalculateBoundsHeight(float availableHeight)
+    private void ApplyHeightByBoxSizing(float height)
     {
-        HeightValue = _height.CalculateSize(availableHeight);
-        HeightValue = MathHelper.Clamp(HeightValue, MinHeightValue, MaxHeightValue);
-
         switch (BoxSizing)
         {
             default:
             case BoxSizing.Border:
-                SetBoundsHeightRaw(HeightValue);
+                SetBoundsHeightRaw(height);
                 break;
             case BoxSizing.Content:
-                SetInnerBoundsHeightRaw(HeightValue);
+                SetInnerBoundsHeightRaw(height);
                 break;
         }
     }
 
     #region 设置 Bounds 的方法，包括 OuterBounds, Bounds, InnerBounds
 
+    /// <summary>
+    /// 直接设置 OuterWidth，并同步推导 Bounds/InnerWidth。
+    /// </summary>
     internal void SetOuterBoundsWidthRaw(float width)
     {
         OuterBounds.Width = width;
-        Bounds.Width = width -= Margin.Horizontal;
-        InnerBounds.Width = width - Padding.Horizontal - Border * 2;
+        var boundsWidth = width - Margin.Horizontal;
+        Bounds.Width = boundsWidth;
+        InnerBounds.Width = boundsWidth - Padding.Horizontal - Border * 2;
     }
 
+    /// <summary>
+    /// 直接设置 OuterHeight，并同步推导 Bounds/InnerHeight。
+    /// </summary>
     internal void SetOuterBoundsHeightRaw(float height)
     {
         OuterBounds.Height = height;
-        Bounds.Height = height -= Margin.Vertical;
-        InnerBounds.Height = height - Padding.Vertical - Border * 2;
+        var boundsHeight = height - Margin.Vertical;
+        Bounds.Height = boundsHeight;
+        InnerBounds.Height = boundsHeight - Padding.Vertical - Border * 2;
     }
 
+    /// <summary>
+    /// 直接设置 Bounds.Width，并同步推导 Inner/Outer 宽度。
+    /// </summary>
     private void SetBoundsWidthRaw(float width)
     {
         Bounds.Width = width;
@@ -365,6 +355,9 @@ public partial class UIView
         OuterBounds.Width = width + Margin.Horizontal;
     }
 
+    /// <summary>
+    /// 直接设置 Bounds.Height，并同步推导 Inner/Outer 高度。
+    /// </summary>
     private void SetBoundsHeightRaw(float height)
     {
         Bounds.Height = height;
@@ -372,18 +365,26 @@ public partial class UIView
         OuterBounds.Height = height + Margin.Vertical;
     }
 
+    /// <summary>
+    /// 直接设置 InnerWidth，并同步推导 Bounds/OuterWidth。
+    /// </summary>
     public void SetInnerBoundsWidthRaw(float width)
     {
         InnerBounds.Width = width;
-        Bounds.Width = width += Padding.Horizontal + Border * 2;
-        OuterBounds.Width = width + Margin.Horizontal;
+        var boundsWidth = width + Padding.Horizontal + Border * 2;
+        Bounds.Width = boundsWidth;
+        OuterBounds.Width = boundsWidth + Margin.Horizontal;
     }
 
+    /// <summary>
+    /// 直接设置 InnerHeight，并同步推导 Bounds/OuterHeight。
+    /// </summary>
     public void SetInnerBoundsHeightRaw(float height)
     {
         InnerBounds.Height = height;
-        Bounds.Height = height += Padding.Vertical + Border * 2;
-        OuterBounds.Height = height + Margin.Vertical;
+        var boundsHeight = height + Padding.Vertical + Border * 2;
+        Bounds.Height = boundsHeight;
+        OuterBounds.Height = boundsHeight + Margin.Vertical;
     }
 
     #endregion

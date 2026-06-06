@@ -34,7 +34,7 @@ public partial class UIElementGroup
     public void SetGap(float gap) => Gap = gap;
     public void SetGap(float width, float height) => Gap = Gap.With(width, height);
 
-    private readonly Layout.FlexboxModule FlexboxModule;
+    private readonly FlexboxModule FlexboxModule;
     private readonly GridModule GridModule;
 
     public LayoutModule LayoutModule
@@ -59,65 +59,59 @@ public partial class UIElementGroup
 
     #endregion
 
-    public override void PreMeasure(float? width, float? height)
+    public override void Measure(float width, float height)
     {
-        base.PreMeasure(width, height);
+        base.Measure(width, height);
 
-        PreMeasureChildren();
+        MeasureChildren();
 
-        if (LayoutElements.Count <= 0) return;
-        LayoutModule?.PreMeasure();
+        if (InFlowElements.Count <= 0) return;
+        LayoutModule?.Measure();
     }
 
     /// <summary>
-    /// 预测量子元素宽高
+    /// 测量子元素宽高
     /// </summary>
-    public virtual void PreMeasureChildren()
+    public virtual void MeasureChildren()
     {
         ClassifyChildren();
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
 
-        // 有子元素时，后续需要布局计算，所以同步缓存
-        LayoutModule?.UpdateCacheStatus();
+        LayoutModule?.PrepareData();
 
-        float? availableWidth = FitWidth ? null : InnerBounds.Width;
-        float? availableHeight = FitHeight ? null : InnerBounds.Height;
+        var availableWidth = FitWidth ? 0 : InnerBounds.Width;
+        var availableHeight = FitHeight ? 0 : InnerBounds.Height;
 
-        for (var i = 0; i < LayoutElements.Count; i++)
+        for (var i = 0; i < InFlowElements.Count; i++)
         {
             var cacheWidth = availableWidth;
             var cacheHeight = availableHeight;
-            LayoutModule?.ModifyAvailableSize(LayoutElements[i], i, ref cacheWidth, ref cacheHeight);
-            LayoutElements[i].PreMeasure(cacheWidth, cacheHeight);
+            InFlowElements[i].Measure(cacheWidth, cacheHeight);
         }
 
-        LayoutModule?.PreMeasureChildren();
+        LayoutModule?.MeasureChildren();
     }
 
     /// <summary> 重设宽度 </summary>
     public virtual void ResizeChildrenWidth()
     {
-        if (LayoutElements.Count <= 0) return;
-
-        if (!FitWidth)
-        {
-            foreach (var element in LayoutElements)
-            {
-                element.RefreshWidth(InnerBounds.Width);
-            }
-        }
+        if (InFlowElements.Count <= 0) return;
 
         LayoutModule?.ResizeChildrenWidth();
 
-        foreach (var item in LayoutElements.OfType<UIElementGroup>())
+        foreach (var item in InFlowElements.OfType<UIElementGroup>())
         {
             item.ResizeChildrenWidth();
         }
     }
 
+    /// <summary>
+    /// 设定宽度之后重新计算高度, 适应某些因宽度而改变高度的情况
+    /// </summary>
     public override void RecalculateHeight()
     {
         base.RecalculateHeight();
+
         RecalculateChildrenHeight();
 
         LayoutModule?.RecalculateHeight();
@@ -125,46 +119,44 @@ public partial class UIElementGroup
 
     protected virtual void RecalculateChildrenHeight()
     {
-        if (LayoutElements.Count <= 0) return;
-        foreach (var element in LayoutElements)
+        if (InFlowElements.Count <= 0) return;
+
+        foreach (var el in InFlowElements)
         {
-            element.RecalculateHeight();
+            el.RecalculateHeight();
         }
 
         LayoutModule?.RecalculateChildrenHeight();
     }
 
+    /// <summary>
+    /// 重新设置子元素高度的
+    /// </summary>
     protected virtual void ResizeChildrenHeight()
     {
-        if (LayoutElements.Count <= 0) return;
-        var innerSize = InnerBounds.Size;
-
-        if (!FitHeight)
-        {
-            foreach (var element in LayoutElements)
-            {
-                element.RefreshHeight(innerSize.Height);
-            }
-        }
+        if (InFlowElements.Count <= 0) return;
 
         LayoutModule?.ResizeChildrenHeight();
 
-        foreach (var item in LayoutElements.OfType<UIElementGroup>())
+        foreach (var item in InFlowElements.OfType<UIElementGroup>())
         {
             item.ResizeChildrenHeight();
         }
     }
 
 
-    protected virtual void UpdateChildrenLayoutOffset()
+    /// <summary>
+    /// 更新子元素布局位置
+    /// </summary>
+    protected virtual void UpdateChildrenLayoutPosition()
     {
-        if (LayoutElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0) return;
 
-        LayoutModule.ModifyLayoutOffset();
+        LayoutModule.UpdateChildrenLayoutPosition();
 
-        foreach (var child in LayoutElements.OfType<UIElementGroup>())
+        foreach (var child in InFlowElements.OfType<UIElementGroup>())
         {
-            child.UpdateChildrenLayoutOffset();
+            child.UpdateChildrenLayoutPosition();
         }
     }
 }

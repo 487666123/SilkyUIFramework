@@ -2,6 +2,9 @@
 
 namespace SilkyUIFramework.UserInterfaces.DialogBox;
 
+/// <summary>
+/// 没啥鸟用
+/// </summary>
 [RegisterGlobalUI(priority: 2000)]
 public class DialogBoxUI : BaseBody
 {

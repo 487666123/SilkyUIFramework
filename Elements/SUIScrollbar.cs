@@ -228,6 +228,6 @@ public class SUIScrollbar : UIView
 
         var barIsHover = IsScrollbarDragging || BarContainsPoint();
         ControlBar.BackgroundColor = barIsHover ? BarColor.Hover : BarColor.Default;
-        ControlBar.Draw(BarPositionOnScreen, barSize, false, SilkyUI.TransformMatrix);
+        ControlBar.Draw(BarPositionOnScreen, barSize, ref SilkyUI.TransformMatrix);
     }
 }

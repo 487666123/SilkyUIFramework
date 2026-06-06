@@ -7,7 +7,8 @@ public class SUIImage : UIView
 {
     #region Texture2D
 
-    public delegate void TextureChangeEventHandler(SUIImage sender, Asset<Texture2D> newTexture2D, Asset<Texture2D> oldTexture2D);
+    public delegate void TextureChangeEventHandler(SUIImage sender, Asset<Texture2D> newTexture2D,
+        Asset<Texture2D> oldTexture2D);
 
     public Asset<Texture2D> Texture2D
     {
@@ -16,6 +17,11 @@ public class SUIImage : UIView
         {
             if (value == field) return;
             field = value;
+
+            if (field != null)
+            {
+                _imageLoading = field.Value is null;
+            }
 
             if (FitWidth || FitHeight) MarkLayoutDirty();
             OnTextureChanged(this, value, field);
@@ -27,14 +33,18 @@ public class SUIImage : UIView
         get
         {
             if (Texture2D.Value is { } texture2D)
-                return new(texture2D.Width, texture2D.Height);
+                return new Vector2(texture2D.Width, texture2D.Height);
             return Vector2.Zero;
         }
     }
 
+    /// <summary>
+    /// 纹理修改后
+    /// </summary>
     public event TextureChangeEventHandler TextureChanged;
 
-    protected virtual void OnTextureChanged(SUIImage sender, Asset<Texture2D> newTexture2D, Asset<Texture2D> oldTexture2D) =>
+    protected virtual void OnTextureChanged(SUIImage sender, Asset<Texture2D> newTexture2D,
+        Asset<Texture2D> oldTexture2D) =>
         TextureChanged?.Invoke(sender, newTexture2D, oldTexture2D);
 
     #endregion
@@ -66,11 +76,11 @@ public class SUIImage : UIView
         FitHeight = true;
     }
 
-    public override void PreMeasure(float? width, float? height)
+    public override void Measure(float width, float height)
     {
-        base.PreMeasure(width, height);
+        base.Measure(width, height);
 
-        if (Texture2D == null || Texture2D.Value == null) return;
+        if (Texture2D?.Value == null) return;
 
         if (FitWidth)
         {
@@ -83,10 +93,24 @@ public class SUIImage : UIView
         }
     }
 
+    private bool _imageLoading = false;
+    protected override void UpdateStatus(GameTime gameTime)
+    {
+        base.UpdateStatus(gameTime);
+
+        var imageLoading = Texture2D?.Value is null;
+        if (imageLoading != _imageLoading)
+        {
+            _imageLoading = imageLoading;
+            MarkLayoutDirty();
+        }
+    }
+
     protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
         base.Draw(gameTime, spriteBatch);
 
+        if (ImageColor == Color.Transparent) return;
         if (Texture2D?.Value == null) return;
 
         var position = InnerBounds.Position;

@@ -13,7 +13,7 @@ public ref struct SnippetToken(float maxWidth, float spacing)
     public int Word { get; private set; } = 0;
     public float Width { get; private set; } = -spacing;
 
-    public void Append(float width, bool usingGap = true)
+    public void Add(float width, bool usingGap = true)
     {
         Word++;
         // 首次添加不计算间隔

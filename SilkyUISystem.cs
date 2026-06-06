@@ -2,49 +2,68 @@
 
 namespace SilkyUIFramework;
 
+public record ModLoadedTypes(Mod Mod, Type[] LoadedTypes);
+
 public partial class SilkyUISystem : ModSystem
 {
     public static SilkyUISystem Instance => ModContent.GetInstance<SilkyUISystem>();
-
     public static IServiceProvider ServiceProvider { get; private set; }
 
     public SilkyUIManager SilkyUIManager { get; private set; }
-    private SilkyUIRegistrar SilkyUIRegistrar { get; set; }
+    SilkyUIRegistrar SilkyUIRegistrar { get; set; }
 
-    private IReadOnlyList<Assembly> Assemblies { get; set; }
-    private IEnumerable<Type[]> GetLoadableTypes() => Assemblies.Select(AssemblyManager.GetLoadableTypes);
+    ModLoadedTypes[] _modsWithLoadedTypes;
+
+    /// <summary>
+    /// 收集 Mod 已加载的类型
+    /// </summary>
+    void CollectLoadedTypes()
+    {
+        var mods = ModLoader.Mods.AsSpan();
+        _modsWithLoadedTypes = new ModLoadedTypes[mods.Length];
+
+        for (int i = 0; i < mods.Length; i++)
+        {
+            var mod = mods[i];
+            _modsWithLoadedTypes[i] = new ModLoadedTypes(mod, AssemblyManager.GetLoadableTypes(mod.Code));
+        }
+    }
 
     public override void Load()
     {
-        Assemblies = [.. ModLoader.Mods.Select(m => m.Code)];
+        if (Main.netMode == NetmodeID.Server) return;
 
-        ServiceProvider = ServiceProviderBuilder.BuildServiceProvider(GetLoadableTypes());
+        CollectLoadedTypes();
+
+        ServiceProvider = ServiceProviderBuilder.BuildServiceProvider(_modsWithLoadedTypes);
 
         SilkyUIManager = ServiceProvider.GetRequiredService<SilkyUIManager>();
         SilkyUIRegistrar = ServiceProvider.GetRequiredService<SilkyUIRegistrar>();
     }
 
-    public override void Unload()
-    {
-        ServiceProvider = null;
-    }
+    public override void Unload() => ServiceProvider = null;
 
     public override void PostSetupContent()
     {
-        SilkyUIRegistrar.RegisterUI(GetLoadableTypes());
+        if (Main.netMode == NetmodeID.Server) return;
+
+        SilkyUIRegistrar.CollectFrom(_modsWithLoadedTypes);
         SilkyUIManager.Initialize();
     }
 
     public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers) =>
         SilkyUIManager.ModifyInterfaceLayers(layers);
+
+    public override void PreSaveAndQuit()
+    {
+
+    }
 }
 
 public class SilkyUIPlayer : ModPlayer
 {
     public override void OnEnterWorld()
     {
-        if (SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUIRenderSystem>() is not { } renderSystem) return;
-
-        renderSystem.ReloadGameGroups();
+        if (SilkyUIRenderSystem.Instance is { } rs) rs.ReloadSilkyUIStacks();
     }
 }

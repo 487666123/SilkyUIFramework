@@ -1,27 +1,44 @@
 ﻿namespace SilkyUIFramework;
 
+/// <summary>
+/// 构建框架所需的依赖注入容器
+/// </summary>
 internal static class ServiceProviderBuilder
 {
-    public static IServiceProvider BuildServiceProvider(IEnumerable<Type[]> allTypes)
+    public static IServiceProvider BuildServiceProvider(ReadOnlySpan<ModLoadedTypes> modsWithLoadedTypes)
     {
         var services = new ServiceCollection();
-        services.AddSingleton(_ => SilkyUIFramework.Instance.Logger);
-        services.AddSingleton(_ => SilkyUISystem.Instance);
+        RegisterCoreServices(services);
 
-        foreach (var types in allTypes)
+
+        var bodyType = typeof(BaseBody);
+
+        foreach (var modLoadedTypes in modsWithLoadedTypes)
         {
-            RegisterAttributedServices(services, types);
-
-            foreach (var type in types.Where(type => type.IsSubclassOf(typeof(BaseBody))))
+            foreach (var type in modLoadedTypes.LoadedTypes)
             {
-                if (type.IsDefined(typeof(RegisterUIAttribute)))
+                // 继承 BaseBody 时，永不进入 Service 特性分支
+
+                if (type.IsSubclassOf(bodyType))
                 {
-                    Register(services, ServiceLifetime.Transient, type);
+                    if (type.IsDefined(typeof(RegisterUIAttribute)))
+                    {
+                        RegisterImplementation(services, ServiceLifetime.Transient, type);
+                        RegisterInterfaceMappings(services, ServiceLifetime.Transient, type);
+                    }
+                    else if (type.IsDefined(typeof(RegisterGlobalUIAttribute)))
+                    {
+                        RegisterImplementation(services, ServiceLifetime.Singleton, type);
+                        RegisterInterfaceMappings(services, ServiceLifetime.Singleton, type);
+                    }
+
+                    continue; // Body 跳过 ServiceAttribute
                 }
 
-                if (type.IsDefined(typeof(RegisterGlobalUIAttribute)))
+                if (type.GetCustomAttribute<ServiceAttribute>() is { } serviceAttr)
                 {
-                    Register(services, ServiceLifetime.Singleton, type);
+                    RegisterImplementation(services, serviceAttr.Lifetime, type);
+                    RegisterInterfaceMappings(services, serviceAttr.Lifetime, type);
                 }
             }
         }
@@ -29,36 +46,71 @@ internal static class ServiceProviderBuilder
         return services.BuildServiceProvider();
     }
 
-    private static void RegisterAttributedServices(IServiceCollection services, Type[] types)
+    /// <summary>
+    /// 注册框架构建服务提供器所需的核心单例。
+    /// </summary>
+    static void RegisterCoreServices(IServiceCollection services)
     {
-        foreach (var (type, attr) in CollectServices(types))
-        {
-            Register(services, attr.Lifetime, type);
-        }
+        services.AddSingleton(_ => SilkyUIFramework.Instance);
+        services.AddSingleton(_ => SilkyUIFramework.Instance.Logger);
+        services.AddSingleton(_ => SilkyUISystem.Instance);
     }
 
-    private static IEnumerable<(Type, ServiceAttribute)> CollectServices(Type[] types)
-        => types.Select(t => (t, t.GetCustomAttribute<ServiceAttribute>())).Where(p => p.Item2 != null);
-
-    private static void Register(IServiceCollection services, ServiceLifetime lifetime, Type impl)
+    /// <summary>
+    /// 仅注册实现类型本身。
+    /// </summary>
+    private static void RegisterImplementation(
+        IServiceCollection services, ServiceLifetime lifetime, Type implementation)
     {
-        var interfaces = impl.GetInterfaces();
         switch (lifetime)
         {
             case ServiceLifetime.Singleton:
             {
-                services.AddSingleton(impl);
-                foreach (var iface in interfaces)
-                    services.AddSingleton(iface, sp => sp.GetRequiredService(impl));
+                services.AddSingleton(implementation);
                 break;
             }
             case ServiceLifetime.Transient:
             {
-                services.AddTransient(impl);
-                foreach (var iface in interfaces)
-                    services.AddTransient(iface, sp => sp.GetRequiredService(impl));
+                services.AddTransient(implementation);
                 break;
             }
+            default:
+                throw new Exception("不支持的生命周期。");
+        }
+    }
+
+    /// <summary>
+    /// 将实现类型的所有接口映射到同一实例解析链。
+    /// </summary>
+    private static void RegisterInterfaceMappings(
+        IServiceCollection services, ServiceLifetime lifetime, Type implementation)
+    {
+        foreach (var iface in implementation.GetInterfaces())
+        {
+            RegisterInterfaceMapping(services, lifetime, iface, implementation);
+        }
+    }
+
+    /// <summary>
+    /// 注册单个接口到实现类型的映射。
+    /// </summary>
+    private static void RegisterInterfaceMapping(
+        IServiceCollection services, ServiceLifetime lifetime, Type interfaceType, Type implementation)
+    {
+        switch (lifetime)
+        {
+            case ServiceLifetime.Singleton:
+            {
+                services.AddSingleton(interfaceType, sp => sp.GetRequiredService(implementation));
+                break;
+            }
+            case ServiceLifetime.Transient:
+            {
+                services.AddTransient(interfaceType, sp => sp.GetRequiredService(implementation));
+                break;
+            }
+            default:
+                throw new Exception("不支持的生命周期。");
         }
     }
 }

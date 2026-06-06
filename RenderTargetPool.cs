@@ -1,27 +1,25 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿namespace SilkyUIFramework;
 
-namespace SilkyUIFramework;
+//public readonly struct CanvasSize(int width, int height) : IEquatable<CanvasSize>
+//{
+//    private readonly int _width = width;
+//    private readonly int _height = height;
 
-public readonly struct CanvasSize(int width, int height) : IEquatable<CanvasSize>
-{
-    private readonly int _width = width;
-    private readonly int _height = height;
+//    public override bool Equals([NotNullWhen(true)] object obj)
+//    {
+//        return obj is CanvasSize other && Equals(other);
+//    }
 
-    public override bool Equals([NotNullWhen(true)] object obj)
-    {
-        return obj is CanvasSize other && Equals(other);
-    }
+//    public override int GetHashCode() => HashCode.Combine(_width, _height);
 
-    public override int GetHashCode() => HashCode.Combine(_width, _height);
+//    public readonly bool Equals(CanvasSize other) => _width == other._width && _height == other._height;
 
-    public readonly bool Equals(CanvasSize other) => _width == other._width && _height == other._height;
+//    public static bool operator ==(CanvasSize left, CanvasSize right) => left.Equals(right);
+//    public static bool operator !=(CanvasSize left, CanvasSize right) => !left.Equals(right);
 
-    public static bool operator ==(CanvasSize left, CanvasSize right) => left.Equals(right);
-    public static bool operator !=(CanvasSize left, CanvasSize right) => !left.Equals(right);
-
-    public static implicit operator CanvasSize(RenderTarget2D renderTarget) =>
-        new(renderTarget.Width, renderTarget.Height);
-}
+//    public static implicit operator CanvasSize(RenderTarget2D renderTarget) =>
+//        new(renderTarget.Width, renderTarget.Height);
+//}
 
 /// <summary>
 /// 渲染目标对象池，用于管理和复用 RenderTarget2D 实例
@@ -33,10 +31,10 @@ public sealed class RenderTargetPool : IDisposable
     private readonly GraphicsDevice _graphicsDevice = Main.graphics.GraphicsDevice;
 
     // 可用渲染目标字典，按尺寸分组存储
-    private readonly Dictionary<CanvasSize, HashSet<RenderTarget2D>> _available = [];
+    private readonly Dictionary<Size, HashSet<RenderTarget2D>> _available = [];
 
     // 已占用渲染目标字典，按尺寸分组存储
-    private readonly Dictionary<CanvasSize, HashSet<RenderTarget2D>> _occupied = [];
+    private readonly Dictionary<Size, HashSet<RenderTarget2D>> _occupied = [];
 
     /// <summary>
     /// 租借指定尺寸的渲染目标
@@ -46,7 +44,7 @@ public sealed class RenderTargetPool : IDisposable
     /// <returns>可用的 RenderTarget2D 实例</returns>
     public RenderTarget2D Rent(int width, int height)
     {
-        var size = new CanvasSize(width, height);
+        var size = new Size(width, height);
 
         if (!_available.TryGetValue(size, out var available))
         {
@@ -77,13 +75,13 @@ public sealed class RenderTargetPool : IDisposable
     /// <summary>
     /// 归还渲染目标到对象池
     /// </summary>
-    /// <param name="renderTarget">要归还的 RenderTarget2D 实例</param>
+    /// <param name="render">要归还的 RenderTarget2D 实例</param>
     /// <exception cref="InvalidOperationException">当尝试归还未从此池租借的渲染目标时抛出</exception>
-    public void Return(RenderTarget2D renderTarget)
+    public void Return(RenderTarget2D render)
     {
-        var size = (CanvasSize)renderTarget;
+        var size = new Size(render.Width, render.Height);
 
-        if (!_occupied.TryGetValue(size, out var occupied) || !occupied.Remove(renderTarget))
+        if (!_occupied.TryGetValue(size, out var occupied) || !occupied.Remove(render))
         {
             throw new InvalidOperationException("RenderTarget was not rented from this pool");
         }
@@ -94,7 +92,7 @@ public sealed class RenderTargetPool : IDisposable
             _available[size] = available;
         }
 
-        available.Add(renderTarget);
+        available.Add(render);
     }
 
 

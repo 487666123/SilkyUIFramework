@@ -3,37 +3,34 @@
 [Service]
 public class SilkyUIRegistrar
 {
-    public IReadOnlyDictionary<string, List<Type>> BodyTypesForGameUI { get; private set; }
-    public IReadOnlyList<Type> BodyTypesForGlobalUI { get; private set; }
+    readonly Dictionary<string, List<Type>> _gameUIBodyTypesByLayer = [];
+    readonly List<Type> _globalUIBodyTypes = [];
 
-    public void RegisterUI(IEnumerable<Type[]> allTypes)
+    public IReadOnlyDictionary<string, List<Type>> GameUIBodyTypesByLayer => _gameUIBodyTypesByLayer;
+    public IReadOnlyList<Type> GlobalUIBodyTypes => _globalUIBodyTypes;
+
+    public void CollectFrom(ReadOnlySpan<ModLoadedTypes> modsWithLoadedTypes)
     {
-        var bodyTypesForGameUI = new Dictionary<string, List<Type>>();
-        var bodyTypeForGlobalUI = new List<Type>();
-
-        foreach (var types in allTypes)
+        foreach (var (_, types) in modsWithLoadedTypes)
         {
-            foreach (var (type, layer) in CollectGameUI(types))
+            foreach (var (type, layer) in CollectGameUIBodyTypes(types))
             {
-                var list = bodyTypesForGameUI.TryGetValue(layer, out var value)
+                var list = _gameUIBodyTypesByLayer.TryGetValue(layer, out var value)
                     ? value
-                    : (bodyTypesForGameUI[layer] = []);
+                    : (_gameUIBodyTypesByLayer[layer] = []);
                 list.Add(type);
             }
 
-            bodyTypeForGlobalUI.AddRange(CollectGlobalUI(types));
+            _globalUIBodyTypes.AddRange(CollectGlobalUIBodyTypes(types));
         }
-
-        BodyTypesForGlobalUI = bodyTypeForGlobalUI.AsReadOnly();
-        BodyTypesForGameUI = bodyTypesForGameUI.AsReadOnly();
     }
 
-    static IEnumerable<(Type, string)> CollectGameUI(Type[] types)
+    static IEnumerable<(Type, string)> CollectGameUIBodyTypes(Type[] types)
         => types.Where(t => t.IsSubclassOf(typeof(BaseBody)))
             .Select(t => (t, t.GetCustomAttribute<RegisterUIAttribute>()?.LayerNode))
             .Where(p => p.LayerNode != null);
 
-    static IEnumerable<Type> CollectGlobalUI(Type[] types)
+    static IEnumerable<Type> CollectGlobalUIBodyTypes(Type[] types)
         => types.Where(t => t.IsSubclassOf(typeof(BaseBody)))
             .Where(t => t.GetCustomAttribute<RegisterGlobalUIAttribute>() != null);
 }

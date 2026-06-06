@@ -57,10 +57,30 @@ Configs: {
 
 	BlurMixingNumber: {
 		Tooltip: ""
-		One.Label: One
-		Two.Label: Two
-		Three.Label: Three
-		Four.Label: Four
-		Five.Label: Five
+
+		One: {
+			Label: One
+			Tooltip: ""
+		}
+
+		Two: {
+			Label: Two
+			Tooltip: ""
+		}
+
+		Three: {
+			Label: Three
+			Tooltip: ""
+		}
+
+		Four: {
+			Label: Four
+			Tooltip: ""
+		}
+
+		Five: {
+			Label: Five
+			Tooltip: ""
+		}
 	}
 }

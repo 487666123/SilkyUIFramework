@@ -4,15 +4,27 @@ namespace SilkyUIFramework.Extensions;
 
 public static class KeyboardStateExtensions
 {
-    public static bool IsControlKeyDown(this KeyboardState keyboardState) =>
-        keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
+    extension(ref KeyboardState keyboardState)
+    {
+        public bool IsControlKeyDown =>
+            keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
 
-    public static bool IsAltKeyDown(this KeyboardState keyboardState) =>
-        keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);
+        public bool IsAltKeyDown =>
+            keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);
 
-    public static bool IsShiftKeyDown(this KeyboardState keyboardState) =>
-        keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
+        public bool IsShiftKeyDown =>
+            keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
 
-    public static bool JustPressed(this Keys key) =>
-        Main.inputText.IsKeyDown(key) && !Main.oldInputText.IsKeyDown(key);
+        /// <summary>
+        /// 刚刚按下
+        /// </summary>
+        public static bool JustPressed(Keys key) =>
+            Main.inputText.IsKeyDown(key) && Main.oldInputText.IsKeyUp(key);
+
+        /// <summary>
+        /// 刚刚松开
+        /// </summary>
+        public static bool JustReleased(Keys key) =>
+            Main.inputText.IsKeyUp(key) && Main.oldInputText.IsKeyDown(key);
+    }
 }

@@ -18,7 +18,7 @@ public partial class UIView
         {
             if (field == value) return;
             field = value;
-            MarkLayoutDirty();
+            MarkLayoutDirty(true);
 
             Parent?.ElementsOrderIsDirty = true;
         }
@@ -40,14 +40,21 @@ public partial class UIView
 
     public bool LayoutIsDirty { get; protected set; } = true;
 
-    public void MarkLayoutDirty()
+    public void MarkLayoutDirty(bool force = false)
     {
-        LayoutIsDirty = true;
-        MarkPositionDirty();
+        if (force)
+        {
+            LayoutIsDirty = true;
+            PositionIsDirty = true;
+            Parent?.MarkLayoutDirty(true);
+            return;
+        }
 
-        // 如果元素是自由定位的，则不需要通知父元素
-        if (Positioning.IsFree) return;
-        Parent?.NotifyParentChildDirty();
+        LayoutIsDirty = true;
+        PositionIsDirty = true;
+
+        if (Positioning.IsOutOfFlow) return;
+        Parent?.MarkLayoutDirty(force);
     }
 
     /// <summary>
@@ -61,16 +68,28 @@ public partial class UIView
 
     public UIElementGroup GetAncestor()
     {
-        if (Parent == null) return null;
+        var node = Parent;
+        if (node == null) return null;
 
-        var ancestor = Parent;
-
-        while (ancestor.Parent != null)
+        while (node.Parent != null)
         {
-            ancestor = ancestor.Parent;
+            node = node.Parent;
         }
 
-        return ancestor;
+        return node;
+    }
+
+    public T GetAncestor<T>() where T : UIElementGroup
+    {
+        var node = Parent;
+
+        while (node != null)
+        {
+            if (node is T t) return t;
+            node = node.Parent;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -78,7 +97,7 @@ public partial class UIView
     /// </summary>
     public bool IsInsideTree => SilkyUI != null;
 
-    public UIElementGroup Parent { get; protected internal set; }
+    public UIElementGroup Parent { get; internal set; }
 
     public virtual void RemoveFromParent() => Parent?.RemoveChild(this);
 
@@ -102,7 +121,7 @@ public partial class UIView
     {
         if (_initialized) return;
         _initialized = true;
-        RuntimeSafeHelper.SafeInvoke(OnInitialize);
+        OnInitialize();
     }
 
     protected virtual void OnInitialize() { }
@@ -113,14 +132,16 @@ public partial class UIView
     {
         if (SilkyUI != null || silkyUI == null) return;
         SilkyUI = silkyUI;
-        RuntimeSafeHelper.SafeInvoke(OnEnterTree);
+        SubscribeDataContext();
+        OnEnterTree();
     }
 
     internal virtual void HandleExitTree()
     {
         if (SilkyUI == null) return;
         SilkyUI = null;
-        RuntimeSafeHelper.SafeInvoke(OnExitTree);
+        UnsubscribeDataContext();
+        OnExitTree();
     }
 
     /// <summary> 当元素加入UI树中时调用 </summary>
@@ -143,14 +164,14 @@ public partial class UIView
         set
         {
             if (field == value) return;
-            var isFree = field.IsFree == value.IsFree;
-
+            if (field.IsOutOfFlow == value.IsOutOfFlow)
+            {
+                field = value;
+                MarkPositionDirty();
+                return;
+            }
             field = value;
-            MarkPositionDirty();
-
-            if (isFree) return;
-            LayoutIsDirty = true;
-            Parent?.NotifyParentChildDirty();
+            MarkLayoutDirty();
         }
     }
 
@@ -352,17 +373,17 @@ public partial class UIView
     }
 
     /// <summary>
-    /// 布局计算后的最终值，为了方便编自定义布局，公开此字段
+    /// 布局计算后的最终值
     /// </summary>
     public Bounds Bounds;
 
     /// <summary>
-    /// 布局计算后的最终值，为了方便编自定义布局，公开此字段
+    /// 布局计算后的最终值
     /// </summary>
     public Bounds InnerBounds;
 
     /// <summary>
-    /// 布局计算后的最终值，为了方便编自定义布局，公开此字段
+    /// 布局计算后的最终值
     /// </summary>
     public Bounds OuterBounds;
 
@@ -370,8 +391,8 @@ public partial class UIView
 
     public virtual void HandleUpdateStatus(GameTime gameTime)
     {
-        RuntimeSafeHelper.SafeInvoke(OnUpdateStatus, action => action(gameTime));
-        RuntimeSafeHelper.SafeInvoke(() => UpdateStatus(gameTime));
+        OnUpdateStatus?.Invoke(gameTime);
+        UpdateStatus(gameTime);
     }
 
     public event Action<GameTime> OnUpdate;
@@ -379,9 +400,7 @@ public partial class UIView
 
     public virtual void HandleUpdate(GameTime gameTime)
     {
-        RuntimeSafeHelper.SafeInvoke(OnUpdate, action => action(gameTime));
+        OnUpdate?.Invoke(gameTime);
         Update(gameTime);
     }
-
-    public event Action<GameTime, SpriteBatch> DrawAction;
 }

@@ -2,19 +2,6 @@
 
 public partial class UIElementGroup
 {
-    protected internal virtual void NotifyParentChildDirty()
-    {
-        LayoutIsDirty = true;
-        PositionIsDirty = true;
-
-        if (FitWidth || FitHeight)
-        {
-            Parent?.NotifyParentChildDirty();
-        }
-    }
-
-    #region Elements Z Index Order
-
     public bool ElementsOrderIsDirty { get; set; } = true;
 
     protected List<UIView> ElementsInOrder { get; } = [];
@@ -34,54 +21,19 @@ public partial class UIElementGroup
         }
     }
 
-    #endregion
+    #region 同级别
 
     public override void UpdateLayout()
     {
         if (LayoutIsDirty)
         {
-            if (Positioning.IsFree)
-            {
-                UpdateLayoutFromFree();
-            }
-            else
-            {
-                UpdateLayoutFromFlow();
-            }
-
+            HandleDirtyLayoutUpdate();
             CleanupDirtyMark();
         }
 
         foreach (var child in ElementsCache)
         {
             child.UpdateLayout();
-        }
-    }
-
-    protected void UpdateLayoutFromFree()
-    {
-        var container = GetParentInnerSpace();
-        PreMeasure(container.Width, container.Height);
-        ResizeChildrenWidth();
-        RecalculateHeight();
-        ResizeChildrenHeight();
-        UpdateChildrenLayoutOffset();
-    }
-
-    protected void UpdateLayoutFromFlow()
-    {
-        PreMeasureChildren();
-        ResizeChildrenWidth();
-        RecalculateChildrenHeight();
-        ResizeChildrenHeight();
-        UpdateChildrenLayoutOffset();
-    }
-
-    protected void MarkFreeElementsDirty()
-    {
-        foreach (var item in FreeElements.Where(e => e.IsDependentParent() && !e.LayoutIsDirty))
-        {
-            item.MarkLayoutDirty();
         }
     }
 
@@ -92,6 +44,54 @@ public partial class UIElementGroup
         foreach (var child in ElementsCache)
         {
             child.UpdatePosition();
+        }
+    }
+
+    #endregion
+
+    /// <summary>
+    /// 处理当前元素的布局脏标记。
+    /// 默认仅脱离文档流元素需要独立执行完整布局管线；
+    /// 在流内元素的布局由父容器布局阶段统一驱动。
+    /// </summary>
+    protected virtual void HandleDirtyLayoutUpdate()
+    {
+        if (!Positioning.IsOutOfFlow) return;
+
+        RunIndependentLayoutPass();
+    }
+
+    /// <summary>
+    /// 以当前容器为根执行一轮完整布局管线。
+    /// </summary>
+    protected void RunIndependentLayoutPass()
+    {
+        var container = GetAvailableSize();
+        Measure(container.Width, container.Height);
+        ResizeChildrenWidth();
+        RecalculateHeight();
+        ResizeChildrenHeight();
+        UpdateChildrenLayoutPosition();
+    }
+
+    // <summary>
+    // [已废弃]<br/>
+    // 设计的是一个在流中的更新，但是我想遗弃了，遗弃了设计起来也会更简单，留着其实也没什么大用的，最初设计是为了节省性能
+    // </summary>
+    //protected void UpdateFlowLayout()
+    //{
+    //    MeasureChildren();
+    //    ResizeChildrenWidth();
+    //    RecalculateChildrenHeight();
+    //    ResizeChildrenHeight();
+    //    UpdateChildrenLayoutPosition();
+    //}
+
+    protected void MarkFreeElementsDirty()
+    {
+        foreach (var child in OutOfFlowElements.Where(e => e.IsDependentParent() && !e.LayoutIsDirty))
+        {
+            child.MarkLayoutDirty();
         }
     }
 
