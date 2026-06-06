@@ -6,6 +6,8 @@ namespace SilkyUIFramework.Extensions;
 /// </summary>
 public class TweenLerpRegistry : ILoadable
 {
+    #region Implement ILoadable
+
     public void Load(Mod mod)
     {
         Register<float>(MathHelper.Lerp);
@@ -18,6 +20,8 @@ public class TweenLerpRegistry : ILoadable
     }
 
     public void Unload() => _lerpFuncs.Clear();
+
+    #endregion
 
     private static readonly Dictionary<Type, Delegate> _lerpFuncs = [];
 

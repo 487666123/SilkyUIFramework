@@ -10,7 +10,7 @@ public partial class SilkyUISystem : ModSystem
     public static IServiceProvider ServiceProvider { get; private set; }
 
     public SilkyUIManager SilkyUIManager { get; private set; }
-    SilkyUIRegistrar SilkyUIRegistrar { get; set; }
+    BodyTypeRegistry BodyTypeRegistry { get; set; }
 
     ModLoadedTypes[] _modsWithLoadedTypes;
 
@@ -38,36 +38,36 @@ public partial class SilkyUISystem : ModSystem
         ServiceProvider = ServiceProviderBuilder.BuildServiceProvider(_modsWithLoadedTypes);
 
         SilkyUIManager = ServiceProvider.GetRequiredService<SilkyUIManager>();
-        SilkyUIRegistrar = ServiceProvider.GetRequiredService<SilkyUIRegistrar>();
+        BodyTypeRegistry = ServiceProvider.GetRequiredService<BodyTypeRegistry>();
     }
 
     public override void Unload()
     {
+        if (ServiceProvider is IDisposable disposable)
+            disposable.Dispose();
+
         ServiceProvider = null;
-        SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>().Dispose();
+        SilkyUIManager = null;
+        BodyTypeRegistry = null;
+        _modsWithLoadedTypes = null;
     }
 
     public override void PostSetupContent()
     {
         if (Main.netMode == NetmodeID.Server) return;
 
-        SilkyUIRegistrar.CollectFrom(_modsWithLoadedTypes);
+        BodyTypeRegistry.CollectFrom(_modsWithLoadedTypes);
         SilkyUIManager.Initialize();
     }
 
     public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers) =>
         SilkyUIManager.ModifyInterfaceLayers(layers);
-
-    public override void PreSaveAndQuit()
-    {
-
-    }
 }
 
 public class SilkyUIPlayer : ModPlayer
 {
     public override void OnEnterWorld()
     {
-        if (SilkyUIRenderSystem.Instance is { } rs) rs.ReloadSilkyUIStacks();
+        SilkyUISystem.ServiceProvider?.GetService<SilkyUIRenderSystem>()?.ReloadSilkyUIStacks();
     }
 }

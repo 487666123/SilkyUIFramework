@@ -1,49 +1,55 @@
 namespace SilkyUIFramework;
 
 [Service]
-public class SilkyUIRenderSystem(IServiceProvider provider, SilkyUIRegistrar silkyUIRegistrar)
+public class SilkyUIRenderSystem(IServiceProvider provider, BodyTypeRegistry bodyTypeRegistry)
 {
     public static SilkyUIRenderSystem Instance => SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUIRenderSystem>();
 
     private readonly IServiceProvider _provider = provider;
-    private readonly SilkyUIRegistrar _registrar = silkyUIRegistrar;
+    private readonly BodyTypeRegistry _bodyTypeRegistry = bodyTypeRegistry;
 
     private SilkyUISceneStack _globalStack;
     private Dictionary<string, SilkyUISceneStack> _gameStacksByLayer = [];
     private readonly List<string> _layerOrder = [];
+    private bool _initialized;
 
     public void Initialize()
     {
+        if (_initialized) return;
+
         _globalStack = _provider.GetRequiredService<SilkyUISceneStack>();
 
-        foreach (var type in _registrar.GlobalUIBodyTypes)
+        foreach (var type in _bodyTypeRegistry.GlobalBodyTypes)
         {
-            var silkyUI = _provider.GetRequiredService<SilkyUI>();
-            silkyUI.ScenePriority = type.GetCustomAttribute<RegisterGlobalUIAttribute>()!.Priority;
+            var silkyUI = new SilkyUI
+            {
+                ScenePriority = type.GetCustomAttribute<RegisterGlobalUIAttribute>()!.Priority
+            };
             silkyUI.SetRoot(_provider.GetRequiredService(type) as BaseBody);
             _globalStack.Push(silkyUI);
         }
 
-        foreach (var (layerNode, _) in _registrar.GameUIBodyTypesByLayer)
+        foreach (var (layerNode, _) in _bodyTypeRegistry.GameBodyTypesByLayerNode)
         {
             _gameStacksByLayer[layerNode] = _provider.GetRequiredService<SilkyUISceneStack>();
         }
 
+        _initialized = true;
     }
 
     public void ReloadSilkyUIStacks()
     {
         foreach (var (layerNode, stack) in _gameStacksByLayer)
         {
-            if (!_registrar.GameUIBodyTypesByLayer.TryGetValue(layerNode, out var types)) continue;
+            if (!_bodyTypeRegistry.GameBodyTypesByLayerNode.TryGetValue(layerNode, out var types)) continue;
 
             stack.Clear();
             foreach (var type in types)
             {
-                var ui = SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUI>();
+                var ui = new SilkyUI();
 
                 ui.ScenePriority = type.GetCustomAttribute<RegisterUIAttribute>()!.Priority;
-                ui.SetRoot(SilkyUISystem.ServiceProvider.GetRequiredService(type) as BaseBody);
+                ui.SetRoot(_provider.GetRequiredService(type) as BaseBody);
 
                 stack.Push(ui);
             }

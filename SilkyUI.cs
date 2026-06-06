@@ -3,7 +3,6 @@ namespace SilkyUIFramework;
 /// <summary>
 /// SilkyUI 根容器，负责维护 UI 根节点、矩阵变换，并驱动更新与绘制流程。
 /// </summary>
-[Service(ServiceLifetime.Transient)]
 public class SilkyUI
 {
     /// <summary>
