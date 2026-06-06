@@ -68,6 +68,6 @@ public class SilkyUIPlayer : ModPlayer
 {
     public override void OnEnterWorld()
     {
-        SilkyUISystem.ServiceProvider?.GetService<SilkyUIRenderSystem>()?.ReloadSilkyUIStacks();
+        SilkyUISystem.ServiceProvider?.GetService<SilkyUIManager>()?.ReloadGameScenes();
     }
 }

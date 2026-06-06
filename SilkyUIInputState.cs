@@ -8,14 +8,14 @@ namespace SilkyUIFramework;
 /// UI 输入状态管理器。
 /// 负责在每帧中维护鼠标状态、悬停目标、焦点目标，并分发鼠标与输入法相关事件。
 /// </summary>
-/// <param name="renderSystem">用于命中测试的渲染系统实例。</param>
+/// <param name="interactionService">用于命中测试和激活 UI 的交互服务。</param>
 [Service]
-public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
+public class SilkyUIInputState(IUIInteractionService interactionService)
 {
     public static SilkyUIInputState Instance => SilkyUISystem.ServiceProvider.GetRequiredService<SilkyUIInputState>();
 
-    /// <summary>渲染系统引用，用于查询鼠标命中的 UI 元素。</summary>
-    readonly SilkyUIRenderSystem _renderSystem = renderSystem;
+    /// <summary>UI 交互服务，用于查询鼠标命中的 UI 元素并激活 UI。</summary>
+    readonly IUIInteractionService _interactionService = interactionService;
 
     /// <summary>支持处理的鼠标按键集合。</summary>
     public static MouseButtonType[] MouseButtons { get; } = [.. Enum.GetValues(typeof(MouseButtonType)).Cast<MouseButtonType>()];
@@ -93,7 +93,7 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
     /// <summary>更新当前悬停目标，并在目标变化时触发 MouseLeave/MouseEnter。</summary>
     void UpdateHoverTarget()
     {
-        var element = _renderSystem.HitTest(_mousePosition);
+        var element = _interactionService.HitTest(_mousePosition);
 
         PreviousHoverTarget = HoverTarget;
 
@@ -174,7 +174,7 @@ public class SilkyUIInputState(SilkyUIRenderSystem renderSystem)
         _pressTargetsByButton[buttonType] = hoverTarget;
         if (hoverTarget == null) return;
 
-        _renderSystem.Activate(hoverTarget);
+        _interactionService.Activate(hoverTarget);
 
         switch (buttonType)
         {

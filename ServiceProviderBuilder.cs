@@ -1,4 +1,6 @@
-﻿namespace SilkyUIFramework;
+﻿using System.Collections;
+
+namespace SilkyUIFramework;
 
 /// <summary>
 /// 构建框架所需的依赖注入容器
@@ -10,36 +12,11 @@ internal static class ServiceProviderBuilder
         var services = new ServiceCollection();
         RegisterCoreServices(services);
 
-
-        var bodyType = typeof(BaseBody);
-
         foreach (var modLoadedTypes in modsWithLoadedTypes)
         {
             foreach (var type in modLoadedTypes.LoadedTypes)
             {
-                // 继承 BaseBody 时，永不进入 Service 特性分支
-
-                if (type.IsSubclassOf(bodyType))
-                {
-                    if (type.IsDefined(typeof(RegisterUIAttribute)))
-                    {
-                        RegisterImplementation(services, ServiceLifetime.Transient, type);
-                        RegisterInterfaceMappings(services, ServiceLifetime.Transient, type);
-                    }
-                    else if (type.IsDefined(typeof(RegisterGlobalUIAttribute)))
-                    {
-                        RegisterImplementation(services, ServiceLifetime.Singleton, type);
-                        RegisterInterfaceMappings(services, ServiceLifetime.Singleton, type);
-                    }
-
-                    continue; // Body 跳过 ServiceAttribute
-                }
-
-                if (type.GetCustomAttribute<ServiceAttribute>() is { } serviceAttr)
-                {
-                    RegisterImplementation(services, serviceAttr.Lifetime, type);
-                    RegisterInterfaceMappings(services, serviceAttr.Lifetime, type);
-                }
+                RegisterDiscoveredType(services, type);
             }
         }
 
@@ -56,11 +33,28 @@ internal static class ServiceProviderBuilder
         services.AddSingleton(_ => SilkyUISystem.Instance);
     }
 
+    static void RegisterDiscoveredType(IServiceCollection services, Type type)
+    {
+        if (type.IsSubclassOf(typeof(UIView))) return;
+        if (type.GetCustomAttribute<ServiceAttribute>() is not { } serviceAttr) return;
+
+        RegisterImplementationAndInterfaces(services, serviceAttr.Lifetime, type);
+    }
+
+    static void RegisterImplementationAndInterfaces(
+       IServiceCollection services,
+       ServiceLifetime lifetime,
+       Type implementation)
+    {
+        RegisterImplementation(services, lifetime, implementation);
+        RegisterInterfaceMappings(services, lifetime, implementation);
+    }
+
     /// <summary>
     /// 仅注册实现类型本身。
     /// </summary>
-    private static void RegisterImplementation(
-        IServiceCollection services, ServiceLifetime lifetime, Type implementation)
+    static void RegisterImplementation(
+       IServiceCollection services, ServiceLifetime lifetime, Type implementation)
     {
         switch (lifetime)
         {
@@ -79,23 +73,59 @@ internal static class ServiceProviderBuilder
         }
     }
 
+    static readonly HashSet<Type> ExcludedInterfaces =
+   [
+       typeof(IDisposable),
+        typeof(IAsyncDisposable),
+        typeof(IComparable),
+        typeof(IComparable<>),
+        typeof(IEquatable<>),
+        typeof(IEnumerable),
+        typeof(IEnumerator),
+    ];
+
     /// <summary>
     /// 将实现类型的所有接口映射到同一实例解析链。
     /// </summary>
-    private static void RegisterInterfaceMappings(
-        IServiceCollection services, ServiceLifetime lifetime, Type implementation)
+    static readonly HashSet<Type> _registeredInterfaces = []; // 去重表
+
+    static void RegisterInterfaceMappings(
+       IServiceCollection services, ServiceLifetime lifetime, Type implementation)
     {
-        foreach (var iface in implementation.GetInterfaces())
+        // 获取“直接实现”的接口，并过滤黑名单
+        var directInterfaces = implementation
+            .GetDirectlyImplementedInterfaces()  // 之前写好的扩展
+            .Where(i => !ExcludedInterfaces.Contains(i.IsGenericType
+                ? i.GetGenericTypeDefinition()
+                : i));
+
+        foreach (var iface in directInterfaces)
         {
-            RegisterInterfaceMapping(services, lifetime, iface, implementation);
+            // 去重：一个接口只注册第一个遇到实现（或其他策略）
+            if (_registeredInterfaces.Add(iface))
+            {
+                RegisterInterfaceMapping(services, lifetime, iface, implementation);
+            }
         }
+    }
+
+    /// <summary>
+    /// 获取类型直接实现的接口（不包括从基类继承的）
+    /// </summary>
+    static Type[] GetDirectlyImplementedInterfaces(this Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+
+        var allInterfaces = type.GetInterfaces();
+        var baseInterfaces = type.BaseType?.GetInterfaces() ?? Type.EmptyTypes;
+        return [.. allInterfaces.Except(baseInterfaces)];
     }
 
     /// <summary>
     /// 注册单个接口到实现类型的映射。
     /// </summary>
-    private static void RegisterInterfaceMapping(
-        IServiceCollection services, ServiceLifetime lifetime, Type interfaceType, Type implementation)
+    static void RegisterInterfaceMapping(
+       IServiceCollection services, ServiceLifetime lifetime, Type interfaceType, Type implementation)
     {
         switch (lifetime)
         {

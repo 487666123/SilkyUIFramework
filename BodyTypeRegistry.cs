@@ -2,6 +2,20 @@
 
 namespace SilkyUIFramework;
 
+internal enum SilkyUIScope
+{
+    Global,
+    GameLayer
+}
+
+internal sealed record SilkyUIRegistration(
+    Type BodyType,
+    string Name,
+    int Priority,
+    SilkyUIScope Scope,
+    string LayerNode,
+    InterfaceScaleType ScaleType);
+
 /// <summary>
 /// 收集并分类已注册的 Body 类型，生成供 UI 系统使用的不可变注册表。
 /// </summary>
@@ -10,23 +24,17 @@ public class BodyTypeRegistry
 {
     public static BodyTypeRegistry Instance => SilkyUISystem.ServiceProvider.GetRequiredService<BodyTypeRegistry>();
 
-    /// <summary>
-    /// 按原版界面层节点分组的游戏内 Body 类型。
-    /// </summary>
-    public ImmutableDictionary<string, ImmutableArray<Type>> GameBodyTypesByLayerNode { get; private set; } = [];
+    internal ImmutableDictionary<string, ImmutableArray<SilkyUIRegistration>> GameRegistrationsByLayerNode { get; private set; } = [];
 
-    /// <summary>
-    /// 不依附于原版界面层的全局 Body 类型。
-    /// </summary>
-    public ImmutableArray<Type> GlobalBodyTypes { get; private set; } = [];
+    internal ImmutableArray<SilkyUIRegistration> GlobalRegistrations { get; private set; } = [];
 
     /// <summary>
     /// 从已加载的 Mod 类型中收集 Body 类型，并生成只读注册结果。
     /// </summary>
     public void CollectFrom(ReadOnlySpan<ModLoadedTypes> modsWithLoadedTypes)
     {
-        var gameBodyTypesByLayerNode = new Dictionary<string, List<Type>>();
-        var globalBodyTypes = new List<Type>();
+        var gameRegistrationsByLayerNode = new Dictionary<string, List<SilkyUIRegistration>>();
+        var globalRegistrations = new List<SilkyUIRegistration>();
 
         foreach (var (_, types) in modsWithLoadedTypes)
         {
@@ -34,24 +42,36 @@ public class BodyTypeRegistry
             {
                 if (!type.IsSubclassOf(typeof(BaseBody))) continue;
 
-                if (type.GetCustomAttribute<RegisterUIAttribute>() is { LayerNode: { } layer })
+                if (type.GetCustomAttribute<RegisterUIAttribute>() is { LayerNode: { } layer } registerUI)
                 {
-                    var list = gameBodyTypesByLayerNode.TryGetValue(layer, out var value)
-                        ? value
-                        : (gameBodyTypesByLayerNode[layer] = []);
-                    list.Add(type);
+                    var registrations = gameRegistrationsByLayerNode.TryGetValue(layer, out var registrationList)
+                        ? registrationList
+                        : (gameRegistrationsByLayerNode[layer] = []);
+                    registrations.Add(new SilkyUIRegistration(
+                        type,
+                        registerUI.Name,
+                        registerUI.Priority,
+                        SilkyUIScope.GameLayer,
+                        registerUI.LayerNode,
+                        registerUI.InterfaceScaleType));
                 }
 
-                if (type.GetCustomAttribute<RegisterGlobalUIAttribute>() != null)
+                if (type.GetCustomAttribute<RegisterGlobalUIAttribute>() is { } registerGlobalUI)
                 {
-                    globalBodyTypes.Add(type);
+                    globalRegistrations.Add(new SilkyUIRegistration(
+                        type,
+                        registerGlobalUI.Name,
+                        registerGlobalUI.Priority,
+                        SilkyUIScope.Global,
+                        null,
+                        InterfaceScaleType.UI));
                 }
             }
         }
 
-        GameBodyTypesByLayerNode = gameBodyTypesByLayerNode.ToImmutableDictionary(
+        GameRegistrationsByLayerNode = gameRegistrationsByLayerNode.ToImmutableDictionary(
             p => p.Key,
             p => p.Value.ToImmutableArray());
-        GlobalBodyTypes = [.. globalBodyTypes];
+        GlobalRegistrations = [.. globalRegistrations];
     }
 }
