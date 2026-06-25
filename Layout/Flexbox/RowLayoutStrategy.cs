@@ -20,8 +20,8 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     public void Measure(FlexboxContext context)
     {
         MeasureSize(context, context.Parent.Gap.Width, out var mainSize, out var crossSize);
-        if (context.Parent.FitWidth) LayoutModule.SetInnerWidthClamped(context.Parent, mainSize);
-        if (context.Parent.FitHeight) LayoutModule.SetInnerHeightClamped(context.Parent, crossSize);
+        if (context.Parent.FitWidth) context.Parent.SetInnerWidthClamped(mainSize);
+        if (context.Parent.FitHeight) context.Parent.SetInnerHeightClamped(crossSize);
     }
 
     /// <inheritdoc />
@@ -43,7 +43,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     public void RecalculateHeight(FlexboxContext context)
     {
         if (!context.Parent.FitHeight) return;
-        LayoutModule.SetInnerHeightClamped(context.Parent, FlexboxHelper.CalculateCrossSize(context.Lines, context.Parent.Gap.Height));
+        context.Parent.SetInnerHeightClamped(FlexboxHelper.CalculateCrossSize(context.Lines, context.Parent.Gap.Height));
     }
 
     /// <inheritdoc />
@@ -74,7 +74,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
                 foreach (var el in line.Elements.Where(el =>
                          el.Parent.FitHeight || !(el.OuterBounds.Height >= line.CrossSize)))
                 {
-                    LayoutModule.SetOuterHeightClamped(el, line.CrossSize);
+                    el.SetOuterHeightClamped(line.CrossSize);
                 }
             }
         }
@@ -186,7 +186,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
                         var share = remaining / totalGrow;
                         var alloc = Math.Min(availableGrowth, share * element.FlexGrow);
 
-                        LayoutModule.SetOuterWidthClamped(element, element.OuterBounds.Width + alloc);
+                        element.SetOuterWidthClamped(element.OuterBounds.Width + alloc);
 
                         remaining -= alloc;
                         totalGrow -= element.FlexGrow;
@@ -208,7 +208,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
                         var share = remaining / totalShrink;
                         var alloc = Math.Max(availableShrink, share * element.FlexShrink);
 
-                        LayoutModule.SetOuterWidthClamped(element, element.OuterBounds.Width + alloc);
+                        element.SetOuterWidthClamped(element.OuterBounds.Width + alloc);
 
                         remaining -= alloc;
                         totalShrink -= element.FlexShrink;

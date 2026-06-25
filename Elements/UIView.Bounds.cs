@@ -324,9 +324,29 @@ public partial class UIView
     #region 设置 Bounds 的方法，包括 OuterBounds, Bounds, InnerBounds
 
     /// <summary>
+    /// 按 Inner 宽度约束设置 InnerBounds.Width，并同步推导 Bounds/OuterBounds。
+    /// </summary>
+    public void SetInnerWidthClamped(float width) => SetInnerBoundsWidthRaw(WidthMertrics.ClampInner(width));
+
+    /// <summary>
+    /// 按 Inner 高度约束设置 InnerBounds.Height，并同步推导 Bounds/OuterBounds。
+    /// </summary>
+    public void SetInnerHeightClamped(float height) => SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(height));
+
+    /// <summary>
+    /// 按 Outer 宽度约束设置 OuterBounds.Width，并同步推导 Bounds/InnerBounds。
+    /// </summary>
+    public void SetOuterWidthClamped(float width) => SetOuterBoundsWidthRaw(WidthMertrics.ClampOuter(width));
+
+    /// <summary>
+    /// 按 Outer 高度约束设置 OuterBounds.Height，并同步推导 Bounds/InnerBounds。
+    /// </summary>
+    public void SetOuterHeightClamped(float height) => SetOuterBoundsHeightRaw(HeightMertrics.ClampOuter(height));
+
+    /// <summary>
     /// 直接设置 OuterWidth，并同步推导 Bounds/InnerWidth。
     /// </summary>
-    internal void SetOuterBoundsWidthRaw(float width)
+    public void SetOuterBoundsWidthRaw(float width)
     {
         OuterBounds.Width = width;
         var boundsWidth = width - Margin.Horizontal;
@@ -337,7 +357,7 @@ public partial class UIView
     /// <summary>
     /// 直接设置 OuterHeight，并同步推导 Bounds/InnerHeight。
     /// </summary>
-    internal void SetOuterBoundsHeightRaw(float height)
+    public void SetOuterBoundsHeightRaw(float height)
     {
         OuterBounds.Height = height;
         var boundsHeight = height - Margin.Vertical;
@@ -348,7 +368,7 @@ public partial class UIView
     /// <summary>
     /// 直接设置 Bounds.Width，并同步推导 Inner/Outer 宽度。
     /// </summary>
-    private void SetBoundsWidthRaw(float width)
+    public void SetBoundsWidthRaw(float width)
     {
         Bounds.Width = width;
         InnerBounds.Width = width - Padding.Horizontal - Border * 2;
@@ -358,7 +378,7 @@ public partial class UIView
     /// <summary>
     /// 直接设置 Bounds.Height，并同步推导 Inner/Outer 高度。
     /// </summary>
-    private void SetBoundsHeightRaw(float height)
+    public void SetBoundsHeightRaw(float height)
     {
         Bounds.Height = height;
         InnerBounds.Height = height - Padding.Vertical - Border * 2;

@@ -1,11 +1,30 @@
-﻿namespace SilkyUIFramework.UserInterfaces.MonitoringDashboard;
+﻿using SilkyUIFramework.Layout;
 
-[RegisterGlobalUI]
+namespace SilkyUIFramework.UserInterfaces.MonitoringDashboard;
+
+[RegisterUI]
 public partial class MonitoringDashboardUI : BaseBody
 {
     protected override void OnInitialize()
     {
         InitializeComponent();
+
+        GridItem1.ColumnSpan = new GridSpan(null, 3);
+
+        GridItem3.ColumnSpan = new GridSpan(null, 3);
+
+        GridContainer.SetTemplateColumns([
+            GridTrack.Fr(1f),
+            GridTrack.Fr(1f),
+            GridTrack.Fr(1f),
+        ]);
+
+        GridContainer.SetTemplateRows([
+            GridTrack.Pixels(20f),
+            GridTrack.Pixels(20f),
+            GridTrack.Pixels(20f),
+            GridTrack.Pixels(20f),
+        ]);
 
 #if DEBUG
         Enabled = true;

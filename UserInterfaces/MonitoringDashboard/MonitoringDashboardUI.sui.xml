@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- Class 填写对应类名 -->
 <Body Class="SilkyUIFramework.UserInterfaces.MonitoringDashboard.MonitoringDashboardUI"
-	  Enabled="false" BorderRadius="4" Width="400px" Height="300px" Gap="0"
+	  Enabled="false" BorderRadius="8" Width="400px" Height="300px" Gap="0"
 	  FlexDirection="Column" MainAlignment="Start" CrossAlignment="Stretch" CrossContentAlignment="Stretch">
 	<DraggableView Name="DragPanel" Height="40px" BackgroundColor="rgba(0,0,0,0.25)"
 				   FlexDirection="Row" CrossAlignment="Center" Padding="8">
-		<TextView Name="Title" IgnoreMouseInteraction="true" TextScale="0.4" Text="SilkyUI 仪表盘" />
+		<TextView Name="Title" IgnoreMouseInteraction="true" TextScale="0.45" Text="SilkyUI 仪表盘" />
 	</DraggableView>
 	<ElementGroup Padding="8" FlexDirection="Column" MainAlignment="Start"
 				  CrossAlignment="Stretch" CrossContentAlignment="Stretch" >
@@ -14,5 +14,17 @@
 			<M.Mask Height="100%" />
 			<M.Container FlexDirection="Column" Padding="8" Gap="4" />
 		</ScrollView>
+		<ElementGroup Name="GridContainer"
+					  FitHeight="true" BackgroundColor="#00000033" LayoutType="Grid" Gap="4">
+			
+			<View Name="GridItem1" BackgroundColor="#0099ff99" />
+			
+			<View BackgroundColor="#0099ff99" />
+			<View Name="GridItem3" BackgroundColor="#ff009999"/>
+			<View BackgroundColor="#0099ff99" />
+			
+			<View BackgroundColor="#0099ff99" />
+			<View BackgroundColor="#0099ff99" />
+		</ElementGroup>
 	</ElementGroup>
 </Body>

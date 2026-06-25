@@ -10,7 +10,7 @@ public partial class UIElementGroup
 
     public IReadOnlyList<GridTrack> TemplateRows => _templateRows;
 
-    public AutoFlow AutoFlow
+    public GridFlowDirection GridFlowDirection
     {
         get; set
         {
@@ -37,6 +37,26 @@ public partial class UIElementGroup
         _templateColumns = columns ?? [];
         MarkLayoutDirty();
     }
+
+    public GridItemAlignment GridItemsHorizontalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+            MarkLayoutDirty();
+        }
+    } = GridItemAlignment.Stretch;
+
+    public GridItemAlignment GridItemsVerticalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+            MarkLayoutDirty();
+        }
+    } = GridItemAlignment.Stretch;
 
     #endregion
 

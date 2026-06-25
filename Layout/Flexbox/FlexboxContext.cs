@@ -37,19 +37,13 @@ public class FlexboxContext(UIElementGroup parent)
     /// <summary>
     /// 清空布局线
     /// </summary>
-    public void ClearLines()
-    {
-        _lines.Clear();
-    }
+    public void ClearLines() => _lines.Clear();
 
     /// <summary>
     /// 添加布局线
     /// </summary>
     /// <param name="line">要添加的布局线</param>
-    public void AddLine(FlexLine line)
-    {
-        _lines.Add(line);
-    }
+    public void AddLine(FlexLine line) => _lines.Add(line);
 
     /// <summary>
     /// 获取最大主轴尺寸

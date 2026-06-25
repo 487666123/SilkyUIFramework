@@ -20,8 +20,8 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
     public void Measure(FlexboxContext context)
     {
         MeasureSize(context, context.Parent.Gap.Height, out var mainSize, out var crossSize);
-        if (context.Parent.FitWidth) LayoutModule.SetInnerWidthClamped(context.Parent, crossSize);
-        if (context.Parent.FitHeight) LayoutModule.SetInnerHeightClamped(context.Parent, mainSize);
+        if (context.Parent.FitWidth) context.Parent.SetInnerWidthClamped(crossSize);
+        if (context.Parent.FitHeight) context.Parent.SetInnerHeightClamped(mainSize);
     }
 
     /// <inheritdoc />
@@ -45,7 +45,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
                 foreach (var el in line.Elements.Where(el =>
                          el.Parent.FitWidth || !(el.OuterBounds.Width >= line.CrossSize)))
                 {
-                    LayoutModule.SetOuterWidthClamped(el, line.CrossSize);
+                    el.SetOuterWidthClamped(line.CrossSize);
                 }
             }
         }
@@ -55,7 +55,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
     public void RecalculateHeight(FlexboxContext context)
     {
         if (!context.Parent.FitHeight) return;
-        LayoutModule.SetInnerHeightClamped(context.Parent, context.GetMaxMainSize());
+        context.Parent.SetInnerHeightClamped(context.GetMaxMainSize());
     }
 
     /// <inheritdoc />
@@ -187,7 +187,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
                         var share = remaining / totalGrow;
                         var alloc = Math.Min(availableGrowth, share * element.FlexGrow);
 
-                        LayoutModule.SetOuterHeightClamped(element, element.OuterBounds.Height + alloc);
+                        element.SetOuterHeightClamped(element.OuterBounds.Height + alloc);
 
                         remaining -= alloc;
                         totalGrow -= element.FlexGrow;
@@ -212,7 +212,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
                         var share = remaining / totalShrink;
                         var alloc = Math.Max(availableShrink, share * element.FlexShrink);
 
-                        LayoutModule.SetOuterHeightClamped(element, element.OuterBounds.Height + alloc);
+                        element.SetOuterHeightClamped(element.OuterBounds.Height + alloc);
 
                         remaining -= alloc;
                         totalShrink -= element.FlexShrink;
