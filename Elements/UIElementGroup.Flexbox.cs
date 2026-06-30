@@ -10,7 +10,7 @@ public partial class UIElementGroup
 
     public IReadOnlyList<GridTrack> TemplateRows => _templateRows;
 
-    public GridFlowDirection GridFlowDirection
+    public GridDirection GridDirection
     {
         get; set
         {

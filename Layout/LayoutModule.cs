@@ -3,9 +3,9 @@
 /// <summary>
 /// 布局模块
 /// </summary>
-public abstract class LayoutModule(UIElementGroup parent)
+public abstract class LayoutModule(UIElementGroup container)
 {
-    public readonly UIElementGroup Parent = parent;
+    public readonly UIElementGroup Container = container;
 
     /// <summary>
     /// 准备数据, 计算开始前
@@ -25,10 +25,10 @@ public abstract class LayoutModule(UIElementGroup parent)
     public virtual void ResizeChildrenWidth()
     {
         // 固宽, 更子宽
-        if (Parent.FitWidth) return;
+        if (Container.FitWidth) return;
 
-        var width = Parent.InnerBounds.Width;
-        foreach (var element in Parent.InFlowChildren)
+        var width = Container.InnerBounds.Width;
+        foreach (var element in Container.InFlowChildren)
         {
             element.UpdateWidth(width);
         }
@@ -41,10 +41,10 @@ public abstract class LayoutModule(UIElementGroup parent)
     public virtual void ResizeChildrenHeight()
     {
         // 固高, 更子高
-        if (Parent.FitHeight) return;
+        if (Container.FitHeight) return;
 
-        var height = Parent.InnerBounds.Height;
-        foreach (var element in Parent.InFlowChildren)
+        var height = Container.InnerBounds.Height;
+        foreach (var element in Container.InFlowChildren)
         {
             element.UpdateHeight(height);
         }

@@ -8,14 +8,14 @@ public static class GridLayoutHelper
     /// <summary>
     /// 汇总整组轨道尺寸，并加上轨道之间的 fence gap。
     /// </summary>
-    public static float SumTracks(IReadOnlyList<GridTrackState> tracks, float gap)
+    public static float SumTracks(IReadOnlyList<GridTrackOutput> tracks, float gap)
     {
         if (tracks.Count == 0) return 0f;
 
         var total = (tracks.Count - 1) * gap;
         for (var i = 0; i < tracks.Count; i++)
         {
-            total += tracks[i].FinalSize;
+            total += tracks[i].Size;
         }
 
         return total;
@@ -24,7 +24,7 @@ public static class GridLayoutHelper
     /// <summary>
     /// 汇总指定 Grid 区域覆盖的轨道尺寸，并加上区域内部的 gap。
     /// </summary>
-    public static float SumTracks(IReadOnlyList<GridTrackState> tracks, int start, int span, float gap)
+    public static float SumTracks(IReadOnlyList<GridTrackOutput> tracks, int start, int span, float gap)
     {
         if (tracks.Count == 0) return 0f;
 
@@ -34,7 +34,7 @@ public static class GridLayoutHelper
         var total = (span - 1) * gap;
         for (var i = start; i < start + span; i++)
         {
-            total += tracks[i].FinalSize;
+            total += tracks[i].Size;
         }
 
         return total;
@@ -43,13 +43,13 @@ public static class GridLayoutHelper
     /// <summary>
     /// 根据轨道最终尺寸计算每条轨道相对容器 InnerBounds 的起始偏移。
     /// </summary>
-    public static void UpdateOffsets(GridTrackState[] tracks, float gap)
+    public static void UpdateOffsets(GridTrackOutput[] tracks, float gap)
     {
         var offset = 0f;
         for (var i = 0; i < tracks.Length; i++)
         {
             tracks[i].Offset = offset;
-            offset += tracks[i].FinalSize + gap;
+            offset += tracks[i].Size + gap;
         }
     }
 

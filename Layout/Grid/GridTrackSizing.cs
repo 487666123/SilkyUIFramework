@@ -12,9 +12,9 @@ public static class GridTrackSizing
     {
         ResolveTracks(
             context.Columns,
-            context.Parent.FitWidth,
-            context.Parent.InnerBounds.Width,
-            context.Parent.Gap.Width,
+            context.Container.FitWidth,
+            context.Container.InnerBounds.Width,
+            context.Container.Gap.Width,
             context.Items,
             isColumnAxis: true);
     }
@@ -26,9 +26,9 @@ public static class GridTrackSizing
     {
         ResolveTracks(
             context.Rows,
-            context.Parent.FitHeight,
-            context.Parent.InnerBounds.Height,
-            context.Parent.Gap.Height,
+            context.Container.FitHeight,
+            context.Container.InnerBounds.Height,
+            context.Container.Gap.Height,
             context.Items,
             isColumnAxis: false);
     }
@@ -38,8 +38,8 @@ public static class GridTrackSizing
     /// </summary>
     public static void UpdateOffsets(GridContext context)
     {
-        GridLayoutHelper.UpdateOffsets(context.Columns, context.Parent.Gap.Width);
-        GridLayoutHelper.UpdateOffsets(context.Rows, context.Parent.Gap.Height);
+        GridLayoutHelper.UpdateOffsets(context.Columns, context.Container.Gap.Width);
+        GridLayoutHelper.UpdateOffsets(context.Rows, context.Container.Gap.Height);
     }
 
     /// <summary>
@@ -47,11 +47,11 @@ public static class GridTrackSizing
     /// 顺序为：重置缓存 -> 固定/百分比轨道 -> 内容撑开的轨道 -> fr 轨道 -> 非负修正。
     /// </summary>
     private static void ResolveTracks(
-        GridTrackState[] tracks,
+        GridTrackOutput[] tracks,
         bool fitAxis,
         float availableSize,
         float gap,
-        IReadOnlyList<GridLayoutItem> items,
+        IReadOnlyList<GridItem> items,
         bool isColumnAxis)
     {
         if (tracks.Length == 0) return;
@@ -64,14 +64,13 @@ public static class GridTrackSizing
     }
 
     /// <summary>
-    /// 清空上一轮计算得到的 BaseSize/FinalSize，保留轨道定义和 Offset。
+    /// 清空上一轮计算得到的 Size，保留轨道定义和 Offset。
     /// </summary>
-    private static void ResetTracks(GridTrackState[] tracks)
+    private static void ResetTracks(GridTrackOutput[] tracks)
     {
         for (var i = 0; i < tracks.Length; i++)
         {
-            tracks[i].BaseSize = 0f;
-            tracks[i].FinalSize = 0f;
+            tracks[i].Size = 0f;
         }
     }
 
@@ -79,7 +78,7 @@ public static class GridTrackSizing
     /// 先解析无需依赖内容的轨道。
     /// 当容器对应轴是 Fit 时，百分比没有明确参照尺寸，暂时按 0 处理，后续可由内容撑开。
     /// </summary>
-    private static void ResolveFixedTracks(GridTrackState[] tracks, bool fitAxis, float availableSize)
+    private static void ResolveFixedTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize)
     {
         for (var i = 0; i < tracks.Length; i++)
         {
@@ -87,12 +86,10 @@ public static class GridTrackSizing
             switch (definition.TemplateType)
             {
                 case TemplateType.Pixels:
-                    tracks[i].BaseSize = Math.Max(0f, definition.Value);
-                    tracks[i].FinalSize = tracks[i].BaseSize;
+                    tracks[i].Size = Math.Max(0f, definition.Value);
                     break;
                 case TemplateType.Percent:
-                    tracks[i].BaseSize = fitAxis ? 0f : Math.Max(0f, availableSize * definition.Value);
-                    tracks[i].FinalSize = tracks[i].BaseSize;
+                    tracks[i].Size = fitAxis ? 0f : Math.Max(0f, availableSize * definition.Value);
                     break;
             }
         }
@@ -103,8 +100,8 @@ public static class GridTrackSizing
     /// 第一版只做工程化近似：单轨道子项直接撑开轨道，跨轨道子项把不足尺寸平均分配给可被内容撑开的轨道。
     /// </summary>
     private static void ResolveAutoTracks(
-        GridTrackState[] tracks,
-        IReadOnlyList<GridLayoutItem> items,
+        GridTrackOutput[] tracks,
+        IReadOnlyList<GridItem> items,
         bool isColumnAxis,
         bool fitAxis,
         float gap)
@@ -130,12 +127,11 @@ public static class GridTrackSizing
     /// <summary>
     /// 让单个可内容撑开的轨道至少达到指定尺寸。
     /// </summary>
-    private static void GrowContentSizedTrack(ref GridTrackState track, float size, bool fitAxis)
+    private static void GrowContentSizedTrack(ref GridTrackOutput track, float size, bool fitAxis)
     {
         if (!CanGrowByContent(track.Definition, fitAxis)) return;
 
-        track.BaseSize = Math.Max(track.BaseSize, size);
-        track.FinalSize = Math.Max(track.FinalSize, track.BaseSize);
+        track.Size = Math.Max(track.Size, size);
     }
 
     /// <summary>
@@ -144,7 +140,7 @@ public static class GridTrackSizing
     /// 如果容器对应轴是 Fit，Percent/Fr 轨道也允许按内容撑开。
     /// </summary>
     private static void DistributeSpanningAutoSize(
-        GridTrackState[] tracks,
+        GridTrackOutput[] tracks,
         int start,
         int span,
         float outerSize,
@@ -158,7 +154,7 @@ public static class GridTrackSizing
 
         for (var i = start; i < end; i++)
         {
-            currentSize += tracks[i].FinalSize;
+            currentSize += tracks[i].Size;
             if (CanGrowByContent(tracks[i].Definition, fitAxis))
             {
                 growableCount++;
@@ -172,8 +168,7 @@ public static class GridTrackSizing
         {
             if (!CanGrowByContent(tracks[i].Definition, fitAxis)) continue;
 
-            tracks[i].BaseSize += share;
-            tracks[i].FinalSize = Math.Max(tracks[i].FinalSize, tracks[i].BaseSize);
+            tracks[i].Size += share;
         }
     }
 
@@ -192,14 +187,14 @@ public static class GridTrackSizing
     /// 将剩余空间分配给 fr 轨道。
     /// 如果容器对应轴是 Fit，则没有 definite free space，fr 轨道保留内容撑开的尺寸。
     /// </summary>
-    private static void ResolveFractionTracks(GridTrackState[] tracks, bool fitAxis, float availableSize, float gap)
+    private static void ResolveFractionTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize, float gap)
     {
         var totalFraction = 0f;
         var usedSize = Math.Max(0, tracks.Length - 1) * gap;
 
         for (var i = 0; i < tracks.Length; i++)
         {
-            usedSize += tracks[i].FinalSize;
+            usedSize += tracks[i].Size;
             if (tracks[i].Definition.TemplateType is TemplateType.Fraction)
             {
                 totalFraction += Math.Max(0f, tracks[i].Definition.Value);
@@ -208,18 +203,7 @@ public static class GridTrackSizing
 
         if (totalFraction <= 0f) return;
 
-        if (fitAxis)
-        {
-            for (var i = 0; i < tracks.Length; i++)
-            {
-                if (tracks[i].Definition.TemplateType is TemplateType.Fraction)
-                {
-                    tracks[i].FinalSize = Math.Max(tracks[i].FinalSize, tracks[i].BaseSize);
-                }
-            }
-
-            return;
-        }
+        if (fitAxis) return;
 
         var remaining = Math.Max(0f, availableSize - usedSize);
         for (var i = 0; i < tracks.Length; i++)
@@ -227,19 +211,18 @@ public static class GridTrackSizing
             if (tracks[i].Definition.TemplateType is not TemplateType.Fraction) continue;
 
             var fraction = Math.Max(0f, tracks[i].Definition.Value);
-            tracks[i].FinalSize = remaining * fraction / totalFraction;
+            tracks[i].Size = remaining * fraction / totalFraction;
         }
     }
 
     /// <summary>
     /// 对外部输入和中间计算结果做兜底修正，避免负尺寸进入布局结果。
     /// </summary>
-    private static void ClampNegativeTracks(GridTrackState[] tracks)
+    private static void ClampNegativeTracks(GridTrackOutput[] tracks)
     {
         for (var i = 0; i < tracks.Length; i++)
         {
-            tracks[i].BaseSize = Math.Max(0f, tracks[i].BaseSize);
-            tracks[i].FinalSize = Math.Max(0f, tracks[i].FinalSize);
+            tracks[i].Size = Math.Max(0f, tracks[i].Size);
         }
     }
 }

@@ -3,23 +3,18 @@ namespace SilkyUIFramework.Layout.Grid;
 /// <summary>
 /// Grid 单次布局计算的上下文，集中保存父容器、子项区域和轨道状态。
 /// </summary>
-public sealed class GridContext(UIElementGroup parent)
+public sealed class GridContext(UIElementGroup container)
 {
-    /// <summary> 当前执行 Grid 布局的父容器。 </summary>
-    public UIElementGroup Parent { get; } = parent;
+    public UIElementGroup Container { get; } = container;
 
-    /// <summary> 当前参与布局的流内子项及其已计算出的 Grid 区域。 </summary>
-    public GridLayoutItem[] Items { get; private set; } = [];
+    public GridItem[] Items { get; private set; } = [];
 
-    /// <summary> 行轨道状态。显式轨道来自 TemplateRows，隐式轨道使用 Auto。 </summary>
-    public GridTrackState[] Rows { get; private set; } = [];
+    public GridTrackOutput[] Rows { get; private set; } = [];
+    public GridTrackOutput[] Columns { get; private set; } = [];
 
-    /// <summary> 列轨道状态。显式轨道来自 TemplateColumns，隐式轨道使用 Auto。 </summary>
-    public GridTrackState[] Columns { get; private set; } = [];
+    public float TotalRowsHeight => GridLayoutHelper.SumTracks(Rows, Container.Gap.Height);
 
-    public float TotalRowsHeight => GridLayoutHelper.SumTracks(Rows, Parent.Gap.Height);
-
-    public float TotalColumnsWidth => GridLayoutHelper.SumTracks(Columns, Parent.Gap.Width);
+    public float TotalColumnsWidth => GridLayoutHelper.SumTracks(Columns, Container.Gap.Width);
 
     /// <summary>
     /// 重建本轮布局的子项和显式轨道。
@@ -27,11 +22,11 @@ public sealed class GridContext(UIElementGroup parent)
     /// </summary>
     public void Initialize()
     {
-        Items = [.. Parent.InFlowChildren
-            .Select(element => new GridLayoutItem(element, CreateInitialArea(element)))];
+        Items = [.. Container.InFlowChildren
+            .Select(element => new GridItem(element, CreateInitialArea(element)))];
 
-        Rows = CreateTrackStates(Parent.TemplateRows);
-        Columns = CreateTrackStates(Parent.TemplateColumns);
+        Rows = CreateTrackStates(Container.TemplateRows);
+        Columns = CreateTrackStates(Container.TemplateColumns);
     }
 
     /// <summary>
@@ -46,11 +41,11 @@ public sealed class GridContext(UIElementGroup parent)
         // 行数不足时创建隐式行。显式行保持原定义，新增行统一按 Auto 轨道处理。
         if (Rows.Length < rowCount)
         {
-            var rows = new GridTrackState[rowCount];
+            var rows = new GridTrackOutput[rowCount];
             Array.Copy(Rows, rows, Rows.Length);
             for (var i = Rows.Length; i < rows.Length; i++)
             {
-                rows[i] = new GridTrackState(GridTrack.Auto);
+                rows[i] = new GridTrackOutput(GridTrack.Auto);
             }
 
             Rows = rows;
@@ -59,11 +54,11 @@ public sealed class GridContext(UIElementGroup parent)
         // 列数不足时创建隐式列。显式列保持原定义，新增列统一按 Auto 轨道处理。
         if (Columns.Length < columnCount)
         {
-            var columns = new GridTrackState[columnCount];
+            var columns = new GridTrackOutput[columnCount];
             Array.Copy(Columns, columns, Columns.Length);
             for (var i = Columns.Length; i < columns.Length; i++)
             {
-                columns[i] = new GridTrackState(GridTrack.Auto);
+                columns[i] = new GridTrackOutput(GridTrack.Auto);
             }
 
             Columns = columns;
@@ -75,7 +70,7 @@ public sealed class GridContext(UIElementGroup parent)
     /// </summary>
     public float GetAreaWidth(GridArea area)
     {
-        return GridLayoutHelper.SumTracks(Columns, area.Column, area.ColumnSpan, Parent.Gap.Width);
+        return GridLayoutHelper.SumTracks(Columns, area.Column, area.ColumnSpan, Container.Gap.Width);
     }
 
     /// <summary>
@@ -83,17 +78,17 @@ public sealed class GridContext(UIElementGroup parent)
     /// </summary>
     public float GetAreaHeight(GridArea area)
     {
-        return GridLayoutHelper.SumTracks(Rows, area.Row, area.RowSpan, Parent.Gap.Height);
+        return GridLayoutHelper.SumTracks(Rows, area.Row, area.RowSpan, Container.Gap.Height);
     }
 
-    private static GridTrackState[] CreateTrackStates(IReadOnlyList<GridTrack> tracks)
+    private static GridTrackOutput[] CreateTrackStates(IReadOnlyList<GridTrack> tracks)
     {
-        if (tracks.Count == 0) return [new GridTrackState(GridTrack.Auto)];
+        if (tracks.Count == 0) return [new GridTrackOutput(GridTrack.Auto)];
 
-        var states = new GridTrackState[tracks.Count];
+        var states = new GridTrackOutput[tracks.Count];
         for (var i = 0; i < tracks.Count; i++)
         {
-            states[i] = new GridTrackState(tracks[i]);
+            states[i] = new GridTrackOutput(tracks[i]);
         }
 
         return states;

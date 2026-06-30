@@ -3,7 +3,7 @@ namespace SilkyUIFramework.Layout;
 /// <summary>
 /// Grid 自动放置方向。
 /// </summary>
-public enum GridFlowDirection
+public enum GridDirection
 {
     /// <summary> 优先沿列方向向右推进，当前行放满后进入下一行。 </summary>
     Row,

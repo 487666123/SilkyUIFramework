@@ -5,9 +5,9 @@ namespace SilkyUIFramework.Layout;
 /// <summary>
 /// Grid 布局模块，负责在现有 <see cref="LayoutModule"/> 生命周期中完成子项放置、轨道尺寸解析和位置更新。
 /// </summary>
-public sealed class GridModule(UIElementGroup parent) : LayoutModule(parent)
+public sealed class GridModule(UIElementGroup container) : LayoutModule(container)
 {
-    private readonly GridContext _context = new(parent);
+    private readonly GridContext _context = new(container);
 
     /// <summary>
     /// 初始化本轮 Grid 计算所需的临时状态，并先完成子项所在网格区域的放置。
@@ -36,15 +36,15 @@ public sealed class GridModule(UIElementGroup parent) : LayoutModule(parent)
     {
         GridTrackSizing.ResolveRows(_context);
 
-        if (Parent.FitWidth)
+        if (Container.FitWidth)
         {
-            Parent.SetInnerWidthClamped(_context.TotalColumnsWidth);
+            Container.SetInnerWidthClamped(_context.TotalColumnsWidth);
             GridTrackSizing.ResolveColumns(_context);
         }
 
-        if (Parent.FitHeight)
+        if (Container.FitHeight)
         {
-            Parent.SetInnerHeightClamped(_context.TotalRowsHeight);
+            Container.SetInnerHeightClamped(_context.TotalRowsHeight);
             GridTrackSizing.ResolveRows(_context);
         }
     }
@@ -121,12 +121,12 @@ public sealed class GridModule(UIElementGroup parent) : LayoutModule(parent)
 
     private GridItemAlignment ResolveHorizontalAlignment(UIView element)
     {
-        return ResolveAlignment(element.GridHorizontalAlignment, Parent.GridItemsHorizontalAlignment);
+        return ResolveAlignment(element.GridHorizontalAlignment, Container.GridItemsHorizontalAlignment);
     }
 
     private GridItemAlignment ResolveVerticalAlignment(UIView element)
     {
-        return ResolveAlignment(element.GridVerticalAlignment, Parent.GridItemsVerticalAlignment);
+        return ResolveAlignment(element.GridVerticalAlignment, Container.GridItemsVerticalAlignment);
     }
 
     private static GridItemAlignment ResolveAlignment(GridItemAlignment selfAlignment, GridItemAlignment parentAlignment)

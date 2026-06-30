@@ -3,7 +3,7 @@ namespace SilkyUIFramework.Layout.Grid;
 /// <summary>
 /// Grid 布局中的一个子项，绑定实际 UIView 与当前计算出的 Grid 区域。
 /// </summary>
-public struct GridLayoutItem(UIView element, GridArea area)
+public struct GridItem(UIView element, GridArea area)
 {
     /// <summary> 参与布局的实际 UI 元素。 </summary>
     public UIView Element { get; } = element;

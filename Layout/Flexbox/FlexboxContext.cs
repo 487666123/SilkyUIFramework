@@ -6,13 +6,13 @@ namespace SilkyUIFramework.Layout.Flexbox;
 /// <remarks>
 /// 创建新的布局上下文，包含空的布局线列表
 /// </remarks>
-/// <param name="parent">父容器</param>
-public class FlexboxContext(UIElementGroup parent)
+/// <param name="container">父容器</param>
+public class FlexboxContext(UIElementGroup container)
 {
     /// <summary>
     /// 父容器元素
     /// </summary>
-    public UIElementGroup Parent { get; } = parent;
+    public UIElementGroup Container { get; } = container;
 
     /// <summary>
     /// 布局线集合（可变内部存储）

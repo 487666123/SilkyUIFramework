@@ -50,7 +50,7 @@ public partial class UIElementGroup
         }
         set
         {
-            if (value.Parent != this) return;
+            if (value.Container != this) return;
             if (field?.GetType() == value?.GetType()) return;
             field = value;
             if (LayoutType == LayoutType.Custom) MarkLayoutDirty();

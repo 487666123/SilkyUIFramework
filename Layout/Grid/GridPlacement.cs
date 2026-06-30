@@ -5,20 +5,22 @@ namespace SilkyUIFramework.Layout.Grid;
 /// </summary>
 public static class GridPlacement
 {
+    private readonly record struct PlacedGridItem(GridArea Area, FlowRect Rect);
+
     /// <summary>
     /// 按 CSS Grid 自动放置的基本优先级处理子项：
     /// 先放置行列都明确的项，再放置只明确一个轴的项，最后放置完全自动的项。
     /// </summary>
     public static void PlaceItems(GridContext context)
     {
-        var flow = GridFlow.From(context.Parent.GridFlowDirection);
+        var direction = context.Container.GridDirection;
         var placedItems = new List<PlacedGridItem>(context.Items.Length);
         var rowCount = Math.Max(1, context.Rows.Length);
         var columnCount = Math.Max(1, context.Columns.Length);
 
-        PlaceDefiniteItems(context, flow, placedItems, ref rowCount, ref columnCount);
-        PlaceSemiDefiniteItems(context, flow, placedItems, ref rowCount, ref columnCount);
-        PlaceAutoItems(context, flow, placedItems, ref rowCount, ref columnCount);
+        PlaceDefiniteItems(context, direction, placedItems, ref rowCount, ref columnCount);
+        PlaceSemiDefiniteItems(context, direction, placedItems, ref rowCount, ref columnCount);
+        PlaceAutoItems(context, direction, placedItems, ref rowCount, ref columnCount);
 
         context.EnsureTrackCapacity(rowCount, columnCount);
     }
@@ -28,7 +30,7 @@ public static class GridPlacement
     /// </summary>
     private static void PlaceDefiniteItems(
         GridContext context,
-        GridFlow flow,
+        GridDirection direction,
         List<PlacedGridItem> placedItems,
         ref int rowCount,
         ref int columnCount)
@@ -44,7 +46,7 @@ public static class GridPlacement
                 element.RowSpan.Size,
                 element.ColumnSpan.Size);
 
-            PlaceItem(context, flow, placedItems, i, area, ref rowCount, ref columnCount);
+            PlaceItem(context, direction, placedItems, i, area, ref rowCount, ref columnCount);
         }
     }
 
@@ -53,7 +55,7 @@ public static class GridPlacement
     /// </summary>
     private static void PlaceSemiDefiniteItems(
         GridContext context,
-        GridFlow flow,
+        GridDirection direction,
         List<PlacedGridItem> placedItems,
         ref int rowCount,
         ref int columnCount)
@@ -67,19 +69,19 @@ public static class GridPlacement
 
             var area = hasRow
                 ? FindInFixedRow(
-                    flow,
+                    direction,
                     element.RowSpan.Start!.Value,
                     element.RowSpan.Size,
                     element.ColumnSpan.Size,
                     placedItems)
                 : FindInFixedColumn(
-                    flow,
+                    direction,
                     element.ColumnSpan.Start!.Value,
                     element.RowSpan.Size,
                     element.ColumnSpan.Size,
                     placedItems);
 
-            PlaceItem(context, flow, placedItems, i, area, ref rowCount, ref columnCount);
+            PlaceItem(context, direction, placedItems, i, area, ref rowCount, ref columnCount);
         }
     }
 
@@ -88,28 +90,28 @@ public static class GridPlacement
     /// </summary>
     private static void PlaceAutoItems(
         GridContext context,
-        GridFlow flow,
+        GridDirection direction,
         List<PlacedGridItem> placedItems,
         ref int rowCount,
         ref int columnCount)
     {
         var cursorMajor = 0;
         var cursorMinor = 0;
-        var minorLimit = GetInitialMinorLimit(context, flow);
+        var minorLimit = GetInitialMinorLimit(context, direction);
 
         for (var i = 0; i < context.Items.Length; i++)
         {
             var element = context.Items[i].Element;
             if (element.RowSpan.Start.HasValue || element.ColumnSpan.Start.HasValue) continue;
 
-            var majorSpan = GetMajorSpan(flow, element.RowSpan.Size, element.ColumnSpan.Size);
-            var minorSpan = GetMinorSpan(flow, element.RowSpan.Size, element.ColumnSpan.Size);
+            var majorSpan = GetMajorSpan(direction, element.RowSpan.Size, element.ColumnSpan.Size);
+            var minorSpan = GetMinorSpan(direction, element.RowSpan.Size, element.ColumnSpan.Size);
             minorLimit = Math.Max(minorLimit, minorSpan);
 
             var rect = FindAuto(placedItems, majorSpan, minorSpan, minorLimit, ref cursorMajor, ref cursorMinor);
-            var area = ToGridArea(flow, rect);
+            var area = ToGridArea(direction, rect);
 
-            PlaceItem(context, flow, placedItems, i, area, ref rowCount, ref columnCount);
+            PlaceItem(context, direction, placedItems, i, area, ref rowCount, ref columnCount);
 
             cursorMajor = rect.MajorStart;
             cursorMinor = rect.MinorEnd;
@@ -118,7 +120,7 @@ public static class GridPlacement
     }
 
     private static GridArea FindInFixedRow(
-        GridFlow flow,
+        GridDirection direction,
         int row,
         int rowSpan,
         int columnSpan,
@@ -129,7 +131,7 @@ public static class GridPlacement
         for (var column = 0; ;)
         {
             var area = new GridArea(row, column, rowSpan, columnSpan);
-            var candidate = ToFlowRect(flow, area);
+            var candidate = ToFlowRect(direction, area);
             var conflict = FindConflict(placedItems, candidate);
             if (!conflict.HasValue) return area;
 
@@ -138,7 +140,7 @@ public static class GridPlacement
     }
 
     private static GridArea FindInFixedColumn(
-        GridFlow flow,
+        GridDirection direction,
         int column,
         int rowSpan,
         int columnSpan,
@@ -149,7 +151,7 @@ public static class GridPlacement
         for (var row = 0; ;)
         {
             var area = new GridArea(row, column, rowSpan, columnSpan);
-            var candidate = ToFlowRect(flow, area);
+            var candidate = ToFlowRect(direction, area);
             var conflict = FindConflict(placedItems, candidate);
             if (!conflict.HasValue) return area;
 
@@ -165,7 +167,7 @@ public static class GridPlacement
         ref int cursorMajor,
         ref int cursorMinor)
     {
-        for (; ; )
+        while (true)
         {
             if (cursorMinor + minorSpan > minorLimit)
             {
@@ -189,7 +191,7 @@ public static class GridPlacement
 
     private static void PlaceItem(
         GridContext context,
-        GridFlow flow,
+        GridDirection direction,
         List<PlacedGridItem> placedItems,
         int itemIndex,
         GridArea area,
@@ -200,7 +202,7 @@ public static class GridPlacement
         rowCount = Math.Max(rowCount, area.RowEnd);
         columnCount = Math.Max(columnCount, area.ColumnEnd);
 
-        var placedItem = new PlacedGridItem(itemIndex, area, ToFlowRect(flow, area));
+        var placedItem = new PlacedGridItem(area, ToFlowRect(direction, area));
         placedItems.Add(placedItem);
     }
 
@@ -224,14 +226,14 @@ public static class GridPlacement
         return conflict;
     }
 
-    private static int GetInitialMinorLimit(GridContext context, GridFlow flow)
+    private static int GetInitialMinorLimit(GridContext context, GridDirection direction)
     {
-        var limit = flow.Minor == GridFlowDirection.Column ? context.Columns.Length : context.Rows.Length;
+        var limit = direction == GridDirection.Row ? context.Columns.Length : context.Rows.Length;
 
         foreach (var item in context.Items)
         {
             var element = item.Element;
-            if (flow.Minor == GridFlowDirection.Column)
+            if (direction == GridDirection.Row)
             {
                 limit = Math.Max(limit, element.ColumnSpan.Size);
                 if (element.ColumnSpan.Start is { } start)
@@ -252,16 +254,16 @@ public static class GridPlacement
         return Math.Max(1, limit);
     }
 
-    private static FlowRect ToFlowRect(GridFlow flow, GridArea area)
+    private static FlowRect ToFlowRect(GridDirection direction, GridArea area)
     {
-        return flow.Major == GridFlowDirection.Row
+        return direction == GridDirection.Row
             ? new FlowRect(area.Row, area.Column, area.RowEnd, area.ColumnEnd)
             : new FlowRect(area.Column, area.Row, area.ColumnEnd, area.RowEnd);
     }
 
-    private static GridArea ToGridArea(GridFlow flow, FlowRect rect)
+    private static GridArea ToGridArea(GridDirection direction, FlowRect rect)
     {
-        return flow.Major == GridFlowDirection.Row
+        return direction == GridDirection.Row
             ? new GridArea(
                 rect.MajorStart,
                 rect.MinorStart,
@@ -274,14 +276,14 @@ public static class GridPlacement
                 rect.MajorEnd - rect.MajorStart);
     }
 
-    private static int GetMajorSpan(GridFlow flow, int rowSpan, int columnSpan)
+    private static int GetMajorSpan(GridDirection direction, int rowSpan, int columnSpan)
     {
-        return flow.Major == GridFlowDirection.Row ? rowSpan : columnSpan;
+        return direction == GridDirection.Row ? rowSpan : columnSpan;
     }
 
-    private static int GetMinorSpan(GridFlow flow, int rowSpan, int columnSpan)
+    private static int GetMinorSpan(GridDirection direction, int rowSpan, int columnSpan)
     {
-        return flow.Minor == GridFlowDirection.Row ? rowSpan : columnSpan;
+        return direction == GridDirection.Row ? columnSpan : rowSpan;
     }
 
     private static void NormalizeCursor(ref int cursorMajor, ref int cursorMinor, int minorLimit)
