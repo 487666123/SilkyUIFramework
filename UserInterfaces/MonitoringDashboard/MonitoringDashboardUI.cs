@@ -14,12 +14,13 @@ public partial class MonitoringDashboardUI : BaseBody
         GridItem3.ColumnSpan = new GridSpan(null, 3);
 
         GridContainer.SetTemplateColumns([
-            GridTrack.Fr(1f),
+            GridTrack.Auto,
             GridTrack.Fr(1f),
             GridTrack.Fr(1f),
         ]);
 
         GridContainer.SetTemplateRows([
+            GridTrack.Auto,
             GridTrack.Pixels(20f),
             GridTrack.Pixels(20f),
             GridTrack.Pixels(20f),

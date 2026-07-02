@@ -34,18 +34,22 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
     /// </summary>
     public override void Measure()
     {
-        GridTrackSizing.ResolveRows(_context);
-
         if (Container.FitWidth)
         {
             Container.SetInnerWidthClamped(_context.TotalColumnsWidth);
             GridTrackSizing.ResolveColumns(_context);
         }
+    }
 
+    /// <summary>
+    /// 子项完成宽度变化后的高度重算后，若容器需要按内容收缩高度，则同步回写容器高度。
+    /// 这时子项高度已经是最终值，容器高度不会再落在旧的粗测结果上。
+    /// </summary>
+    public override void RecalculateHeight()
+    {
         if (Container.FitHeight)
         {
             Container.SetInnerHeightClamped(_context.TotalRowsHeight);
-            GridTrackSizing.ResolveRows(_context);
         }
     }
 

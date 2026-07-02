@@ -15,11 +15,14 @@
 			<M.Container FlexDirection="Column" Padding="8" Gap="4" />
 		</ScrollView>
 		<ElementGroup Name="GridContainer"
-					  FitHeight="true" BackgroundColor="#00000033" LayoutType="Grid" Gap="4">
-			
+					  FitHeight="true" BackgroundColor="#ffffff99" LayoutType="Grid" Gap="4">
+
+			<TextView BackgroundColor="#FF990099" WordWrap="true"
+					  GridHorizontalAlignment="Stretch" GridVerticalAlignment="Stretch"
+					  Text="你会看到这段话，哦耶 你会看到这段话，哦耶 你会看到这段话，哦耶 你会看到这段话，哦耶 你会看到这段话，哦耶"/>
 			<View Name="GridItem1" BackgroundColor="#0099ff99" />
 			
-			<View BackgroundColor="#0099ff99" />
+			<View Width="500px" BackgroundColor="#0099ff99" />
 			<View Name="GridItem3" BackgroundColor="#ff009999"/>
 			<View BackgroundColor="#0099ff99" />
 			
