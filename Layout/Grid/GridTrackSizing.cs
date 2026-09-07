@@ -6,7 +6,7 @@ namespace SilkyUIFramework.Layout.Grid;
 public static class GridTrackSizing
 {
     /// <summary>
-    /// 解析列轨道尺寸。列百分比和 fr 基于父容器 InnerBounds.Width。
+    /// 解析列轨道尺寸。非 FitWidth 时，列百分比和 fr 基于父容器 InnerBounds.Width。
     /// </summary>
     public static void ResolveColumns(GridContext context)
     {
@@ -20,7 +20,7 @@ public static class GridTrackSizing
     }
 
     /// <summary>
-    /// 解析行轨道尺寸。行百分比和 fr 基于父容器 InnerBounds.Height。
+    /// 解析行轨道尺寸。非 FitHeight 时，行百分比和 fr 基于父容器 InnerBounds.Height。
     /// </summary>
     public static void ResolveRows(GridContext context)
     {
@@ -106,6 +106,8 @@ public static class GridTrackSizing
         bool fitAxis,
         float gap)
     {
+        if (items.Count == 0) return;
+
         foreach (var item in items)
         {
             var area = item.Area;
@@ -147,6 +149,8 @@ public static class GridTrackSizing
         bool fitAxis,
         float gap)
     {
+        if (span <= 1) return; // 调用方应保证 span > 1，此处为防御性检查
+
         var end = Math.Min(tracks.Length, start + span);
         var growableCount = 0;
         var currentSize = 0f;

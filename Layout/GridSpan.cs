@@ -9,7 +9,7 @@ public readonly struct GridSpan(int? start, int size) : IEquatable<GridSpan>
     /// <summary> 起始轨道索引；为 null 时由 Grid 自动放置算法决定。 </summary>
     public int? Start { get; } = start;
 
-    /// <summary> 跨越的轨道数量，最小为 1，且不会让明确放置越过最大轨道数。 </summary>
+    /// <summary> 跨越的轨道数量。该值原样保存，最终 GridArea 会把小于 1 的跨度按 1 处理。 </summary>
     public int Size { get; } = size;
 
     /// <summary> 自动放置且跨度为 1 的默认值。 </summary>

@@ -20,7 +20,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<AdditionalFiles Include="**/*.xml" Exclude="bin/**/*;obj/**/*;.git/**/*;.idea/**/*;.vs/**/*" Pack="true" ModPath="%(Identity)" />
+		<AdditionalFiles Include="**/*.sui.xml" Exclude="bin/**/*;obj/**/*;.git/**/*;.idea/**/*;.vs/**/*" Pack="true" ModPath="%(Identity)" />
 		<AdditionalFiles Include="**/*.txt" Exclude="bin/**/*;obj/**/*;.git/**/*;.idea/**/*;.vs/**/*" Pack="true" ModPath="%(Identity)" />
 	</ItemGroup>
 

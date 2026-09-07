@@ -26,7 +26,7 @@ public enum TemplateType
     /// <summary> 固定像素尺寸。 </summary>
     Pixels,
 
-    /// <summary> 按父容器对应轴 InnerBounds 的百分比计算。 </summary>
+    /// <summary> 非 Fit 轴按父容器对应轴 InnerBounds 的百分比计算。 </summary>
     Percent
 }
 

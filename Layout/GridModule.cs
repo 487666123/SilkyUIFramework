@@ -8,10 +8,12 @@ namespace SilkyUIFramework.Layout;
 public sealed class GridModule(UIElementGroup container) : LayoutModule(container)
 {
     private readonly GridContext _context = new(container);
+    private float _lastResolvedColumnsWidth = -1f;
+    private float _lastResolvedRowsHeight = -1f;
 
     /// <summary>
     /// 初始化本轮 Grid 计算所需的临时状态，并先完成子项所在网格区域的放置。
-    /// 此时子项已经被父级粗测过一次，可以用其 OuterBounds 参与后续 Auto 轨道计算。
+    /// 此时本轮子项测量尚未执行；Auto 轨道会在子项测量后使用其 OuterBounds。
     /// </summary>
     public override void PrepareData()
     {
@@ -21,24 +23,25 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
 
     /// <summary>
     /// 子项完成初始测量后，先解析列宽。
-    /// 后续 ResizeChildrenWidth 会根据列宽把子项拉伸到所在 Grid 区域。
+    /// 后续 ResizeChildrenWidth 会根据列宽和水平对齐方式更新子项宽度。
     /// </summary>
     public override void MeasureChildren()
     {
         GridTrackSizing.ResolveColumns(_context);
+        _lastResolvedColumnsWidth = Container.InnerBounds.Width;
     }
 
     /// <summary>
-    /// 解析行高，并在父容器 FitWidth/FitHeight 时用 Grid 内容尺寸反推容器尺寸。
-    /// 容器尺寸变化后，对应方向需要重新解析一次轨道，保证百分比与 fr 能基于最新空间计算。
+    /// 在父容器 FitWidth 时用当前列总宽度反推容器宽度。
+    /// 容器宽度变化后重新解析列轨道，保证百分比与 fr 基于最新宽度计算。
     /// </summary>
     public override void Measure()
     {
-        if (Container.FitWidth)
-        {
-            Container.SetInnerWidthClamped(_context.TotalColumnsWidth);
-            GridTrackSizing.ResolveColumns(_context);
-        }
+        if (!Container.FitWidth) return;
+
+        Container.SetInnerWidthClamped(_context.TotalColumnsWidth);
+        GridTrackSizing.ResolveColumns(_context);
+        _lastResolvedColumnsWidth = Container.InnerBounds.Width;
     }
 
     /// <summary>
@@ -47,18 +50,23 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
     /// </summary>
     public override void RecalculateHeight()
     {
-        if (Container.FitHeight)
-        {
-            Container.SetInnerHeightClamped(_context.TotalRowsHeight);
-        }
+        if (!Container.FitHeight) return;
+
+        Container.SetInnerHeightClamped(_context.TotalRowsHeight);
     }
 
     /// <summary>
-    /// 根据已解析的列宽，把每个子项宽度设置为其覆盖的 Grid 区域宽度。
+    /// 根据已解析的列宽更新每个子项的宽度。
+    /// Stretch 直接设置外部宽度；其他对齐方式调用 UpdateWidth 更新可用宽度。
     /// </summary>
     public override void ResizeChildrenWidth()
     {
-        GridTrackSizing.ResolveColumns(_context);
+        var currentWidth = Container.InnerBounds.Width;
+        if (Math.Abs(currentWidth - _lastResolvedColumnsWidth) > 0.001f)
+        {
+            GridTrackSizing.ResolveColumns(_context);
+            _lastResolvedColumnsWidth = currentWidth;
+        }
 
         foreach (var item in _context.Items)
         {
@@ -81,14 +89,21 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
     public override void RecalculateChildrenHeight()
     {
         GridTrackSizing.ResolveRows(_context);
+        _lastResolvedRowsHeight = Container.InnerBounds.Height;
     }
 
     /// <summary>
-    /// 根据已解析的行高，把每个子项高度设置为其覆盖的 Grid 区域高度。
+    /// 根据已解析的行高更新每个子项的高度。
+    /// Stretch 直接设置外部高度；其他对齐方式调用 UpdateHeight 更新可用高度。
     /// </summary>
     public override void ResizeChildrenHeight()
     {
-        GridTrackSizing.ResolveRows(_context);
+        var currentHeight = Container.InnerBounds.Height;
+        if (Math.Abs(currentHeight - _lastResolvedRowsHeight) > 0.001f)
+        {
+            GridTrackSizing.ResolveRows(_context);
+            _lastResolvedRowsHeight = currentHeight;
+        }
 
         foreach (var item in _context.Items)
         {
@@ -105,7 +120,7 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
     }
 
     /// <summary>
-    /// 将轨道尺寸转换为每条轨道的偏移量，并把子项移动到对应 Grid 区域左上角。
+    /// 将轨道尺寸转换为每条轨道的偏移量，并把子项移动到对应 Grid 区域内的对齐位置。
     /// </summary>
     public override void UpdateChildrenLayoutPosition()
     {

@@ -20,7 +20,7 @@ public readonly struct GridTrack(TemplateType templateType, float value = 0f) : 
     /// <summary> 创建固定像素轨道。 </summary>
     public static GridTrack Pixels(float value) => new(TemplateType.Pixels, value);
 
-    /// <summary> 创建百分比轨道，value 使用 0 到 1 的比例。 </summary>
+    /// <summary> 创建百分比轨道，value 按父容器对应轴尺寸的倍率使用，不在这里限制到 0 到 1。 </summary>
     public static GridTrack Percent(float value) => new(TemplateType.Percent, value);
 
     /// <summary>

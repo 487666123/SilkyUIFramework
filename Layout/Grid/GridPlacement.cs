@@ -8,7 +8,7 @@ public static class GridPlacement
     private readonly record struct PlacedGridItem(GridArea Area, FlowRect Rect);
 
     /// <summary>
-    /// 按 CSS Grid 自动放置的基本优先级处理子项：
+    /// 按当前 Grid 自动放置优先级处理子项：
     /// 先放置行列都明确的项，再放置只明确一个轴的项，最后放置完全自动的项。
     /// </summary>
     public static void PlaceItems(GridContext context)
@@ -26,7 +26,7 @@ public static class GridPlacement
     }
 
     /// <summary>
-    /// 放置行列起点都明确的子项。它们优先占位，后续自动项会绕开这些矩形区域。
+    /// 放置行列起点都明确的子项。明确项之间不检查冲突，后续自动项会绕开这些矩形区域。
     /// </summary>
     private static void PlaceDefiniteItems(
         GridContext context,
@@ -86,7 +86,7 @@ public static class GridPlacement
     }
 
     /// <summary>
-    /// 放置没有明确行列起点的子项。cursor 按 GridFlowDirection 指定方向执行 sparse 扫描。
+    /// 放置没有明确行列起点的子项。cursor 按 GridDirection 指定方向执行 sparse 扫描。
     /// </summary>
     private static void PlaceAutoItems(
         GridContext context,
@@ -212,7 +212,7 @@ public static class GridPlacement
 
         foreach (var item in placedItems)
         {
-            if (!GridLayoutHelper.Overlaps(candidate, item.Rect)) continue;
+            if (!FlowRect.Overlaps(candidate, item.Rect)) continue;
 
             if (!conflict.HasValue ||
                 item.Rect.MinorEnd < conflict.Value.Rect.MinorEnd ||

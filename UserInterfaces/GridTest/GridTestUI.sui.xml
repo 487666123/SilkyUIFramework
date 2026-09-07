@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Body xmlns:s="https://github.com/487666123/SilkyUIFramework"
+      s:Class="SilkyUIFramework.UserInterfaces.GridTest.GridTestUI"
+      Enabled="false" Width="680px" Height="660px" MaxWidth="95%" MaxHeight="90%"
+      Border="1" BorderRadius="6" BorderColor="#59616a" BackgroundColor="#23272c"
+      Gap="0" FlexDirection="Column" FlexWrap="false" MainAlignment="Start"
+      CrossAlignment="Stretch" OverflowHidden="true" IndependentRenderTarget="false">
+    <DraggableView s:Name="DragPanel" Width="100%" Height="56px" FlexShrink="0"
+                   BackgroundColor="#2e343a" Padding="16" Gap="12"
+                   FlexDirection="Row" MainAlignment="Start" CrossAlignment="Center">
+        <View Width="3px" Height="24px" BackgroundColor="#72d8ab" IgnoreMouseInteraction="true" />
+        <TextView s:Name="Title" Text="Grid 布局实验室" TextScale="1" TextBorder="1" IgnoreMouseInteraction="true" />
+        <View Width="0px" FlexGrow="1" IgnoreMouseInteraction="true" />
+        <TextView Text="SilkyUI" TextScale="1" TextBorder="1" TextColor="#a5b2bc" IgnoreMouseInteraction="true" />
+    </DraggableView>
+    <View Width="100%" Height="1px" BackgroundColor="#414950" />
+
+    <ScrollView s:Name="TestScroll" Width="100%" Height="0px" FlexGrow="1" FlexShrink="1"
+                CrossAlignment="Stretch" Gap="8">
+        <M.Mask Width="0px" Height="100%" FlexGrow="1"
+                OverflowHidden="true" IndependentRenderTarget="false" />
+        <!-- 滚动内容按高度增长，不换列；每个测试网格都有明确的可用宽度。 -->
+        <M.Container Width="100%" FitWidth="false" FitHeight="true"
+                     FlexDirection="Column" FlexWrap="false" MainAlignment="Start"
+                     CrossAlignment="Stretch" CrossContentAlignment="Stretch" Padding="16" Gap="12">
+            <ElementGroup Width="100%" Height="28px" FlexDirection="Row" CrossAlignment="Center" Gap="10">
+                <TextView Text="01" TextScale="1" TextBorder="1" TextColor="#80a5b9" />
+                <TextView Text="等分网格" TextScale="1" TextBorder="1" />
+                <View Width="0px" FlexGrow="1" />
+                <TextView s:Name="Result1" Text="待测" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                          FitWidth="false" FitHeight="false" Width="64px" Height="28px" TextAlign="1 0.5" />
+            </ElementGroup>
+            <TextView Text="列 1fr / 1fr   |   行 1fr / 1fr" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                      FitWidth="false" Width="100%" WordWrap="true" />
+            <ElementGroup s:Name="Grid1" LayoutType="Grid" Width="100%" Height="128px"
+                          FitWidth="false" FitHeight="false" Gap="8"
+                          GridItemsHorizontalAlignment="Stretch" GridItemsVerticalAlignment="Stretch">
+                <TextView s:Name="Item1" Text="A1" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#843c4a" Border="1" BorderColor="#cf7581" BorderRadius="4" />
+                <TextView s:Name="Item2" Text="A2" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#285e79" Border="1" BorderColor="#68accc" BorderRadius="4" />
+                <TextView s:Name="Item3" Text="B1" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#28695d" Border="1" BorderColor="#65bda4" BorderRadius="4" />
+                <TextView s:Name="Item4" Text="B2" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#785928" Border="1" BorderColor="#cfa862" BorderRadius="4" />
+            </ElementGroup>
+
+            <View Width="100%" Height="1px" BackgroundColor="#3d444c" Margin="0 8 0 0" />
+            <ElementGroup Width="100%" Height="28px" FlexDirection="Row" CrossAlignment="Center" Gap="10">
+                <TextView Text="02" TextScale="1" TextBorder="1" TextColor="#80a5b9" />
+                <TextView Text="跨行与跨列" TextScale="1" TextBorder="1" />
+                <View Width="0px" FlexGrow="1" />
+                <TextView s:Name="Result2" Text="待测" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                          FitWidth="false" FitHeight="false" Width="64px" Height="28px" TextAlign="1 0.5" />
+            </ElementGroup>
+            <TextView Text="列 2fr / 1fr / 1fr   |   行 1fr / 1fr / 48px" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                      FitWidth="false" Width="100%" WordWrap="true" />
+            <ElementGroup s:Name="Grid2" LayoutType="Grid" Width="100%" Height="208px"
+                          FitWidth="false" FitHeight="false" Gap="8"
+                          GridItemsHorizontalAlignment="Stretch" GridItemsVerticalAlignment="Stretch">
+                <TextView s:Name="Big" Text="主区域" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#285e79" Border="1" BorderColor="#68accc" BorderRadius="4" />
+                <TextView s:Name="Sidebar" Text="侧栏" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#28695d" Border="1" BorderColor="#65bda4" BorderRadius="4" />
+                <TextView s:Name="Small1" Text="左下" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#843c4a" Border="1" BorderColor="#cf7581" BorderRadius="4" />
+                <TextView s:Name="Small2" Text="中下" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#785928" Border="1" BorderColor="#cfa862" BorderRadius="4" />
+                <TextView s:Name="Footer" Text="底栏" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" BackgroundColor="#414b57" Border="1" BorderColor="#778797" BorderRadius="4" />
+            </ElementGroup>
+
+            <View Width="100%" Height="1px" BackgroundColor="#3d444c" Margin="0 8 0 0" />
+            <ElementGroup Width="100%" Height="28px" FlexDirection="Row" CrossAlignment="Center" Gap="10">
+                <TextView Text="03" TextScale="1" TextBorder="1" TextColor="#80a5b9" />
+                <TextView Text="固定尺寸与对齐" TextScale="1" TextBorder="1" />
+                <View Width="0px" FlexGrow="1" />
+                <TextView s:Name="Result3" Text="待测" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                          FitWidth="false" FitHeight="false" Width="64px" Height="28px" TextAlign="1 0.5" />
+            </ElementGroup>
+            <TextView Text="列 1fr / 1fr   |   单元内对齐" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                      FitWidth="false" Width="100%" WordWrap="true" />
+            <ElementGroup s:Name="Grid3" LayoutType="Grid" Width="100%" Height="168px"
+                          FitWidth="false" FitHeight="false" Gap="8" Padding="8" BackgroundColor="#2d333a">
+                <!-- 2x2 等分轨道，8px 间距各扣一半；辅助框脱离布局，不占用单元格。 -->
+                <View Positioning="Absolute" ZIndex="-1" DisableMouseInteraction="true"
+                      Width="-4px 50%" Height="-4px 50%" Left="0px" Top="0px"
+                      BackgroundColor="#00000000" Border="1" BorderColor="#5a6570" />
+                <View Positioning="Absolute" ZIndex="-1" DisableMouseInteraction="true"
+                      Width="-4px 50%" Height="-4px 50%" Left="100#" Top="0px"
+                      BackgroundColor="#00000000" Border="1" BorderColor="#5a6570" />
+                <View Positioning="Absolute" ZIndex="-1" DisableMouseInteraction="true"
+                      Width="-4px 50%" Height="-4px 50%" Left="0px" Top="100#"
+                      BackgroundColor="#00000000" Border="1" BorderColor="#5a6570" />
+                <View Positioning="Absolute" ZIndex="-1" DisableMouseInteraction="true"
+                      Width="-4px 50%" Height="-4px 50%" Left="100#" Top="100#"
+                      BackgroundColor="#00000000" Border="1" BorderColor="#9c8455" />
+                <TextView s:Name="Box1" Text="左上" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" Width="60px" Height="60px"
+                          BackgroundColor="#843c4a" Border="1" BorderColor="#cf7581" BorderRadius="4" />
+                <TextView s:Name="Box2" Text="右上" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" Width="60px" Height="60px"
+                          BackgroundColor="#285e79" Border="1" BorderColor="#68accc" BorderRadius="4" />
+                <TextView s:Name="Box3" Text="左下" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" Width="60px" Height="60px"
+                          BackgroundColor="#28695d" Border="1" BorderColor="#65bda4" BorderRadius="4" />
+                <TextView s:Name="Box4" Text="居中" TextScale="1" TextBorder="1" TextAlign="0.5"
+                          FitWidth="false" FitHeight="false" Width="60px" Height="60px"
+                          BackgroundColor="#785928" Border="1" BorderColor="#cfa862" BorderRadius="4" />
+            </ElementGroup>
+
+            <View Width="100%" Height="1px" BackgroundColor="#3d444c" Margin="0 8 0 0" />
+            <ElementGroup Width="100%" Height="28px" FlexDirection="Row" CrossAlignment="Center" Gap="10">
+                <TextView Text="04" TextScale="1" TextBorder="1" TextColor="#80a5b9" />
+                <TextView Text="内容与隐式轨道" TextScale="1" TextBorder="1" />
+                <View Width="0px" FlexGrow="1" />
+                <TextView s:Name="Result4" Text="待测" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                          FitWidth="false" FitHeight="false" Width="64px" Height="28px" TextAlign="1 0.5" />
+            </ElementGroup>
+            <TextView Text="列 Auto / 1fr   |   隐式 Auto 行" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                      FitWidth="false" Width="100%" WordWrap="true" />
+            <ElementGroup s:Name="Grid4" LayoutType="Grid" Width="100%" FitWidth="false" FitHeight="true"
+                          Gap="12 8" GridItemsHorizontalAlignment="Stretch" GridItemsVerticalAlignment="Center">
+                <TextView s:Name="Label1" Text="角色" TextScale="1" TextBorder="1" GridHorizontalAlignment="End" />
+                <TextView s:Name="Input1" Text="向导" TextScale="1" TextBorder="1" TextAlign="0 0.5"
+                          FitWidth="false" FitHeight="false" Height="36px" Padding="10 4"
+                          BackgroundColor="#30373f" Border="1" BorderColor="#48525b" BorderRadius="4" />
+                <TextView s:Name="Label2" Text="当前世界" TextScale="1" TextBorder="1" GridHorizontalAlignment="End" />
+                <TextView s:Name="Input2" Text="森林" TextScale="1" TextBorder="1" TextAlign="0 0.5"
+                          FitWidth="false" FitHeight="false" Height="36px" Padding="10 4"
+                          BackgroundColor="#30373f" Border="1" BorderColor="#48525b" BorderRadius="4" />
+                <TextView s:Name="Label3" Text="难度" TextScale="1" TextBorder="1" GridHorizontalAlignment="End" />
+                <TextView s:Name="Input3" Text="经典" TextScale="1" TextBorder="1" TextAlign="0 0.5"
+                          FitWidth="false" FitHeight="false" Height="36px" Padding="10 4"
+                          BackgroundColor="#30373f" Border="1" BorderColor="#48525b" BorderRadius="4" />
+            </ElementGroup>
+        </M.Container>
+    </ScrollView>
+    <View Width="100%" Height="1px" BackgroundColor="#414950" />
+    <ElementGroup Width="100%" Height="38px" Padding="16 6" BackgroundColor="#2e343a"
+                  FlexDirection="Row" CrossAlignment="Center" Gap="12">
+        <TextView s:Name="CheckSummary" Text="几何检查：待测" TextScale="1" TextBorder="1"
+                  FitWidth="false" FitHeight="false" Width="0px" Height="26px" FlexGrow="1" TextAlign="0 0.5" />
+        <TextView s:Name="MeasuredSize" Text="-- px" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                  FitWidth="false" FitHeight="false" Width="150px" Height="26px" TextAlign="1 0.5" />
+    </ElementGroup>
+</Body>

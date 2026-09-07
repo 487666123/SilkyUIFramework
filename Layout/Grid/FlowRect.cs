@@ -17,4 +17,12 @@ internal readonly struct FlowRect
     public int MajorEnd { get; }
 
     public int MinorEnd { get; }
+
+    public static bool Overlaps(FlowRect left, FlowRect right)
+    {
+        return left.MajorStart < right.MajorEnd &&
+               left.MajorEnd > right.MajorStart &&
+               left.MinorStart < right.MinorEnd &&
+               left.MinorEnd > right.MinorStart;
+    }
 }

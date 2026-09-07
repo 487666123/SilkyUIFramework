@@ -1,7 +1,7 @@
 namespace SilkyUIFramework.Layout.Grid;
 
 /// <summary>
-/// Grid 布局的无状态辅助方法，包含轨道求和、偏移计算和矩形关系判断。
+/// Grid 布局的无状态辅助方法，包含轨道求和和偏移计算。
 /// </summary>
 public static class GridLayoutHelper
 {
@@ -51,16 +51,5 @@ public static class GridLayoutHelper
             tracks[i].Offset = offset;
             offset += tracks[i].Size + gap;
         }
-    }
-
-    /// <summary>
-    /// 判断两个 major/minor 矩形是否相交。结束线按开区间处理。
-    /// </summary>
-    internal static bool Overlaps(FlowRect left, FlowRect right)
-    {
-        return left.MajorStart < right.MajorEnd &&
-               left.MajorEnd > right.MajorStart &&
-               left.MinorStart < right.MinorEnd &&
-               left.MinorEnd > right.MinorStart;
     }
 }

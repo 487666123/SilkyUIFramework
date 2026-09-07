@@ -4,9 +4,10 @@
 
 - `Layout/GridModule.cs`
 - `Layout/Grid/GridContext.cs`
-- `Layout/Grid/GridFlow.cs`
+- `Layout/Grid/GridItem.cs`
+- `Layout/Grid/GridArea.cs`
+- `Layout/Grid/GridTrackOutput.cs`
 - `Layout/Grid/FlowRect.cs`
-- `Layout/Grid/PlacedGridItem.cs`
 - `Layout/Grid/GridPlacement.cs`
 - `Layout/Grid/GridTrackSizing.cs`
 - `Layout/Grid/GridLayoutHelper.cs`
@@ -41,7 +42,7 @@ Grid 布局通过 `UIElementGroup.LayoutType = LayoutType.Grid` 启用。
 | `LayoutType.Grid`             | `display: grid`           | 启用 Grid 布局                        |
 | `TemplateRows`                | `grid-template-rows`      | 显式行轨道                            |
 | `TemplateColumns`             | `grid-template-columns`   | 显式列轨道                            |
-| `GridFlowDirection`           | `grid-auto-flow`          | 自动放置方向，仅支持 `Row` / `Column` |
+| `GridDirection`               | `grid-auto-flow`          | 自动放置方向，仅支持 `Row` / `Column` |
 | `Gap`                         | `gap`                     | 使用 `Size`，可分别控制列/行间距      |
 | `RowSpan`                     | `grid-row` / `grid-row-*` | 子项所在行与跨行数量                  |
 | `ColumnSpan`                  | `grid-column`             | 子项所在列与跨列数量                  |
@@ -71,7 +72,7 @@ Grid 布局通过 `UIElementGroup.LayoutType = LayoutType.Grid` 启用。
 | `LayoutType`                   | `LayoutType`               | `Flexbox` | 设置为 `Grid` 启用布局 |
 | `TemplateRows`                 | `IReadOnlyList<GridTrack>` | 空        | 显式行模板             |
 | `TemplateColumns`              | `IReadOnlyList<GridTrack>` | 空        | 显式列模板             |
-| `GridFlowDirection`            | `GridFlowDirection`        | `Row`     | 自动放置方向           |
+| `GridDirection`                | `GridDirection`           | `Row`     | 自动放置方向           |
 | `Gap`                          | `Size`                     | `0`       | 列间距与行间距         |
 | `GridItemsHorizontalAlignment` | `GridItemAlignment`        | `Stretch` | 子项默认水平对齐       |
 | `GridItemsVerticalAlignment`   | `GridItemAlignment`        | `Stretch` | 子项默认垂直对齐       |
@@ -115,13 +116,7 @@ GridSpan.At(1, 2)      // 从第 1 条轨道开始，占 2 格
 new GridSpan(null, 3)  // 自动寻找位置，占 3 格
 ```
 
-当前实现使用 0-based 索引。第一个行/列轨道索引是 `0`。
-
-`GridSpan` 会对输入做兜底限制：
-
-- 明确起点小于 0 时会被限制为 0。
-- 跨度最小为 1。
-- 最大轨道索引当前限制为 10240，避免错误配置导致无限扩展。
+当前实现使用 0-based 索引。第一个行/列轨道索引是 `0`。`GridSpan` 会原样保存 `Start` 和 `Size`；进入 `GridArea` 后，负数起点按 `0` 处理，小于 `1` 的跨度按 `1` 处理。
 
 ## 轨道类型
 
@@ -135,15 +130,15 @@ GridTrack.Pixels(120f)
 
 ### `GridTrack.Percent(value)`
 
-百分比轨道。
+百分比轨道。`value` 原样保存，不限制到 `0..1`。
 
 ```csharp
 GridTrack.Percent(0.5f)
 ```
 
-列百分比基于容器 `InnerBounds.Width`，行百分比基于容器 `InnerBounds.Height`。
+列百分比基于容器 `InnerBounds.Width`，行百分比基于容器 `InnerBounds.Height`。非 Fit 轴上按 `availableSize * value` 计算，并把负结果钳制到 `0`。
 
-如果对应轴是 `FitWidth` 或 `FitHeight`，百分比没有明确可用空间，当前实现会按内容尺寸参与撑开。
+如果对应轴是 `FitWidth` 或 `FitHeight`，百分比轨道先按 `0` 处理，再允许被覆盖它的子项内容撑开。
 
 ### `GridTrack.Fr(value)`
 
@@ -156,7 +151,7 @@ GridTrack.Fr(2f)
 
 在固定宽度容器中，`1fr 2fr` 会把剩余空间按 1:2 分配。
 
-如果对应轴是 `FitWidth` 或 `FitHeight`，`fr` 没有明确剩余空间，当前实现会按内容尺寸参与撑开。
+如果对应轴是 `FitWidth` 或 `FitHeight`，`fr` 不分配剩余空间，只保留被内容撑开的尺寸。
 
 ### `GridTrack.Auto`
 
@@ -179,19 +174,19 @@ GridTrack.Auto
 
 当前实现使用 sparse 自动放置：自动游标只向前推进，不会回填前面因为跨行/跨列产生的空洞。
 
-`GridFlowDirection.Row`：
+`GridDirection.Row`：
 
 - 优先向右查找。
 - 当前行放不下时进入下一行。
 
-`GridFlowDirection.Column`：
+`GridDirection.Column`：
 
 - 优先向下查找。
 - 当前列放不下时进入下一列。
 
 当现有显式轨道不够时，会创建隐式 `Auto` 轨道。
 
-内部实现使用已放置矩形列表判断冲突，不使用完整二维 cell 占用表。这样可以避免大量隐式轨道时创建过大的二维数组。
+内部实现使用已放置矩形列表判断冲突，不使用完整二维 cell 占用表。行列起点都明确的子项直接加入列表，不检查彼此冲突；只明确一轴和完全自动的子项会查找无冲突位置。
 
 ## 对齐规则
 
@@ -222,24 +217,26 @@ item.GridVerticalAlignment = GridItemAlignment.End;
 1. 子项为 `Inherit` 时，使用父容器对应轴的默认对齐。
 2. 如果父容器对应轴也是 `Inherit`，最终退化为 `Stretch`。
 3. `Stretch` 会把子项外部尺寸设置为 Grid 区域尺寸。
-4. `Start` / `Center` / `End` 会保留子项自身尺寸，并在 Grid 区域内计算偏移。
+4. `Start` / `Center` / `End` 会调用 `UpdateWidth` / `UpdateHeight` 更新可用尺寸；`FitWidth` / `FitHeight` 子项保留自身测量尺寸，非 Fit 子项会按可用尺寸更新。
 
 ## 尺寸与拉伸规则
 
 Grid 仍然运行在 SilkyUI 现有布局管线中：
 
 ```text
-MeasureChildren -> Measure -> ResizeChildrenWidth -> RecalculateHeight -> ResizeChildrenHeight -> UpdateChildrenLayoutPosition
+Measure -> ResizeChildrenWidth -> RecalculateHeight -> ResizeChildrenHeight -> UpdateChildrenLayoutPosition
 ```
+
+`Measure` 内部会先执行 `MeasureChildren`，再执行 `LayoutModule.Measure`。`RecalculateHeight` 内部会先执行子项高度重算，再执行 `LayoutModule.RecalculateHeight`。
 
 行为要点：
 
-- 子项会先按父容器可用空间进行一次普通测量。
-- Grid 根据子项初始 `OuterBounds` 解析 `Auto` 轨道。
+- Grid 先放置子项所在区域，再让子项按父容器可用空间进行一次普通测量。
+- Grid 根据子项本轮普通测量后的 `OuterBounds` 解析 `Auto` 轨道。
 - `Pixels` / `Percent` / `Auto` 先确定基础尺寸。
 - `Fraction` 根据剩余空间分配。
 - 子项默认拉伸到它所在的 Grid 区域。
-- 子项非 `Stretch` 对齐时，会按 Grid 区域尺寸更新约束，但不会强制填满区域。
+- 子项非 `Stretch` 对齐时，会调用 `UpdateWidth` / `UpdateHeight`。Fit 子项只更新约束，非 Fit 子项会更新到可用尺寸。
 - 子项尺寸写入时会经过 `MinWidth` / `MaxWidth` / `MinHeight` / `MaxHeight` 约束。
 
 ## 使用示例
@@ -389,7 +386,7 @@ grid.AddChild(new UIView
 - 列方向需要 `FitWidth = false` 且容器有明确宽度。
 - 行方向需要 `FitHeight = false` 且容器有明确高度。
 
-如果容器对应轴是 Fit，`fr` 没有可分配的剩余空间，会按内容尺寸处理。
+如果容器对应轴是 Fit，`fr` 没有可分配的剩余空间，只保留被内容撑开的尺寸。
 
 ### 3. 百分比轨道尺寸不符合预期
 
@@ -398,7 +395,7 @@ grid.AddChild(new UIView
 - 列百分比依赖容器宽度。
 - 行百分比依赖容器高度。
 
-如果容器对应轴是 Fit，百分比会退化为内容撑开行为。
+如果容器对应轴是 Fit，百分比轨道先为 `0`，之后可被内容撑开。
 
 ### 4. 子项尺寸被拉伸
 
