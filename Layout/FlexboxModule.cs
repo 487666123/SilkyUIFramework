@@ -2,10 +2,10 @@
 
 namespace SilkyUIFramework.Layout;
 
-public sealed class FlexboxModule(UIElementGroup parent) : LayoutModule(parent)
+public sealed class FlexboxModule(UIElementGroup container) : LayoutModule(container)
 {
-    private readonly FlexboxContext _context = new(parent);
-    private IFlexboxLayoutStrategy _strategy = parent.FlexDirection switch
+    private readonly FlexboxContext _context = new(container);
+    private IFlexboxLayoutStrategy _strategy = container.FlexDirection switch
     {
         FlexDirection.Column => ColumnLayoutStrategy.Instance,
         _ => RowLayoutStrategy.Instance
@@ -14,7 +14,7 @@ public sealed class FlexboxModule(UIElementGroup parent) : LayoutModule(parent)
     public override void PrepareData()
     {
         // 策略模式
-        _strategy = _context.Parent.FlexDirection switch
+        _strategy = _context.Container.FlexDirection switch
         {
             FlexDirection.Column => ColumnLayoutStrategy.Instance,
             _ => RowLayoutStrategy.Instance

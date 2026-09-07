@@ -6,13 +6,13 @@ namespace SilkyUIFramework.Layout.Flexbox;
 /// <remarks>
 /// 创建新的布局上下文，包含空的布局线列表
 /// </remarks>
-/// <param name="parent">父容器</param>
-public class FlexboxContext(UIElementGroup parent)
+/// <param name="container">父容器</param>
+public class FlexboxContext(UIElementGroup container)
 {
     /// <summary>
     /// 父容器元素
     /// </summary>
-    public UIElementGroup Parent { get; } = parent;
+    public UIElementGroup Container { get; } = container;
 
     /// <summary>
     /// 布局线集合（可变内部存储）
@@ -37,19 +37,13 @@ public class FlexboxContext(UIElementGroup parent)
     /// <summary>
     /// 清空布局线
     /// </summary>
-    public void ClearLines()
-    {
-        _lines.Clear();
-    }
+    public void ClearLines() => _lines.Clear();
 
     /// <summary>
     /// 添加布局线
     /// </summary>
     /// <param name="line">要添加的布局线</param>
-    public void AddLine(FlexLine line)
-    {
-        _lines.Add(line);
-    }
+    public void AddLine(FlexLine line) => _lines.Add(line);
 
     /// <summary>
     /// 获取最大主轴尺寸

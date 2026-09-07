@@ -1,4 +1,4 @@
-﻿using SilkyUIFramework.Layout;
+using SilkyUIFramework.Layout;
 
 namespace SilkyUIFramework.Elements;
 
@@ -10,7 +10,7 @@ public partial class UIElementGroup
 
     public IReadOnlyList<GridTrack> TemplateRows => _templateRows;
 
-    public AutoFlow AutoFlow
+    public GridDirection GridDirection
     {
         get; set
         {
@@ -23,7 +23,7 @@ public partial class UIElementGroup
     public void SetTemplateRows(GridTrack[] rows)
     {
         if (_templateRows == rows) return;
-        _templateRows = rows ?? [];
+        _templateRows = rows is null ? [] : [.. rows];
         MarkLayoutDirty();
     }
 
@@ -34,9 +34,29 @@ public partial class UIElementGroup
     public void SetTemplateColumns(GridTrack[] columns)
     {
         if (_templateColumns == columns) return;
-        _templateColumns = columns ?? [];
+        _templateColumns = columns is null ? [] : [.. columns];
         MarkLayoutDirty();
     }
+
+    public GridItemAlignment GridItemsHorizontalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+            MarkLayoutDirty();
+        }
+    } = GridItemAlignment.Stretch;
+
+    public GridItemAlignment GridItemsVerticalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+            MarkLayoutDirty();
+        }
+    } = GridItemAlignment.Stretch;
 
     #endregion
 

@@ -1,253 +1,166 @@
+using SilkyUIFramework.Layout.Grid;
+
 namespace SilkyUIFramework.Layout;
 
-public enum AutoFlow { Row, Column }
-
-public class GridModule(UIElementGroup parent) : LayoutModule(parent)
+/// <summary>
+/// Grid 布局模块，负责在现有 <see cref="LayoutModule"/> 生命周期中完成子项放置、轨道尺寸解析和位置更新。
+/// </summary>
+public sealed class GridModule(UIElementGroup container) : LayoutModule(container)
 {
-    /// <summary>
-    /// 元素在表格中实际位置
-    /// </summary>
-    private struct Location(int x, int y, int width, int height)
-    {
-        public int X { get; set => field = Math.Max(0, value); } = x;
-        public int Y { get; set => field = Math.Max(0, value); } = y;
-        public int Width { get; set => field = Math.Max(1, value); } = width;
-        public int Height { get; set => field = Math.Max(1, value); } = height;
-
-        public readonly int Right => X + Width;
-        public readonly int Bottom => Y + Height;
-    }
+    private readonly GridContext _context = new(container);
+    private float _lastResolvedColumnsWidth = -1f;
+    private float _lastResolvedRowsHeight = -1f;
 
     /// <summary>
-    /// 行值
+    /// 初始化本轮 Grid 计算所需的临时状态，并先完成子项所在网格区域的放置。
+    /// 此时本轮子项测量尚未执行；Auto 轨道会在子项测量后使用其 OuterBounds。
     /// </summary>
-    private float[] _rowValues;
-
-    /// <summary>
-    /// 列值
-    /// </summary>
-    private float[] _columnValues;
-
-    /// <summary>
-    /// 格子标记
-    /// </summary>
-    private bool[,] _markers;
-
-    private float _rowsFenceGap;
-    private float _columnsFenceGap;
-
-    /// <summary>
-    /// 更新大小固定的行的大小
-    /// </summary>
-    private void UpdateFixedRows(float width)
-    {
-        var rows = Parent.TemplateRows;
-
-        if (Parent.FitHeight)
-        {
-            for (var i = 0; i < rows.Count; i++)
-            {
-                _rowValues[i] = rows[i].TemplateType switch
-                {
-                    TemplateType.Pixels => rows[i].Value,
-                    { } => 0f
-                };
-            }
-        }
-        else
-        {
-            for (var i = 0; i < rows.Count; i++)
-            {
-                _rowValues[i] = rows[i].TemplateType switch
-                {
-                    TemplateType.Percent => rows[i].Value * width,
-                    TemplateType.Pixels => rows[i].Value,
-                    { } => 0f
-                };
-            }
-        }
-    }
-
-    /// <summary>
-    /// 更新大小固定的列的大小
-    /// </summary>
-    private void UpdateFixedColumns(float height)
-    {
-        var columns = Parent.TemplateColumns;
-
-        if (Parent.FitWidth)
-        {
-            for (var i = 0; i < columns.Count; i++)
-            {
-                _columnValues[i] = columns[i].TemplateType switch
-                {
-                    TemplateType.Pixels => columns[i].Value,
-                    { } => 0f
-                };
-            }
-        }
-        else
-        {
-            for (var i = 0; i < columns.Count; i++)
-            {
-                _columnValues[i] = columns[i].TemplateType switch
-                {
-                    TemplateType.Percent => columns[i].Value * height,
-                    TemplateType.Pixels => columns[i].Value,
-                    { } => 0f
-                };
-            }
-        }
-    }
-
-    // 记录元素位置
-    private Location[] _locations;
-
     public override void PrepareData()
     {
-        var list = Parent.InFlowChildren;
-        _locations = new Location[list.Count];
+        _context.Initialize();
+        GridPlacement.PlaceItems(_context);
+    }
 
-        var rows = Parent.TemplateRows;
-        var columns = Parent.TemplateColumns;
+    /// <summary>
+    /// 子项完成初始测量后，先解析列宽。
+    /// 后续 ResizeChildrenWidth 会根据列宽和水平对齐方式更新子项宽度。
+    /// </summary>
+    public override void MeasureChildren()
+    {
+        GridTrackSizing.ResolveColumns(_context);
+        _lastResolvedColumnsWidth = Container.InnerBounds.Width;
+    }
 
-        // 行列大小默认都是 0
-        _rowValues = new float[rows.Count];
-        _columnValues = new float[columns.Count];
+    /// <summary>
+    /// 在父容器 FitWidth 时用当前列总宽度反推容器宽度。
+    /// 容器宽度变化后重新解析列轨道，保证百分比与 fr 基于最新宽度计算。
+    /// </summary>
+    public override void Measure()
+    {
+        if (!Container.FitWidth) return;
 
-        // 标记元素
-        _markers = new bool[rows.Count, columns.Count];
+        Container.SetInnerWidthClamped(_context.TotalColumnsWidth);
+        GridTrackSizing.ResolveColumns(_context);
+        _lastResolvedColumnsWidth = Container.InnerBounds.Width;
+    }
 
-        // 计算行列 fr 总数
-        //_rowsTotalFraction = rows.Where(row => row.TemplateType is TemplateType.Fraction).Sum(row => row.Value);
-        //_columnsTotalFraction = columns.Where(column => column.TemplateType is TemplateType.Fraction).Sum(column => column.Value);
+    /// <summary>
+    /// 子项完成宽度变化后的高度重算后，若容器需要按内容收缩高度，则同步回写容器高度。
+    /// 这时子项高度已经是最终值，容器高度不会再落在旧的粗测结果上。
+    /// </summary>
+    public override void RecalculateHeight()
+    {
+        if (!Container.FitHeight) return;
 
-        _rowsFenceGap = (rows.Count - 1) * Parent.Gap.Height;
-        _columnsFenceGap = (columns.Count - 1) * Parent.Gap.Width;
+        Container.SetInnerHeightClamped(_context.TotalRowsHeight);
+    }
 
-        UpdateFixedRows(0);
-        UpdateFixedColumns(0);
-
-        // 横纵皆定义, marker!
-        for (int i = 0; i < list.Count; i++)
+    /// <summary>
+    /// 根据已解析的列宽更新每个子项的宽度。
+    /// Stretch 直接设置外部宽度；其他对齐方式调用 UpdateWidth 更新可用宽度。
+    /// </summary>
+    public override void ResizeChildrenWidth()
+    {
+        var currentWidth = Container.InnerBounds.Width;
+        if (Math.Abs(currentWidth - _lastResolvedColumnsWidth) > 0.001f)
         {
-            var el = list[i];
-            ref var location = ref _locations[i];
-
-            location = new Location(
-                el.ColumnSpan.Start.Value, el.RowSpan.Start.Value,
-                el.ColumnSpan.Size, el.RowSpan.Size);
-
-            if (el.RowSpan.Start.HasValue && el.ColumnSpan.Start.HasValue)
-            {
-                var bottom = Math.Min(location.Bottom, rows.Count);
-                var right = Math.Min(location.Right, columns.Count);
-
-                for (var j = location.Y; j < bottom; j++)
-                {
-                    for (int k = location.X; k < right; k++)
-                    {
-                        // Success!
-                        _markers[j, k] = true;
-                    }
-                }
-            }
+            GridTrackSizing.ResolveColumns(_context);
+            _lastResolvedColumnsWidth = currentWidth;
         }
 
-        for (int i = 0; i < list.Count; i++)
+        foreach (var item in _context.Items)
         {
-            var el = list[i];
-            ref var location = ref _locations[i];
-
-            if (el.RowSpan.Start.HasValue)
+            var areaWidth = _context.GetAreaWidth(item.Area);
+            if (ResolveHorizontalAlignment(item.Element) == GridItemAlignment.Stretch)
             {
-                var right = Math.Min(location.Right, columns.Count);
-
-                for (int k = location.X; k < right; k++)
-                {
-                    // Success!
-                    _markers[el.RowSpan.Start.Value, k] = true;
-                }
+                item.Element.SetOuterWidthClamped(areaWidth);
             }
-            else if (el.ColumnSpan.Start.HasValue)
+            else
             {
-
+                item.Element.UpdateWidth(areaWidth);
             }
         }
     }
 
-    public override void MeasureChildren() { }
-
-    public sealed override void Measure() { }
-
-    //public override void ModifyAvailableSize(UIView view, int index,
-    //    ref float availableWidth, ref float availableHeight)
-    //{
-    //    if (!view.GridArea) return;
-
-    //    availableWidth = GetColumnWidth(view.ColumnStart, view.ColumnEnd);
-    //    availableHeight = GetRowHeight(view.RowStart, view.RowEnd);
-    //    UpdateLocking(view.RowStart, view.RowEnd, view.ColumnStart, view.ColumnEnd);
-    //}
-}
-
-public enum TemplateType { Auto, Fraction, Pixels, Percent }
-
-/// <summary>
-/// 横列的模板定义
-/// </summary>
-public readonly struct GridTrack(TemplateType templateType, float value = 0f) : IEquatable<GridTrack>
-{
-    public TemplateType TemplateType { get; } = templateType;
-    public float Value { get; } = value;
-
-    public static GridTrack[] Repeat(int quantity, TemplateType templateType, float value = 0f)
+    /// <summary>
+    /// 子项因宽度变化完成高度重算后，重新解析行高。
+    /// 这一步用于支持文本等“宽度影响高度”的元素。
+    /// </summary>
+    public override void RecalculateChildrenHeight()
     {
-        var units = new GridTrack[quantity];
-        for (var i = 0; i < units.Length; i++)
+        GridTrackSizing.ResolveRows(_context);
+        _lastResolvedRowsHeight = Container.InnerBounds.Height;
+    }
+
+    /// <summary>
+    /// 根据已解析的行高更新每个子项的高度。
+    /// Stretch 直接设置外部高度；其他对齐方式调用 UpdateHeight 更新可用高度。
+    /// </summary>
+    public override void ResizeChildrenHeight()
+    {
+        var currentHeight = Container.InnerBounds.Height;
+        if (Math.Abs(currentHeight - _lastResolvedRowsHeight) > 0.001f)
         {
-            units[i] = new GridTrack(templateType, value);
+            GridTrackSizing.ResolveRows(_context);
+            _lastResolvedRowsHeight = currentHeight;
         }
 
-        return units;
+        foreach (var item in _context.Items)
+        {
+            var areaHeight = _context.GetAreaHeight(item.Area);
+            if (ResolveVerticalAlignment(item.Element) == GridItemAlignment.Stretch)
+            {
+                item.Element.SetOuterHeightClamped(areaHeight);
+            }
+            else
+            {
+                item.Element.UpdateHeight(areaHeight);
+            }
+        }
     }
 
-    public static bool operator ==(GridTrack left, GridTrack right)
+    /// <summary>
+    /// 将轨道尺寸转换为每条轨道的偏移量，并把子项移动到对应 Grid 区域内的对齐位置。
+    /// </summary>
+    public override void UpdateChildrenLayoutPosition()
     {
-        if (left.TemplateType == right.TemplateType && left.Value == right.Value) return true;
+        GridTrackSizing.UpdateOffsets(_context);
 
-        return false;
+        foreach (var item in _context.Items)
+        {
+            var areaWidth = _context.GetAreaWidth(item.Area);
+            var areaHeight = _context.GetAreaHeight(item.Area);
+            var x = _context.Columns[item.Area.Column].Offset +
+                    CalculateAlignmentOffset(areaWidth, item.Element.OuterBounds.Width, ResolveHorizontalAlignment(item.Element));
+            var y = _context.Rows[item.Area.Row].Offset +
+                    CalculateAlignmentOffset(areaHeight, item.Element.OuterBounds.Height, ResolveVerticalAlignment(item.Element));
+            item.Element.SetLayoutOffset(x, y);
+        }
     }
-    public static bool operator !=(GridTrack left, GridTrack right) => !(left == right);
 
-    public bool Equals(GridTrack other) => this == other;
-
-    public override bool Equals(object obj) => obj is GridTrack other && this == other;
-
-    public override int GetHashCode() => HashCode.Combine(TemplateType, Value);
-}
-
-/// <summary>
-/// 元素在 Grid 中的位置和大小
-/// </summary>
-public readonly struct GridSpan(int? start, int size) : IEquatable<GridSpan>
-{
-    public readonly int? Start { get; } = start;
-
-    public readonly int Size { get; } = size;
-
-    public static bool operator ==(GridSpan left, GridSpan right)
+    private GridItemAlignment ResolveHorizontalAlignment(UIView element)
     {
-        if (left.Start == right.Start && left.Size == right.Size) return true;
-
-        return false;
+        return ResolveAlignment(element.GridHorizontalAlignment, Container.GridItemsHorizontalAlignment);
     }
 
-    public static bool operator !=(GridSpan left, GridSpan right) => !(left == right);
+    private GridItemAlignment ResolveVerticalAlignment(UIView element)
+    {
+        return ResolveAlignment(element.GridVerticalAlignment, Container.GridItemsVerticalAlignment);
+    }
 
-    public bool Equals(GridSpan other) => this == other;
+    private static GridItemAlignment ResolveAlignment(GridItemAlignment selfAlignment, GridItemAlignment parentAlignment)
+    {
+        var resolved = selfAlignment == GridItemAlignment.Inherit ? parentAlignment : selfAlignment;
+        return resolved == GridItemAlignment.Inherit ? GridItemAlignment.Stretch : resolved;
+    }
 
-    public override bool Equals(object obj) => obj is GridSpan other && this == other;
-
-    public override int GetHashCode() => HashCode.Combine(Start, Size);
+    private static float CalculateAlignmentOffset(float areaSize, float itemSize, GridItemAlignment alignment)
+    {
+        return alignment switch
+        {
+            GridItemAlignment.Center => (areaSize - itemSize) / 2f,
+            GridItemAlignment.End => areaSize - itemSize,
+            _ => 0f
+        };
+    }
 }

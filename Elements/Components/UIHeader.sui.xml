@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Body Class="SilkyUIFramework.Elements.Components.UIHeader"
+<Body xmlns:s="https://github.com/487666123/SilkyUIFramework"
+	s:Class="SilkyUIFramework.Elements.Components.UIHeader"
 	Width="100%" Height="40px" BackgroundColor="rgba(0,0,0,0.25)"
 	FlexDirection="Row" MainAlignment="SpaceBetween" CrossAlignment="Center">
 	<!-- 标题 -->
-	<TextView Name="Title" Width="25%" Height="100%" Padding="12 0" TextScale="0.45" TextAlign="0 0.5" />
+	<TextView s:Name="Title" Width="25%" Height="100%" Padding="12 0" TextScale="0.45" TextAlign="0 0.5" />
 	<!-- 关闭 -->
-	<Cross Name="CloseButton" BoxSizing="Content"
+	<Cross s:Name="CloseButton" BoxSizing="Content"
 		Width="24px" Height="100%" Padding="12 0" CrossSize="22" CrossBorderRadius="3.5" />
 </Body>

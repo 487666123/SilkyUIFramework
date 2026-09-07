@@ -1,0 +1,232 @@
+namespace SilkyUIFramework.Layout.Grid;
+
+/// <summary>
+/// Grid 轨道尺寸解析器，按单轴分别计算行高和列宽。
+/// </summary>
+public static class GridTrackSizing
+{
+    /// <summary>
+    /// 解析列轨道尺寸。非 FitWidth 时，列百分比和 fr 基于父容器 InnerBounds.Width。
+    /// </summary>
+    public static void ResolveColumns(GridContext context)
+    {
+        ResolveTracks(
+            context.Columns,
+            context.Container.FitWidth,
+            context.Container.InnerBounds.Width,
+            context.Container.Gap.Width,
+            context.Items,
+            isColumnAxis: true);
+    }
+
+    /// <summary>
+    /// 解析行轨道尺寸。非 FitHeight 时，行百分比和 fr 基于父容器 InnerBounds.Height。
+    /// </summary>
+    public static void ResolveRows(GridContext context)
+    {
+        ResolveTracks(
+            context.Rows,
+            context.Container.FitHeight,
+            context.Container.InnerBounds.Height,
+            context.Container.Gap.Height,
+            context.Items,
+            isColumnAxis: false);
+    }
+
+    /// <summary>
+    /// 在轨道最终尺寸确定后，计算行列偏移。
+    /// </summary>
+    public static void UpdateOffsets(GridContext context)
+    {
+        GridLayoutHelper.UpdateOffsets(context.Columns, context.Container.Gap.Width);
+        GridLayoutHelper.UpdateOffsets(context.Rows, context.Container.Gap.Height);
+    }
+
+    /// <summary>
+    /// 单轴轨道尺寸计算入口。
+    /// 顺序为：重置缓存 -> 固定/百分比轨道 -> 内容撑开的轨道 -> fr 轨道 -> 非负修正。
+    /// </summary>
+    private static void ResolveTracks(
+        GridTrackOutput[] tracks,
+        bool fitAxis,
+        float availableSize,
+        float gap,
+        IReadOnlyList<GridItem> items,
+        bool isColumnAxis)
+    {
+        if (tracks.Length == 0) return;
+
+        ResetTracks(tracks);
+        ResolveFixedTracks(tracks, fitAxis, availableSize);
+        ResolveAutoTracks(tracks, items, isColumnAxis, fitAxis, gap);
+        ResolveFractionTracks(tracks, fitAxis, availableSize, gap);
+        ClampNegativeTracks(tracks);
+    }
+
+    /// <summary>
+    /// 清空上一轮计算得到的 Size，保留轨道定义和 Offset。
+    /// </summary>
+    private static void ResetTracks(GridTrackOutput[] tracks)
+    {
+        for (var i = 0; i < tracks.Length; i++)
+        {
+            tracks[i].Size = 0f;
+        }
+    }
+
+    /// <summary>
+    /// 先解析无需依赖内容的轨道。
+    /// 当容器对应轴是 Fit 时，百分比没有明确参照尺寸，暂时按 0 处理，后续可由内容撑开。
+    /// </summary>
+    private static void ResolveFixedTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize)
+    {
+        for (var i = 0; i < tracks.Length; i++)
+        {
+            var definition = tracks[i].Definition;
+            switch (definition.TemplateType)
+            {
+                case TemplateType.Pixels:
+                    tracks[i].Size = Math.Max(0f, definition.Value);
+                    break;
+                case TemplateType.Percent:
+                    tracks[i].Size = fitAxis ? 0f : Math.Max(0f, availableSize * definition.Value);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 根据子项当前 OuterBounds 解析内容相关轨道。
+    /// 第一版只做工程化近似：单轨道子项直接撑开轨道，跨轨道子项把不足尺寸平均分配给可被内容撑开的轨道。
+    /// </summary>
+    private static void ResolveAutoTracks(
+        GridTrackOutput[] tracks,
+        IReadOnlyList<GridItem> items,
+        bool isColumnAxis,
+        bool fitAxis,
+        float gap)
+    {
+        if (items.Count == 0) return;
+
+        foreach (var item in items)
+        {
+            var area = item.Area;
+            var start = isColumnAxis ? area.Column : area.Row;
+            var span = isColumnAxis ? area.ColumnSpan : area.RowSpan;
+            if (span <= 0 || start >= tracks.Length) continue;
+
+            var outerSize = isColumnAxis ? item.Element.OuterBounds.Width : item.Element.OuterBounds.Height;
+            if (span == 1)
+            {
+                GrowContentSizedTrack(ref tracks[start], outerSize, fitAxis);
+                continue;
+            }
+
+            DistributeSpanningAutoSize(tracks, start, span, outerSize, fitAxis, gap);
+        }
+    }
+
+    /// <summary>
+    /// 让单个可内容撑开的轨道至少达到指定尺寸。
+    /// </summary>
+    private static void GrowContentSizedTrack(ref GridTrackOutput track, float size, bool fitAxis)
+    {
+        if (!CanGrowByContent(track.Definition, fitAxis)) return;
+
+        track.Size = Math.Max(track.Size, size);
+    }
+
+    /// <summary>
+    /// 处理跨多条轨道的子项。
+    /// 子项尺寸先扣除区域内部 gap，再把不足部分平均分摊给 Auto 轨道；
+    /// 如果容器对应轴是 Fit，Percent/Fr 轨道也允许按内容撑开。
+    /// </summary>
+    private static void DistributeSpanningAutoSize(
+        GridTrackOutput[] tracks,
+        int start,
+        int span,
+        float outerSize,
+        bool fitAxis,
+        float gap)
+    {
+        if (span <= 1) return; // 调用方应保证 span > 1，此处为防御性检查
+
+        var end = Math.Min(tracks.Length, start + span);
+        var growableCount = 0;
+        var currentSize = 0f;
+        var targetSize = Math.Max(0f, outerSize - Math.Max(0, span - 1) * gap);
+
+        for (var i = start; i < end; i++)
+        {
+            currentSize += tracks[i].Size;
+            if (CanGrowByContent(tracks[i].Definition, fitAxis))
+            {
+                growableCount++;
+            }
+        }
+
+        if (growableCount <= 0 || targetSize <= currentSize) return;
+
+        var share = (targetSize - currentSize) / growableCount;
+        for (var i = start; i < end; i++)
+        {
+            if (!CanGrowByContent(tracks[i].Definition, fitAxis)) continue;
+
+            tracks[i].Size += share;
+        }
+    }
+
+    /// <summary>
+    /// 判断轨道是否允许被内容撑开。
+    /// Auto 始终允许；Percent/Fr 只有在 Fit 轴上没有明确可用空间时才允许。
+    /// </summary>
+    private static bool CanGrowByContent(GridTrack definition, bool fitAxis)
+    {
+        if (definition.TemplateType is TemplateType.Auto) return true;
+
+        return fitAxis && definition.TemplateType is TemplateType.Percent or TemplateType.Fraction;
+    }
+
+    /// <summary>
+    /// 将剩余空间分配给 fr 轨道。
+    /// 如果容器对应轴是 Fit，则没有 definite free space，fr 轨道保留内容撑开的尺寸。
+    /// </summary>
+    private static void ResolveFractionTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize, float gap)
+    {
+        var totalFraction = 0f;
+        var usedSize = Math.Max(0, tracks.Length - 1) * gap;
+
+        for (var i = 0; i < tracks.Length; i++)
+        {
+            usedSize += tracks[i].Size;
+            if (tracks[i].Definition.TemplateType is TemplateType.Fraction)
+            {
+                totalFraction += Math.Max(0f, tracks[i].Definition.Value);
+            }
+        }
+
+        if (totalFraction <= 0f) return;
+
+        if (fitAxis) return;
+
+        var remaining = Math.Max(0f, availableSize - usedSize);
+        for (var i = 0; i < tracks.Length; i++)
+        {
+            if (tracks[i].Definition.TemplateType is not TemplateType.Fraction) continue;
+
+            var fraction = Math.Max(0f, tracks[i].Definition.Value);
+            tracks[i].Size = remaining * fraction / totalFraction;
+        }
+    }
+
+    /// <summary>
+    /// 对外部输入和中间计算结果做兜底修正，避免负尺寸进入布局结果。
+    /// </summary>
+    private static void ClampNegativeTracks(GridTrackOutput[] tracks)
+    {
+        for (var i = 0; i < tracks.Length; i++)
+        {
+            tracks[i].Size = Math.Max(0f, tracks[i].Size);
+        }
+    }
+}

@@ -10,7 +10,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void MeasureChildren(FlexboxContext context)
     {
-        if (context.Parent.FlexWrap && !context.Parent.FitWidth)
+        if (context.Container.FlexWrap && !context.Container.FitWidth)
             WrapRow(context);
         else
             SingleRow(context);
@@ -19,21 +19,21 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void Measure(FlexboxContext context)
     {
-        MeasureSize(context, context.Parent.Gap.Width, out var mainSize, out var crossSize);
-        if (context.Parent.FitWidth) LayoutModule.SetInnerWidthClamped(context.Parent, mainSize);
-        if (context.Parent.FitHeight) LayoutModule.SetInnerHeightClamped(context.Parent, crossSize);
+        MeasureSize(context, context.Container.Gap.Width, out var mainSize, out var crossSize);
+        if (context.Container.FitWidth) context.Container.SetInnerWidthClamped(mainSize);
+        if (context.Container.FitHeight) context.Container.SetInnerHeightClamped(crossSize);
     }
 
     /// <inheritdoc />
     public void ResizeChildrenWidth(FlexboxContext context)
     {
         // 宽度可能被父元素拉伸, 再次计算元素换行
-        if (context.Parent.FlexWrap)
+        if (context.Container.FlexWrap)
             WrapRow(context);
         else
         {
             foreach (var line in context.Lines)
-                line.UpdateMainSizeByRow(context.Parent.Gap.Width);
+                line.UpdateMainSizeByRow(context.Container.Gap.Width);
         }
 
         RowGrowOrShrink(context);
@@ -42,8 +42,8 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void RecalculateHeight(FlexboxContext context)
     {
-        if (!context.Parent.FitHeight) return;
-        LayoutModule.SetInnerHeightClamped(context.Parent, FlexboxHelper.CalculateCrossSize(context.Lines, context.Parent.Gap.Height));
+        if (!context.Container.FitHeight) return;
+        context.Container.SetInnerHeightClamped(FlexboxHelper.CalculateCrossSize(context.Lines, context.Container.Gap.Height));
     }
 
     /// <inheritdoc />
@@ -56,9 +56,9 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void ResizeChildrenHeight(FlexboxContext context)
     {
-        if (context.Parent.CrossContentAlignment == CrossContentAlignment.Stretch)
+        if (context.Container.CrossContentAlignment == CrossContentAlignment.Stretch)
         {
-            var remaining = context.Parent.InnerBounds.Height - FlexboxHelper.CalculateCrossSize(context.Lines, context.Parent.Gap.Height);
+            var remaining = context.Container.InnerBounds.Height - FlexboxHelper.CalculateCrossSize(context.Lines, context.Container.Gap.Height);
             if (remaining > 0)
             {
                 var share = remaining / context.Lines.Count;
@@ -67,28 +67,28 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
             }
         }
 
-        if (context.Parent.CrossAlignment == CrossAlignment.Stretch)
+        if (context.Container.CrossAlignment == CrossAlignment.Stretch)
         {
             foreach (var line in context.Lines)
             {
                 foreach (var el in line.Elements.Where(el =>
                          el.Parent.FitHeight || !(el.OuterBounds.Height >= line.CrossSize)))
                 {
-                    LayoutModule.SetOuterHeightClamped(el, line.CrossSize);
+                    el.SetOuterHeightClamped(line.CrossSize);
                 }
             }
         }
 
-        var innerBounds = context.Parent.InnerBounds;
+        var innerBounds = context.Container.InnerBounds;
 
         foreach (var line in context.Lines)
-            line.UpdateMainAlignment(context.Parent.MainAlignment, innerBounds.Width, context.Parent.Gap.Width);
+            line.UpdateMainAlignment(context.Container.MainAlignment, innerBounds.Width, context.Container.Gap.Width);
 
         FlexboxHelper.UpdateCrossContentAlignment(
             context.Lines,
             innerBounds.Height,
-            context.Parent.Gap.Height,
-            context.Parent.CrossContentAlignment,
+            context.Container.Gap.Height,
+            context.Container.CrossContentAlignment,
             out var crossGapCache,
             out var crossOffsetCache);
         context.CrossGap = crossGapCache;
@@ -106,7 +106,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
 
             foreach (var el in line.Elements)
             {
-                var crossOffset = FlexboxHelper.CalculateCrossOffset(line.CrossSize, el.OuterBounds.Height, context.Parent.CrossAlignment);
+                var crossOffset = FlexboxHelper.CalculateCrossOffset(line.CrossSize, el.OuterBounds.Height, context.Container.CrossAlignment);
                 el.SetLayoutOffset(left, crossStart + crossOffset);
                 left += el.OuterBounds.Width + line.MainGap;
             }
@@ -120,14 +120,14 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     private static void SingleRow(FlexboxContext context)
     {
         context.ClearLines();
-        context.AddLine(FlexLine.CreateSingleRow(context.Parent.InFlowChildren, context.Parent.Gap.Width));
+        context.AddLine(FlexLine.CreateSingleRow(context.Container.InFlowChildren, context.Container.Gap.Width));
     }
 
     private static void WrapRow(FlexboxContext context)
     {
-        var width = context.Parent.InnerBounds.Width;
-        var hGap = context.Parent.Gap.Width;
-        var elements = context.Parent.InFlowChildren;
+        var width = context.Container.InnerBounds.Width;
+        var hGap = context.Container.Gap.Width;
+        var elements = context.Container.InFlowChildren;
         context.ClearLines();
 
         if (elements.Count == 0) return;
@@ -164,8 +164,8 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
 
     private static void RowGrowOrShrink(FlexboxContext context)
     {
-        var mainSize = context.Parent.InnerBounds.Width;
-        var gap = context.Parent.Gap.Width;
+        var mainSize = context.Container.InnerBounds.Width;
+        var gap = context.Container.Gap.Width;
 
         foreach (var line in context.Lines)
         {
@@ -186,7 +186,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
                         var share = remaining / totalGrow;
                         var alloc = Math.Min(availableGrowth, share * element.FlexGrow);
 
-                        LayoutModule.SetOuterWidthClamped(element, element.OuterBounds.Width + alloc);
+                        element.SetOuterWidthClamped(element.OuterBounds.Width + alloc);
 
                         remaining -= alloc;
                         totalGrow -= element.FlexGrow;
@@ -208,7 +208,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
                         var share = remaining / totalShrink;
                         var alloc = Math.Max(availableShrink, share * element.FlexShrink);
 
-                        LayoutModule.SetOuterWidthClamped(element, element.OuterBounds.Width + alloc);
+                        element.SetOuterWidthClamped(element.OuterBounds.Width + alloc);
 
                         remaining -= alloc;
                         totalShrink -= element.FlexShrink;

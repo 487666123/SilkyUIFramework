@@ -1,18 +1,76 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- Class 填写对应类名 -->
-<Body Class="SilkyUIFramework.UserInterfaces.MonitoringDashboard.MonitoringDashboardUI"
-	  Enabled="false" BorderRadius="4" Width="400px" Height="300px" Gap="0"
-	  FlexDirection="Column" MainAlignment="Start" CrossAlignment="Stretch" CrossContentAlignment="Stretch">
-	<DraggableView Name="DragPanel" Height="40px" BackgroundColor="rgba(0,0,0,0.25)"
-				   FlexDirection="Row" CrossAlignment="Center" Padding="8">
-		<TextView Name="Title" IgnoreMouseInteraction="true" TextScale="0.4" Text="SilkyUI 仪表盘" />
-	</DraggableView>
-	<ElementGroup Padding="8" FlexDirection="Column" MainAlignment="Start"
-				  CrossAlignment="Stretch" CrossContentAlignment="Stretch" >
-		<TextView Name="TargetCount" TextScale="0.8" />
-		<ScrollView Name="TargetTable" Height="100px">
-			<M.Mask Height="100%" />
-			<M.Container FlexDirection="Column" Padding="8" Gap="4" />
-		</ScrollView>
-	</ElementGroup>
+<Body xmlns:s="https://github.com/487666123/SilkyUIFramework"
+      s:Class="SilkyUIFramework.UserInterfaces.MonitoringDashboard.MonitoringDashboardUI"
+      Enabled="false" Width="620px" Height="480px" MaxWidth="95%" MaxHeight="90%"
+      Border="1" BorderRadius="6" BorderColor="#59616a" BackgroundColor="#23272c"
+      Gap="0" FlexDirection="Column" FlexWrap="false" MainAlignment="Start"
+      CrossAlignment="Stretch" OverflowHidden="true" IndependentRenderTarget="false">
+    <DraggableView s:Name="DragPanel" Width="100%" Height="56px" FlexShrink="0"
+                   BackgroundColor="#2e343a" Padding="16" Gap="12"
+                   FlexDirection="Row" MainAlignment="Start" CrossAlignment="Center">
+        <View Width="3px" Height="24px" BackgroundColor="#72d8ab" IgnoreMouseInteraction="true" />
+        <TextView s:Name="Title" Text="渲染资源监控" TextScale="1" TextBorder="1" IgnoreMouseInteraction="true" />
+        <View Width="0px" FlexGrow="1" IgnoreMouseInteraction="true" />
+        <TextView Text="SilkyUI" TextScale="1" TextBorder="1" TextColor="#a5b2bc" IgnoreMouseInteraction="true" />
+    </DraggableView>
+    <View Width="100%" Height="1px" BackgroundColor="#414950" />
+
+    <ElementGroup Width="100%" Height="0px" FlexGrow="1" Padding="16" Gap="12"
+                  FlexDirection="Column" FlexWrap="false" MainAlignment="Start"
+                  CrossAlignment="Stretch" CrossContentAlignment="Stretch">
+        <ElementGroup s:Name="Metrics" LayoutType="Grid" Width="100%" Height="64px" Gap="12 4"
+                      GridItemsHorizontalAlignment="Stretch" GridItemsVerticalAlignment="Stretch">
+            <TextView Text="可复用" TextScale="1" TextBorder="1" TextColor="#a5b2bc" />
+            <TextView Text="使用中" TextScale="1" TextBorder="1" TextColor="#a5b2bc" />
+            <TextView Text="纹理估算" TextScale="1" TextBorder="1" TextColor="#a5b2bc" />
+            <TextView s:Name="AvailableValue" Text="--" TextScale="1" TextBorder="1" TextColor="#72d8ab"
+                      FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+            <TextView s:Name="OccupiedValue" Text="--" TextScale="1" TextBorder="1" TextColor="#cfa862"
+                      FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+            <TextView s:Name="MemoryValue" Text="-- MiB" TextScale="1" TextBorder="1" TextColor="#9ab8c7"
+                      FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+        </ElementGroup>
+        <View Width="100%" Height="1px" BackgroundColor="#3d444c" />
+        <ElementGroup Width="100%" Height="28px" FlexDirection="Row" CrossAlignment="Center" Gap="12">
+            <TextView Text="尺寸分布" TextScale="1" TextBorder="1" />
+            <View Width="0px" FlexGrow="1" />
+            <TextView s:Name="TargetCount" Text="0 种尺寸" TextScale="1" TextBorder="1" TextColor="#a5b2bc" />
+        </ElementGroup>
+        <ElementGroup Width="100%" Height="0px" FlexGrow="1" Gap="4"
+                      FlexDirection="Column" FlexWrap="false" CrossAlignment="Stretch">
+            <ElementGroup Width="100%" Height="36px" FlexDirection="Row" Gap="0">
+                <ElementGroup s:Name="TableHeader" LayoutType="Grid" Width="0px" FlexGrow="1" Height="36px"
+                              Padding="12 4" Gap="12" BackgroundColor="#30373f">
+                    <TextView Text="尺寸 / px" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                              FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+                    <TextView Text="可用" TextScale="1" TextBorder="1" TextColor="#72d8ab"
+                              FitWidth="false" FitHeight="false" TextAlign="1 0.5" />
+                    <TextView Text="使用中" TextScale="1" TextBorder="1" TextColor="#cfa862"
+                              FitWidth="false" FitHeight="false" TextAlign="1 0.5" />
+                    <TextView Text="估算 / MiB" TextScale="1" TextBorder="1" TextColor="#9ab8c7"
+                              FitWidth="false" FitHeight="false" TextAlign="1 0.5" />
+                </ElementGroup>
+                <View Width="16px" />
+            </ElementGroup>
+            <ScrollView s:Name="TargetTable" Width="100%" Height="0px" FlexGrow="1" FlexShrink="1"
+                        CrossAlignment="Stretch" Gap="8">
+                <M.Mask Width="0px" Height="100%" FlexGrow="1"
+                        OverflowHidden="true" IndependentRenderTarget="false" />
+                <M.Container Width="100%" FitWidth="false" FitHeight="true" Padding="0" Gap="2"
+                             FlexDirection="Column" FlexWrap="false" MainAlignment="Start"
+                             CrossAlignment="Stretch" CrossContentAlignment="Stretch">
+                    <TextView s:Name="EmptyState" Text="暂无渲染目标" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
+                              Width="100%" Height="96px" FitWidth="false" FitHeight="false" TextAlign="0.5" />
+                </M.Container>
+            </ScrollView>
+        </ElementGroup>
+    </ElementGroup>
+
+    <View Width="100%" Height="1px" BackgroundColor="#414950" />
+    <ElementGroup Width="100%" Height="38px" Padding="16 6" BackgroundColor="#2e343a"
+                  FlexDirection="Row" CrossAlignment="Center" Gap="12">
+        <TextView s:Name="PoolSummary" Text="等待采样" TextScale="1" TextBorder="1" TextColor="#72d8ab"
+                  FitWidth="false" FitHeight="false" Width="0px" Height="26px" FlexGrow="1" TextAlign="0 0.5" />
+        <TextView Text="RGBA8 估算" TextScale="1" TextBorder="1" TextColor="#a5b2bc" />
+    </ElementGroup>
 </Body>

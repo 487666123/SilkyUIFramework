@@ -1,10 +1,12 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Body Class="SilkyUIFramework.UserInterfaces.MouseMenuUI" Enabled="false"
+<?xml version="1.0" encoding="utf-8"?>
+<Body xmlns:s="https://github.com/487666123/SilkyUIFramework"
+	s:Class="SilkyUIFramework.UserInterfaces.MouseMenuUI" Enabled="false"
 	Border="0" BorderColor="#00000000" BackgroundColor="#00000000" Width="100%" Height="100%"
 	FitWidth="false">
-	<ElementGroup Name="MenuContainer" BackgroundColor="rgba(0, 155, 255, 0.5)"
+	<s:Style s:Name="Background" BackgroundColor="#0099FF" />
+	<ElementGroup s:Style="Background" s:Name="MenuContainer" BackgroundColor="rgba(0, 155, 255, 0.5)"
 		FlexDirection="Column" FitWidth="true" FitHeight="true" Border="2" BorderRadius="8">
-		<ScrollView Name="ScrollView" FitWidth="true" FitHeight="true"
+		<ScrollView s:Name="ScrollView" FitWidth="true" FitHeight="true"
 			Padding="4" Gap="4" Width="100%" Height="100%" CrossAlignment="Stretch">
 			<M.Mask MaxHeight="300px" FitWidth="true" FitHeight="true" />
 			<M.Container FitWidth="true" FitHeight="true" Gap="4" FlexWrap="false" FlexDirection="Column"

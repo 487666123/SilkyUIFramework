@@ -15,7 +15,7 @@ public partial class UIView
             if (Parent.LayoutType != LayoutType.Grid) return;
             MarkLayoutDirty();
         }
-    } = new GridSpan(0, 1);
+    } = GridSpan.Auto;
 
     public GridSpan ColumnSpan
     {
@@ -28,7 +28,33 @@ public partial class UIView
             if (Parent.LayoutType != LayoutType.Grid) return;
             MarkLayoutDirty();
         }
-    } = new GridSpan(0, 1);
+    } = GridSpan.Auto;
+
+    public GridItemAlignment GridHorizontalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+
+            if (Parent == null) return;
+            if (Parent.LayoutType != LayoutType.Grid) return;
+            MarkLayoutDirty();
+        }
+    } = GridItemAlignment.Inherit;
+
+    public GridItemAlignment GridVerticalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+
+            if (Parent == null) return;
+            if (Parent.LayoutType != LayoutType.Grid) return;
+            MarkLayoutDirty();
+        }
+    } = GridItemAlignment.Inherit;
 
     /// <summary> 弹性项目的增长因子 </summary>
     public float FlexGrow

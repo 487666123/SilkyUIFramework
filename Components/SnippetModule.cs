@@ -103,6 +103,13 @@ public sealed class SnippetModule
         return true;
     }
 
+    private static bool IsEnglishWordChar(char c)
+    {
+        return c is >= 'A' and <= 'Z'
+            or >= 'a' and <= 'z'
+            or >= '0' and <= '9';
+    }
+
     public void FromSnippets(List<TextSnippet> snippets)
     {
         _lines.Clear();
@@ -188,6 +195,20 @@ public sealed class SnippetModule
                     var metrics = font.GetCharacterMetrics(c);
 
                     var isWhiteSpace = char.IsWhiteSpace(c);
+                    var isEnglishWordChar = IsEnglishWordChar(c);
+
+                    if (!isWhiteSpace && !isEnglishWordChar)
+                    {
+                        if (!TryCommitToken(ref token)) return;
+                        token.IsWhiteSpace = false;
+                        if (!token.TryAdd(metrics.KernedWidth))
+                        {
+                            if (!TryCommitToken(ref token)) return;
+                            token.Add(metrics.KernedWidth);
+                        }
+                        if (!TryCommitToken(ref token)) return;
+                        continue;
+                    }
 
                     if (isWhiteSpace != token.IsWhiteSpace)
                     {
