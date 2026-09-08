@@ -56,6 +56,13 @@ public class SUIScrollView : UIElementGroup
     #region Scroll Position
 
     private Tween _tween;
+    private Vector2 _targetScrollPosition;
+
+    /// <summary>
+    /// 逻辑上的目标滚动位置。ScrollBy 基于它累加，Tween 只负责追赶它。
+    /// </summary>
+    public Vector2 TargetScrollPosition =>
+        Vector2.Clamp(_targetScrollPosition, Vector2.Zero, MaxScrollPosition);
 
     /// <summary>
     /// 每次同步当前滚动位置后通知，包括重复赋值。
@@ -100,24 +107,28 @@ public class SUIScrollView : UIElementGroup
     public void VScrollBy(float value) => ScrollBy(new Vector2(0, value));
 
     /// <summary>
-    /// 在当前滚动目标的基础上增加偏移量。
+    /// 在目标滚动位置的基础上增加偏移量。
     /// </summary>
-    public void ScrollBy(Vector2 offset, bool animation = true) => ScrollTo(CurrentScrollPosition + offset, animation);
+    public void ScrollBy(Vector2 offset, bool animation = true) =>
+        ScrollTo(TargetScrollPosition + offset, animation);
 
     /// <summary>
     /// 设置平滑滚动目标位置。
     /// </summary>
     public void ScrollTo(Vector2 position, bool animation = true)
     {
+        var targetPosition = Vector2.Clamp(position, Vector2.Zero, MaxScrollPosition);
+        _targetScrollPosition = targetPosition;
+
         _tween?.Kill();
         if (animation)
         {
             var tween = _tween = CreateTween().Parallel().SetTrans(TransitionType.Quart).SetEase(EaseType.Out);
-            tween.MemberTo(this, "CurrentScrollPosition", position, 0.2f);
+            tween.MemberTo(this, nameof(CurrentScrollPosition), targetPosition, 0.2f);
             return;
         }
 
-        CurrentScrollPosition = position;
+        CurrentScrollPosition = targetPosition;
     }
 
     #endregion
@@ -146,6 +157,16 @@ public class SUIScrollView : UIElementGroup
     {
         ViewportSize = Vector2.Max(Vector2.One, viewportSize);
         ContentSize = Vector2.Max(Vector2.One, contentSize);
+
+        var clampedTarget = Vector2.Clamp(
+            _targetScrollPosition,
+            Vector2.Zero,
+            MaxScrollPosition);
+
+        if (clampedTarget != _targetScrollPosition)
+            _tween?.Kill();
+
+        _targetScrollPosition = clampedTarget;
         CurrentScrollPosition = CurrentScrollPosition;
     }
 
@@ -277,14 +298,16 @@ public class SUIScrollView : UIElementGroup
     {
         if (scrollDelta == 0) return false;
 
-        var currentPosition = Orientation == Orientation.Horizontal
-            ? CurrentScrollPosition.X
-            : CurrentScrollPosition.Y;
+        var targetPosition = Orientation == Orientation.Horizontal
+            ? TargetScrollPosition.X
+            : TargetScrollPosition.Y;
         var maxPosition = Orientation == Orientation.Horizontal
             ? MaxScrollPosition.X
             : MaxScrollPosition.Y;
 
-        return scrollDelta > 0 ? currentPosition > 0f : currentPosition < maxPosition;
+        return scrollDelta > 0
+            ? targetPosition > 0f
+            : targetPosition < maxPosition;
     }
 
     #endregion
