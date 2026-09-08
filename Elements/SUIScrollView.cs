@@ -73,7 +73,6 @@ public class SUIScrollView : UIElementGroup
         get;
         set
         {
-            if (field == value) return;
             field = value;
             Container.ScrollOffset = -field;
             ScrollPositionUpdated?.Invoke(field);
@@ -131,6 +130,8 @@ public class SUIScrollView : UIElementGroup
             return;
         }
 
+        position = Vector2.Clamp(position, Vector2.Zero, MaxScrollPosition);
+        _targetScrollPosition = position;
         ScrollPosition = position;
     }
 
@@ -148,12 +149,25 @@ public class SUIScrollView : UIElementGroup
             GetOverscrollDistance(overscroll.Y, ViewportSize.Y));
     }
 
+    public float MaxOverscrollRatio { get; set; } = 1f;
+
+    public float OverscrollResistance { get; set; } = 25f;
+
     /// <summary>
     /// 根据越界距离计算实际显示的橡皮筋位移。
     /// </summary>
     private float GetOverscrollDistance(float distance, float viewportSize)
     {
-        return viewportSize * (distance / (viewportSize * 20f + distance));
+        if (distance == 0f) return 0f;
+
+        var sign = MathF.Sign(distance);
+        var normalizedDistance = MathF.Abs(distance) / viewportSize;
+
+        var result = viewportSize * MaxOverscrollRatio *
+                     normalizedDistance /
+                     (OverscrollResistance + normalizedDistance);
+
+        return sign * result;
     }
 
     #endregion
@@ -197,13 +211,7 @@ public class SUIScrollView : UIElementGroup
         ContentSize = contentSize;
 
         var clampedTarget = Vector2.Clamp(_targetScrollPosition, Vector2.Zero, MaxScrollPosition);
-
-        if (clampedTarget != _targetScrollPosition)
-        {
-            _tween?.Kill();
-        }
-
-        _targetScrollPosition = clampedTarget;
+        ScrollTo(clampedTarget, false);
     }
 
     public void SetHorizontalScrollSizes(float viewportWidth, float contentWidth) =>
