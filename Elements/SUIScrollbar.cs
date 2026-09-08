@@ -1,233 +1,110 @@
-﻿using SilkyUIFramework.Animation;
-using SilkyUIFramework.Components;
+using Newtonsoft.Json.Linq;
+using System.Windows.Input;
 
 namespace SilkyUIFramework.Elements;
 
-public class SUIScrollbar : UIView
+public class SUIScrollbarThumb : UIView
 {
-    #region ScrollPosition
+    public (Color Default, Color Hover) BarColor { get; set; } = (Color.Black * 0.2f, Color.Black * 0.3f);
 
-    public event Action<Vector2> OnCurrentScrollPositionChanged;
+    public bool IsActive { get; set; }
 
-    public virtual Vector2 CurrentScrollPosition
+    public SUIScrollbarThumb()
     {
-        get => _currentScrollPosition;
-        set
-        {
-            _currentScrollPosition = Vector2.Clamp(value, Vector2.Zero, GetScrollRange());
-            OnCurrentScrollPositionChanged?.Invoke(_currentScrollPosition);
-        }
-    }
-
-    private Vector2 _currentScrollPosition;
-
-    private Vector2 _startScrollPosition;
-
-    protected Vector2 StartScrollPosition
-    {
-        get => _startScrollPosition;
-        set => _startScrollPosition = Vector2.Clamp(value, Vector2.Zero, GetScrollRange());
-    }
-
-    /// <summary>
-    /// 滚动条目标位置
-    /// </summary>
-    public Vector2 TargetScrollPosition
-    {
-        get => Vector2.Clamp(_targetScrollPosition, Vector2.Zero, GetScrollRange());
-        set
-        {
-            StartScrollPosition = CurrentScrollPosition;
-            ScrollTimer.StartUpdate(true);
-            _targetScrollPosition = Vector2.Clamp(value, new Vector2(-500f),
-                GetScrollRange() + new Vector2(500f));
-        }
-    }
-
-    private Vector2 _targetScrollPosition;
-
-    public void ScrollByTop() => TargetScrollPosition = Vector2.Zero;
-
-    /// <summary>
-    /// 横向滚动指定距离
-    /// </summary>
-    public void ScrollByEnd() => TargetScrollPosition = GetScrollRange();
-
-    /// <summary>
-    /// 横向滚动指定距离
-    /// </summary>
-    public void HScrollBy(float value) => TargetScrollPosition += new Vector2(value, 0);
-
-    /// <summary>
-    /// 纵向滚动指定距离
-    /// </summary>
-    public void VScrollBy(float value) => TargetScrollPosition += new Vector2(0, value);
-
-    public bool HScrolledToTop => TargetScrollPosition.X <= 0;
-    public bool HScrolledToEnd => TargetScrollPosition.X >= GetScrollRange().X;
-
-    public bool VScrolledToTop => TargetScrollPosition.Y <= 0;
-    public bool VScrolledToEnd => TargetScrollPosition.Y >= GetScrollRange().Y;
-
-    #endregion
-
-    #region ContainerSize & ContentSize
-
-    public Vector2 ContainerSize
-    {
-        get => _containerSize;
-        set => _containerSize = Vector2.Max(Vector2.One, value);
-    }
-
-    private Vector2 _containerSize = Vector2.One;
-
-    public Vector2 ContentSize
-    {
-        get => _contentSize;
-        set => _contentSize = Vector2.Max(Vector2.One, value);
-    }
-
-    private Vector2 _contentSize = Vector2.One;
-
-    #endregion
-
-    #region Constructor 构造器
-
-    public readonly Direction ScrollDirection;
-
-    public readonly UIElementGroup TargetView;
-
-    public readonly RectangleRender ControlBar = new();
-
-    public readonly AnimationTimer ScrollTimer = new();
-
-    public SUIScrollbar(Direction scrollDirection, UIElementGroup targetView)
-    {
-        Border = 0;
-        ScrollDirection = scrollDirection;
-        TargetView = targetView;
-        BarBorderRadius = new Vector4(2f);
+        Positioning = Positioning.Absolute;
+        BorderRadius = new Vector4(2f);
     }
 
     protected override void UpdateStatus(GameTime gameTime)
     {
         base.UpdateStatus(gameTime);
-        ScrollTimer.Update(gameTime);
+        BackgroundColor = IsActive || LeftMousePressed || IsMouseHovering
+            ? BarColor.Hover
+            : BarColor.Default;
+    }
+}
+
+public class SUIScrollbar : UIElementGroup
+{
+    public readonly SUIScrollbarThumb Thumb = new();
+
+    public event EventHandler<Vector2> Drag;
+
+    protected virtual void OnDrag(Vector2 value)
+    {
+        Value = value;
+        Drag?.Invoke(this, Value);
     }
 
-    #endregion
-
-    #region Scroll Range
-
-    public Vector2 GetScrollRange() => Vector2.Max(Vector2.Zero, ContentSize - ContainerSize);
-
-    public void SetScrollRange(Vector2 maskSize, Vector2 targetSize)
+    public Vector2 ViewportRatio
     {
-        ContainerSize = maskSize;
-        ContentSize = targetSize;
-    }
-
-    public void SetHScrollRange(float containerWidth, float childrenWidth) =>
-        SetScrollRange(new Vector2(containerWidth, 1f), new Vector2(childrenWidth, 1f));
-
-    public void SetVScrollRange(float containerHeight, float childrenHeight) =>
-        SetScrollRange(new Vector2(1f, containerHeight), new Vector2(1f, childrenHeight));
-
-    #endregion
-
-    public Vector2 GetBarPosition(Vector2 barSize)
-    {
-        var progress = CurrentScrollPosition / GetScrollRange();
-        if (float.IsNaN(progress.X)) progress.X = 0;
-        if (float.IsNaN(progress.Y)) progress.Y = 0;
-        return Vector2.Max(Vector2.Zero, ((Vector2)InnerBounds.Size - barSize) * progress);
-    }
-
-    public Vector2 GetBarSize()
-    {
-        var ratio = ContainerSize / ContentSize;
-        var size = (Vector2)InnerBounds.Size * ratio;
-        var minSize = ScrollDirection switch
+        get;
+        set
         {
-            Direction.Horizontal => new Vector2(InnerBounds.Height * 2, InnerBounds.Height),
-            _ => new Vector2(InnerBounds.Width, InnerBounds.Width * 2),
-        };
-        return Vector2.Clamp(size, minSize, InnerBounds.Size);
-    }
+            if (field == value) return;
+            field = value;
+            Thumb.SetSize(0, 0, value.X, value.Y);
+        }
+    } = Vector2.One;
 
-    public Vector2 GetBarRange() => InnerBounds.Size - GetBarSize();
-
-    public Vector2 BarPositionOnScreen => InnerBounds.Position + GetBarPosition(GetBarSize());
-
-    /// <summary> 直接设置滚动位置 </summary>
-    public void SetScrollPosition(Vector2 position)
+    /// <summary> 同步滑块显示位置，不触发滚动请求。 </summary>
+    public Vector2 Value
     {
-        CurrentScrollPosition = position;
-        StartScrollPosition = position;
-        TargetScrollPosition = position;
+        get;
+        set
+        {
+            var progress = Vector2.Clamp(value, Vector2.Zero, Vector2.One);
+            if (float.IsNaN(progress.X)) progress.X = 0;
+            if (float.IsNaN(progress.Y)) progress.Y = 0;
+
+            if (field == progress) return;
+            field = progress;
+
+            Thumb.SetLeft(0f, 0f, progress.X);
+            Thumb.SetTop(0f, 0f, progress.Y);
+        }
     }
 
-    public bool BarContainsPoint()
+    public SUIScrollbar()
     {
-        var focus = Main.MouseScreen;
-        var barPos = BarPositionOnScreen;
-        var barSize = GetBarSize();
-
-        return focus.X > barPos.X && focus.Y > barPos.Y && focus.X < barPos.X + barSize.X &&
-               focus.Y < barPos.Y + barSize.Y;
+        Border = 0;
+        Thumb.Join(this);
     }
 
-    #region MouseDown & MouseUp
+    public Vector2 GetValueAtMousePosition()
+    {
+        var start = InnerBounds.Position + Thumb.Bounds.Size / 2f;
+        var space = InnerBounds.Size - Thumb.Bounds.Size;
 
-    protected bool IsScrollbarDragging;
-    protected Vector2 BarDragOffset;
+        return (Main.MouseScreen - start) / space;
+    }
+
+    private Vector2 _mousePositionAtPress;
+    private Vector2 _valuetAtPress;
 
     public override void OnLeftMouseDown(UIMouseEvent evt)
     {
-        IsScrollbarDragging = true;
-        BarDragOffset = Main.MouseScreen - GetBarPosition(GetBarSize());
         base.OnLeftMouseDown(evt);
+
+        // 支持直接点条确定位置
+        if (evt.Source != Thumb)
+            Value = GetValueAtMousePosition();
+
+        // 记录按下时的状态
+        _valuetAtPress = Value;
+        _mousePositionAtPress = evt.MousePosition;
     }
 
-    public override void OnLeftMouseUp(UIMouseEvent evt)
+    protected override void UpdateStatus(GameTime gameTime)
     {
-        IsScrollbarDragging = false;
-        base.OnLeftMouseUp(evt);
-    }
+        base.UpdateStatus(gameTime);
 
-    #endregion
-
-    protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
-    {
-        CurrentScrollPosition = ScrollTimer.Lerp(_startScrollPosition, _targetScrollPosition);
-        if (IsScrollbarDragging)
+        if (LeftMousePressed)
         {
-            var barPosition = Main.MouseScreen - BarDragOffset;
-            var scrollPosition = barPosition * GetScrollRange() / GetBarRange();
-            if (float.IsNaN(scrollPosition.X)) scrollPosition.X = 0;
-            if (float.IsNaN(scrollPosition.Y)) scrollPosition.Y = 0;
-            SetScrollPosition(scrollPosition);
+            var space = (Vector2)(InnerBounds.Size - Thumb.Bounds.Size);
+            var offset = Main.MouseScreen - _mousePositionAtPress;
+
+            OnDrag(_valuetAtPress + offset / space);
         }
-
-        base.Draw(gameTime, spriteBatch);
-
-        DrawScrollbar();
-    }
-
-    public (Color Default, Color Hover) BarColor = (Color.Black * 0.2f, Color.Black * 0.3f);
-
-    public Vector4 BarBorderRadius
-    {
-        get => ControlBar.BorderRadius;
-        set => ControlBar.BorderRadius = value;
-    }
-
-    protected virtual void DrawScrollbar()
-    {
-        if (GetBarSize() is not { X: > 0, Y: > 0 } barSize) return;
-
-        var barIsHover = IsScrollbarDragging || BarContainsPoint();
-        ControlBar.BackgroundColor = barIsHover ? BarColor.Hover : BarColor.Default;
-        ControlBar.Draw(BarPositionOnScreen, barSize, ref SilkyUI.TransformMatrix);
     }
 }

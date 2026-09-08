@@ -501,7 +501,7 @@ public partial class UIElementGroup : UIView
     public Vector2 ScrollOffset
     {
         get;
-        protected set
+        set
         {
             if (field == value) return;
             field = value;

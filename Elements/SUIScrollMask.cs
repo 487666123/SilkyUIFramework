@@ -1,4 +1,4 @@
-﻿namespace SilkyUIFramework.Elements;
+namespace SilkyUIFramework.Elements;
 
 public class SUIScrollMask : UIElementGroup
 {
@@ -19,14 +19,14 @@ public class SUIScrollMask : UIElementGroup
     {
         base.ResizeChildrenHeight();
 
-        switch (ScrollView.Direction)
+        switch (ScrollView.Orientation)
         {
-            case Direction.Horizontal:
-                ScrollView.ScrollBar?.SetHScrollRange(InnerBounds.Width, ScrollView.Container.OuterBounds.Width);
+            case Orientation.Horizontal:
+                ScrollView.SetHorizontalScrollSizes(InnerBounds.Width, ScrollView.Container.OuterBounds.Width);
                 break;
             default:
-            case Direction.Vertical:
-                ScrollView.ScrollBar?.SetVScrollRange(InnerBounds.Height, ScrollView.Container.OuterBounds.Height);
+            case Orientation.Vertical:
+                ScrollView.SetVerticalScrollSizes(InnerBounds.Height, ScrollView.Container.OuterBounds.Height);
                 break;
         }
     }

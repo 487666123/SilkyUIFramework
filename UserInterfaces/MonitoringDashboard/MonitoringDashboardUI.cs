@@ -20,7 +20,7 @@ public partial class MonitoringDashboardUI : BaseBody
         DragPanel.ControlTarget = this;
         TargetTable.ScrollBar.Width = new Dimension(8f);
         TargetTable.ScrollBar.BackgroundColor = new Color(65, 73, 80);
-        TargetTable.ScrollBar.BarColor = (new Color(154, 184, 199), new Color(114, 216, 171));
+        TargetTable.ScrollBar.Thumb.BarColor = (new Color(154, 184, 199), new Color(114, 216, 171));
 
 #if DEBUG
         Enabled = true;
