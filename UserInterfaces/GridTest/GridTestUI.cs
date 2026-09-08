@@ -48,8 +48,8 @@ public partial class GridTestUI : BaseBody
 
         DragPanel.ControlTarget = this;
         TestScroll.ScrollBar.BorderRadius = Vector4.Zero;
-        TestScroll.ScrollBar.BarBorderRadius = Vector4.Zero;
+        TestScroll.ScrollBar.Thumb.BorderRadius = Vector4.Zero;
         TestScroll.ScrollBar.BackgroundColor = Color.White * 0.25f;
-        TestScroll.ScrollBar.BarColor = (Color.White * 0.25f, Color.White * 0.5f);
+        TestScroll.ScrollBar.Thumb.BarColor = (Color.White * 0.25f, Color.White * 0.5f);
     }
 }
