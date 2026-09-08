@@ -75,7 +75,7 @@ public class Tween
     /// <summary>是否正在播放</summary>
     public bool IsPlaying => State == TweenState.Playing;
 
-    /// <summary>是否已结束</summary>
+    /// <summary>是否已结束（自然完成或被 Kill）</summary>
     public bool IsFinished => State == TweenState.Finished;
 
     /// <summary>
@@ -88,7 +88,13 @@ public class Tween
 
     #region 事件
 
-    /// <summary>进入 Finished 状态时触发（自然完成或 Kill 均触发）</summary>
+    /// <summary>所有循环自然播放完成时触发，先于 OnFinished；Kill 不触发。</summary>
+    public event Action OnCompleted;
+
+    /// <summary>被 Kill 终止时触发，先于 OnFinished；自然完成不触发。</summary>
+    public event Action OnKilled;
+
+    /// <summary>自然完成或 Kill 均触发，在对应的结束原因事件之后执行，最多触发一次。</summary>
     public event Action OnFinished;
 
     #endregion
@@ -244,16 +250,11 @@ public class Tween
     }
 
     /// <summary>
-    /// 终止 Tween。从任何状态调用均有效，进入 <see cref="TweenState.Finished"/>。
+    /// 终止尚未结束的 Tween，进入 <see cref="TweenState.Finished"/>。
+    /// 依次触发 <see cref="OnKilled"/> 和 <see cref="OnFinished"/>，已结束时不重复触发。
     /// <see cref="TweenManager"/> 会在下一帧自动回收。
     /// </summary>
-    public void Kill()
-    {
-        if (State == TweenState.Finished)
-            return;
-        State = TweenState.Finished;
-        OnFinished?.Invoke();
-    }
+    public void Kill() => Finish(completed: false);
 
     #endregion
 
@@ -301,6 +302,25 @@ public class Tween
 
     #region 内部方法
 
+    /// <summary>统一结束入口：先固定终止状态，再通知结束原因和通用清理事件。</summary>
+    private void Finish(bool completed)
+    {
+        if (IsFinished) return;
+
+        // 回调中再次调用 Kill、Play 或 Update，也不会重新结束或恢复此 Tween。
+        State = TweenState.Finished;
+        try
+        {
+            if (completed) OnCompleted?.Invoke();
+            else OnKilled?.Invoke();
+        }
+        finally
+        {
+            // 即使结束原因的回调抛出异常，也保留原有的通用清理通知。
+            OnFinished?.Invoke();
+        }
+    }
+
     /// <summary> 推进循环 </summary>
     private void AdvanceLoop()
     {
@@ -312,7 +332,7 @@ public class Tween
         }
 
         if (_completedLoops < _loopCount) ResetSteps();
-        else Kill();
+        else Finish(completed: true);
     }
 
     private void ResetSteps()

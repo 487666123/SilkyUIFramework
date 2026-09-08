@@ -20,11 +20,7 @@ public class SUIScrollContainer(SUIScrollView scrollView) : UIElementGroup
 /// <summary>
 /// 滚动方向。
 /// </summary>
-public enum Orientation
-{
-    Horizontal,
-    Vertical,
-}
+public enum Orientation { Horizontal, Vertical, }
 
 [XmlElementMapping("ScrollView")]
 public class SUIScrollView : UIElementGroup
@@ -59,7 +55,7 @@ public class SUIScrollView : UIElementGroup
     private Vector2 _targetScrollPosition;
 
     /// <summary>
-    /// 逻辑上的目标滚动位置。ScrollBy 基于它累加，Tween 只负责追赶它。
+    /// 当前滚动目标在有效范围内的投影，供普通滚动操作使用。
     /// </summary>
     public Vector2 TargetScrollPosition =>
         Vector2.Clamp(_targetScrollPosition, Vector2.Zero, MaxScrollPosition);
@@ -72,19 +68,19 @@ public class SUIScrollView : UIElementGroup
     /// <summary>
     /// 当前已经应用到内容容器的滚动位置。
     /// </summary>
-    public virtual Vector2 CurrentScrollPosition
+    public virtual Vector2 ScrollPosition
     {
         get;
         set
         {
-            field = Vector2.Clamp(value, Vector2.Zero, MaxScrollPosition);
-
-            // 内容位置和滚动条显示都由当前滚动位置驱动。
+            if (field == value) return;
+            field = value;
             Container.ScrollOffset = -field;
-            SyncScrollBar();
             ScrollPositionUpdated?.Invoke(field);
         }
     }
+
+    #region ScrollTo
 
     /// <summary>
     /// 将滚动目标设置到起点。
@@ -117,18 +113,47 @@ public class SUIScrollView : UIElementGroup
     /// </summary>
     public void ScrollTo(Vector2 position, bool animation = true)
     {
-        var targetPosition = Vector2.Clamp(position, Vector2.Zero, MaxScrollPosition);
-        _targetScrollPosition = targetPosition;
-
         _tween?.Kill();
         if (animation)
         {
             var tween = _tween = CreateTween().Parallel().SetTrans(TransitionType.Quart).SetEase(EaseType.Out);
-            tween.MemberTo(this, nameof(CurrentScrollPosition), targetPosition, 0.2f);
+            tween.MemberTo(this, nameof(ScrollPosition), position, 0.15f);
+            tween.OnCompleted += () =>
+            {
+                position = Vector2.Clamp(position, Vector2.Zero, MaxScrollPosition);
+                if (ScrollPosition != position)
+                {
+                    tween = _tween = CreateTween().Parallel().SetTrans(TransitionType.Quart).SetEase(EaseType.Out);
+                    tween.MemberTo(this, nameof(_targetScrollPosition), position, 0.15f);
+                    tween.MemberTo(this, nameof(ScrollPosition), position, 0.15f);
+                }
+            };
             return;
         }
 
-        CurrentScrollPosition = targetPosition;
+        ScrollPosition = position;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// 将未钳制的逻辑目标转换为实际显示位置。
+    /// </summary>
+    private Vector2 GetOverscrollPosition(Vector2 target)
+    {
+        var clampedTarget = Vector2.Clamp(target, Vector2.Zero, MaxScrollPosition);
+        var overscroll = target - clampedTarget;
+        return clampedTarget + new Vector2(
+            GetOverscrollDistance(overscroll.X, ViewportSize.X),
+            GetOverscrollDistance(overscroll.Y, ViewportSize.Y));
+    }
+
+    /// <summary>
+    /// 根据越界距离计算实际显示的橡皮筋位移。
+    /// </summary>
+    private float GetOverscrollDistance(float distance, float viewportSize)
+    {
+        return viewportSize * (distance / (viewportSize * 20f + distance));
     }
 
     #endregion
@@ -138,12 +163,24 @@ public class SUIScrollView : UIElementGroup
     /// <summary>
     /// 视口尺寸，由 <see cref="SUIScrollMask"/> 在布局阶段更新。
     /// </summary>
-    public Vector2 ViewportSize { get; private set; } = Vector2.One;
+    public Vector2 ViewportSize
+    {
+        get; private set
+        {
+            field = Vector2.Max(Vector2.One, value);
+        }
+    } = Vector2.One;
 
     /// <summary>
     /// 内容尺寸，由 <see cref="SUIScrollMask"/> 在布局阶段更新。
     /// </summary>
-    public Vector2 ContentSize { get; private set; } = Vector2.One;
+    public Vector2 ContentSize
+    {
+        get; private set
+        {
+            field = Vector2.Max(Vector2.One, value);
+        }
+    } = Vector2.One;
 
     /// <summary>
     /// 当前内容相对于视口可移动的最大距离。
@@ -151,23 +188,22 @@ public class SUIScrollView : UIElementGroup
     public Vector2 MaxScrollPosition => Vector2.Max(Vector2.Zero, ContentSize - ViewportSize);
 
     /// <summary>
-    /// 更新视口和内容尺寸，并重新钳制当前滚动位置。
+    /// 更新视口和内容尺寸，并将滚动目标钳制到新的有效范围。
+    /// 不立即修改显示位置；若显示位置越界，后续更新会按回弹条件收回有效范围。
     /// </summary>
     public void SetScrollSizes(Vector2 viewportSize, Vector2 contentSize)
     {
-        ViewportSize = Vector2.Max(Vector2.One, viewportSize);
-        ContentSize = Vector2.Max(Vector2.One, contentSize);
+        ViewportSize = viewportSize;
+        ContentSize = contentSize;
 
-        var clampedTarget = Vector2.Clamp(
-            _targetScrollPosition,
-            Vector2.Zero,
-            MaxScrollPosition);
+        var clampedTarget = Vector2.Clamp(_targetScrollPosition, Vector2.Zero, MaxScrollPosition);
 
         if (clampedTarget != _targetScrollPosition)
+        {
             _tween?.Kill();
+        }
 
         _targetScrollPosition = clampedTarget;
-        CurrentScrollPosition = CurrentScrollPosition;
     }
 
     public void SetHorizontalScrollSizes(float viewportWidth, float contentWidth) =>
@@ -222,6 +258,8 @@ public class SUIScrollView : UIElementGroup
             ScrollTo(MaxScrollPosition * vec2, false);
         };
 
+        ScrollPositionUpdated += SyncScrollBar;
+
         ConfigureOrientationLayout();
     }
 
@@ -260,10 +298,21 @@ public class SUIScrollView : UIElementGroup
     /// <summary>
     /// 根据当前滚动位置同步滑块的尺寸比例和位置。
     /// </summary>
-    private void SyncScrollBar()
+    private void SyncScrollBar(Vector2 currentScrollPosition)
     {
-        ScrollBar.ViewportRatio = ViewportSize / ContentSize;
-        ScrollBar.Value = Vector2.Clamp(CurrentScrollPosition / MaxScrollPosition, Vector2.Zero, Vector2.One);
+        // 计算越界距离（两端都可能越界，取绝对值累加）
+        var overscroll = Vector2.Max(Vector2.Zero, -currentScrollPosition) +
+                         Vector2.Max(Vector2.Zero, currentScrollPosition - MaxScrollPosition);
+
+        // 虚拟内容尺寸 = 原内容 + 越界距离，内容不足视口时保持满尺寸。
+        var virtualContent = ContentSize + overscroll;
+
+        ScrollBar.ViewportRatio = Vector2.Min(ViewportSize / virtualContent, Vector2.One);
+        var max = MaxScrollPosition;
+        var normalizedPosition = new Vector2(
+            max.X > 0f ? currentScrollPosition.X / max.X : 0f,
+            max.Y > 0f ? currentScrollPosition.Y / max.Y : 0f);
+        ScrollBar.Value = Vector2.Clamp(normalizedPosition, Vector2.Zero, Vector2.One);
     }
 
     #endregion
@@ -272,42 +321,40 @@ public class SUIScrollView : UIElementGroup
 
     public override void OnMouseWheel(UIScrollWheelEvent evt)
     {
-        // 嵌套滚动视图已经消费的滚轮事件不能再次处理。
-        if (evt.ScrollElement != null) return;
-
-        // 当前视图到达边界时不锁定事件，让父级滚动视图继续处理。
-        if (!CanScrollWithWheel(evt.ScrollDelta))
+        if (evt.ScrollElement is null)
         {
-            base.OnMouseWheel(evt);
-            return;
+            var offset = Orientation == Orientation.Horizontal
+                ? new Vector2(-evt.ScrollDelta, 0)
+                : new Vector2(0, -evt.ScrollDelta);
+
+            _targetScrollPosition += offset;
+            var displayPosition = GetOverscrollPosition(_targetScrollPosition);
+            ScrollTo(displayPosition);
+
+            if (CanScrollWithWheel(evt.ScrollDelta))
+                evt.LockScroll(this);
         }
 
-        if (Orientation == Orientation.Horizontal)
-            HScrollBy(-evt.ScrollDelta);
-        else
-            VScrollBy(-evt.ScrollDelta);
-
-        evt.LockScroll(this);
         base.OnMouseWheel(evt);
     }
 
     /// <summary>
-    /// 判断当前视图是否能沿滚轮方向继续移动。
+    /// 仅判断逻辑目标能否在有效范围内沿滚轮方向移动，不考虑橡皮筋位移或动画进度。
     /// </summary>
     private bool CanScrollWithWheel(int scrollDelta)
     {
         if (scrollDelta == 0) return false;
 
-        var targetPosition = Orientation == Orientation.Horizontal
-            ? TargetScrollPosition.X
-            : TargetScrollPosition.Y;
-        var maxPosition = Orientation == Orientation.Horizontal
+        var max = Orientation == Orientation.Horizontal
             ? MaxScrollPosition.X
             : MaxScrollPosition.Y;
+        if (max <= 0f) return false;
 
-        return scrollDelta > 0
-            ? targetPosition > 0f
-            : targetPosition < maxPosition;
+        var target = Orientation == Orientation.Horizontal
+            ? TargetScrollPosition.X
+            : TargetScrollPosition.Y;
+
+        return scrollDelta > 0 ? target > 0f : target < max;
     }
 
     #endregion
