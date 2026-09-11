@@ -57,7 +57,7 @@ public class BlurMakeSystem : ILoadable
             orig(self);
         };
 
-        On_Main.DrawInterface += static (On_Main.orig_DrawInterface orig, Main self, GameTime gameTime) =>
+        On_Main.DrawInterface += static (orig, self, gameTime) =>
         {
             if (!BlurAvailable)
             {
@@ -67,7 +67,7 @@ public class BlurMakeSystem : ILoadable
 
             if (!SingleBlur)
             {
-                RefreshBlur(Main.screenTarget);
+                RefreshBlur([Main.skyTarget, Main.screenTarget]);
                 orig(self, gameTime);
                 return;
             }
@@ -89,47 +89,6 @@ public class BlurMakeSystem : ILoadable
     }
 
     /// <summary>
-    /// 使用指定画面和当前配置刷新模糊结果。调用前绘制批次应处于关闭状态。
-    /// </summary>
-    public static void RefreshBlur(RenderTarget2D source)
-    {
-        BlurHelper.Apply(source, BlurRenderTarget,
-            BlurIterationCount, IterationOffsetMultiplier, BlurMixingNumber);
-    }
-
-    /// <summary>
-    /// 切换到界面捕获目标，复制游戏画面并保留批次供后续绘制使用。
-    /// </summary>
-    private static void BeginInterfaceCapture()
-    {
-        var batch = Main.spriteBatch;
-        var device = Main.graphics.GraphicsDevice;
-
-        batch.End();
-        _originalRenderTargetBindings = device.GetRenderTargets();
-
-        device.SetRenderTarget(UserInterfaceRenderTarget);
-
-        batch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, Matrix.Identity);
-        batch.Draw(Main.screenTarget, Vector2.Zero, null, Color.White);
-    }
-
-    /// <summary>
-    /// 恢复捕获前的目标，并合成捕获的完整画面。
-    /// </summary>
-    private static void EndInterfaceCapture()
-    {
-        var batch = Main.spriteBatch;
-        var device = Main.graphics.GraphicsDevice;
-
-        device.RestoreRenderTargets(_originalRenderTargetBindings);
-
-        batch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, Matrix.Identity);
-        batch.Draw(UserInterfaceRenderTarget, Vector2.Zero, null, Color.White);
-        batch.End();
-    }
-
-    /// <summary>
     /// 根据屏幕尺寸和当前模式准备模糊与界面捕获纹理。
     /// </summary>
     private static void EnsureRenderTargets()
@@ -146,6 +105,48 @@ public class BlurMakeSystem : ILoadable
         {
             UserInterfaceRenderTarget = EnsureTargetSize(UserInterfaceRenderTarget, sourceWidth, sourceHeight);
         }
+    }
+
+    /// <summary>
+    /// 切换到界面捕获目标，复制游戏画面并保留批次供后续绘制使用。
+    /// </summary>
+    private static void BeginInterfaceCapture()
+    {
+        var batch = Main.spriteBatch;
+        var device = Main.graphics.GraphicsDevice;
+
+        batch.End();
+        _originalRenderTargetBindings = device.GetRenderTargets();
+
+        device.SetRenderTarget(UserInterfaceRenderTarget);
+
+        batch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, Matrix.Identity);
+        batch.Draw(Main.skyTarget, Vector2.Zero, null, Color.White);
+        batch.Draw(Main.screenTarget, Vector2.Zero, null, Color.White);
+    }
+
+    /// <summary>
+    /// 使用指定画面和当前配置刷新模糊结果。调用前绘制批次应处于关闭状态。
+    /// </summary>
+    public static void RefreshBlur(RenderTarget2D[] source)
+    {
+        BlurHelper.Apply(source, BlurRenderTarget,
+            BlurIterationCount, IterationOffsetMultiplier, BlurMixingNumber);
+    }
+
+    /// <summary>
+    /// 恢复捕获前的目标，并合成捕获的完整画面。
+    /// </summary>
+    private static void EndInterfaceCapture()
+    {
+        var batch = Main.spriteBatch;
+        var device = Main.graphics.GraphicsDevice;
+
+        device.RestoreRenderTargets(_originalRenderTargetBindings);
+
+        batch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, Matrix.Identity);
+        batch.Draw(UserInterfaceRenderTarget, Vector2.Zero, null, Color.White);
+        batch.End();
     }
 
     /// <summary>
