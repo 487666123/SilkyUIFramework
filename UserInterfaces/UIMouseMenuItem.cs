@@ -1,6 +1,6 @@
 ﻿namespace SilkyUIFramework.UserInterfaces;
 
-public class MouseMenuItem : UIElementGroup
+public class UIMouseMenuItem : UIElementGroup
 {
     public UITextView TextView { get; }
 
@@ -9,7 +9,7 @@ public class MouseMenuItem : UIElementGroup
 
     public MouseMenuCallback MouseMenuCallback { get; set; }
 
-    public MouseMenuItem(string content, int menuIndex)
+    public UIMouseMenuItem(string content, int menuIndex)
     {
         Content = content; MenuIndex = menuIndex;
 
@@ -28,9 +28,10 @@ public class MouseMenuItem : UIElementGroup
 
     public override void OnLeftMouseDown(UIMouseEvent evt)
     {
-        if ((MouseMenuCallback?.Invoke(Content, MenuIndex) ?? true) && GetAncestor() is MouseMenuUI menu)
+        if ((MouseMenuCallback?.Invoke(Content, MenuIndex) ?? true) &&
+            GetAncestor() is MouseMenuUI menu)
         {
-            menu.Enabled = false;
+            menu.Switch(false);
         }
 
         base.OnLeftMouseDown(evt);

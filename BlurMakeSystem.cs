@@ -1,141 +1,166 @@
-﻿namespace SilkyUIFramework;
+namespace SilkyUIFramework;
 
 /// <summary>
-/// 模糊效果处理系统，继承自 ModSystem
-/// 负责创建和管理模糊渲染目标
+/// 调度背景模糊与界面捕获，管理所需的渲染目标和模糊配置。
 /// </summary>
 public class BlurMakeSystem : ILoadable
 {
     public static bool EnableBlur { get; internal set; } = true;
 
     /// <summary>
-    /// 单点模糊, 每个 UI 都单独计算模糊
+    /// 每个 UI 单独计算模糊，使用捕获的界面画面作为输入。
     /// </summary>
     public static bool SingleBlur { get; internal set; } = false;
 
     /// <summary>
-    /// 开启复古和迷幻效果后将不可用
+    /// 开启复古和迷幻效果后将不可用。
     /// </summary>
     public static bool BlurAvailable => EnableBlur && Lighting.NotRetro;
 
+    /// <summary> 模糊纹理尺寸的降采样除数。 </summary>
     public static float BlurZoomMultiplierDenominator
     {
         get; internal set => field = Math.Max(value, 1f);
     } = 2f;
 
-    /// <summary> 模糊迭代次数 </summary>
+    /// <summary> 模糊迭代次数。 </summary>
     public static int BlurIterationCount { get; internal set; } = 3;
 
-    /// <summary> 模糊偏移乘数 </summary>
+    /// <summary> 相邻迭代的偏移倍率。 </summary>
     public static float IterationOffsetMultiplier { get; internal set; } = 2f;
+
+    /// <summary> 模糊混合档位。 </summary>
     public static BlurMixingNumber BlurMixingNumber { get; internal set; } = BlurMixingNumber.Three;
 
-    /// <summary>
-    /// 静态模糊渲染目标，用于存储模糊后的画面
-    /// </summary>
+    /// <summary> 存储模糊结果的降采样纹理。 </summary>
     public static RenderTarget2D BlurRenderTarget { get; private set; }
 
+    /// <summary> 捕获游戏画面和后续界面绘制的全尺寸纹理。 </summary>
     public static RenderTarget2D UserInterfaceRenderTarget { get; private set; }
 
-    public void Unload()
-    {
-        Main.RunOnMainThread(() => BlurRenderTarget?.Dispose());
-    }
+    private static RenderTargetBinding[] _originalRenderTargetBindings;
 
     public void Load(Mod mod)
     {
-        On_Main.DrawPlayerChatBubbles += On_Main_DrawPlayerChatBubbles;
-
-        On_Main.DrawInterface += On_Main_DrawInterface;
-    }
-
-    private void On_Main_DrawPlayerChatBubbles(On_Main.orig_DrawPlayerChatBubbles orig, Main self)
-    {
-        if (BlurAvailable)
+        On_Main.DrawPlayerChatBubbles += static (orig, self) =>
         {
-            WatchRenderTarget();
-
-            if (SingleBlur)
+            if (BlurAvailable)
             {
-                var batch = Main.spriteBatch;
-                var device = Main.graphics.GraphicsDevice;
+                EnsureRenderTargets();
 
-                OriginalRenderTargetBindings = device.GetRenderTargets();
-                device.SetRenderTarget(UserInterfaceRenderTarget);
-
-                batch.End();
-
-                batch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, Matrix.Identity);
-                batch.Draw(Main.screenTarget, Vector2.Zero, null, Color.White);
+                if (SingleBlur)
+                {
+                    BeginInterfaceCapture();
+                }
             }
-        }
 
-        orig(self);
+            orig(self);
+        };
+
+        On_Main.DrawInterface += static (On_Main.orig_DrawInterface orig, Main self, GameTime gameTime) =>
+        {
+            if (!BlurAvailable)
+            {
+                orig(self, gameTime);
+                return;
+            }
+
+            if (!SingleBlur)
+            {
+                RefreshBlur(Main.screenTarget);
+                orig(self, gameTime);
+                return;
+            }
+
+            orig(self, gameTime);
+            EndInterfaceCapture();
+        };
     }
 
-    private void On_Main_DrawInterface(On_Main.orig_DrawInterface orig, Main self, GameTime gameTime)
+    public void Unload()
     {
-        if (!BlurAvailable)
+        Main.RunOnMainThread(() =>
         {
-            orig(self, gameTime);
-            return;
-        }
+            BlurRenderTarget?.Dispose();
+            BlurRenderTarget = null;
+            UserInterfaceRenderTarget?.Dispose();
+            UserInterfaceRenderTarget = null;
+        });
+    }
 
+    /// <summary>
+    /// 使用指定画面和当前配置刷新模糊结果。调用前绘制批次应处于关闭状态。
+    /// </summary>
+    public static void RefreshBlur(RenderTarget2D source)
+    {
+        BlurHelper.Apply(source, BlurRenderTarget,
+            BlurIterationCount, IterationOffsetMultiplier, BlurMixingNumber);
+    }
+
+    /// <summary>
+    /// 切换到界面捕获目标，复制游戏画面并保留批次供后续绘制使用。
+    /// </summary>
+    private static void BeginInterfaceCapture()
+    {
         var batch = Main.spriteBatch;
-
-        if (!SingleBlur)
-        {
-            KawaseBlur(Main.screenTarget);
-            orig(self, gameTime);
-            return;
-        }
-
-        orig(self, gameTime);
-
         var device = Main.graphics.GraphicsDevice;
-        device.RestoreRenderTargets(OriginalRenderTargetBindings);
+
+        batch.End();
+        _originalRenderTargetBindings = device.GetRenderTargets();
+
+        device.SetRenderTarget(UserInterfaceRenderTarget);
+
+        batch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, Matrix.Identity);
+        batch.Draw(Main.screenTarget, Vector2.Zero, null, Color.White);
+    }
+
+    /// <summary>
+    /// 恢复捕获前的目标，并合成捕获的完整画面。
+    /// </summary>
+    private static void EndInterfaceCapture()
+    {
+        var batch = Main.spriteBatch;
+        var device = Main.graphics.GraphicsDevice;
+
+        device.RestoreRenderTargets(_originalRenderTargetBindings);
 
         batch.Begin(SpriteSortMode.Immediate, null, null, null, null, null, Matrix.Identity);
         batch.Draw(UserInterfaceRenderTarget, Vector2.Zero, null, Color.White);
         batch.End();
     }
 
-    private static void WatchRenderTarget()
+    /// <summary>
+    /// 根据屏幕尺寸和当前模式准备模糊与界面捕获纹理。
+    /// </summary>
+    private static void EnsureRenderTargets()
     {
-        var originalWidth = Main.screenTarget.Width;
-        var originalHeight = Main.screenTarget.Height;
+        var sourceWidth = Main.screenTarget.Width;
+        var sourceHeight = Main.screenTarget.Height;
 
-        var width = (int)Math.Ceiling(originalWidth / BlurZoomMultiplierDenominator);
-        var height = (int)Math.Ceiling(originalHeight / BlurZoomMultiplierDenominator);
+        var blurTargetWidth = (int)Math.Ceiling(sourceWidth / BlurZoomMultiplierDenominator);
+        var blurTargetHeight = (int)Math.Ceiling(sourceHeight / BlurZoomMultiplierDenominator);
 
-        var device = Main.graphics.GraphicsDevice;
+        BlurRenderTarget = EnsureTargetSize(BlurRenderTarget, blurTargetWidth, blurTargetHeight);
 
-        if (BlurRenderTarget is null || BlurRenderTarget.Width != width || BlurRenderTarget.Height != height)
+        if (SingleBlur)
         {
-            BlurRenderTarget?.Dispose();
-            BlurRenderTarget = new RenderTarget2D(
-                Main.graphics.GraphicsDevice, width, height, false, device.PresentationParameters.BackBufferFormat, DepthFormat.None);
-        }
-
-        if (!SingleBlur) return;
-
-        if (UserInterfaceRenderTarget is null || UserInterfaceRenderTarget.Width != originalWidth || UserInterfaceRenderTarget.Height != originalHeight)
-        {
-            UserInterfaceRenderTarget?.Dispose();
-            UserInterfaceRenderTarget = new RenderTarget2D
-                (Main.graphics.GraphicsDevice, originalWidth, originalHeight, false, device.PresentationParameters.BackBufferFormat, DepthFormat.None);
+            UserInterfaceRenderTarget = EnsureTargetSize(UserInterfaceRenderTarget, sourceWidth, sourceHeight);
         }
     }
 
-    private static RenderTargetBinding[] OriginalRenderTargetBindings { get; set; }
-
-    public static void KawaseBlur()
+    /// <summary>
+    /// 判断 RenderTarget2D 是不是指定的尺寸，不是就释放，同时创建一个新的 RenderTarget2D
+    /// </summary>
+    private static RenderTarget2D EnsureTargetSize(RenderTarget2D target, int width, int height)
     {
-        BlurHelper.KawaseBlur(UserInterfaceRenderTarget, BlurRenderTarget, BlurIterationCount, IterationOffsetMultiplier, BlurZoomMultiplierDenominator, BlurMixingNumber);
-    }
+        if (target is not null &&
+            target.Width == width &&
+            target.Height == height) return target;
 
-    public static void KawaseBlur(RenderTarget2D renderTarget)
-    {
-        BlurHelper.KawaseBlur(renderTarget, BlurRenderTarget, BlurIterationCount, IterationOffsetMultiplier, BlurZoomMultiplierDenominator, BlurMixingNumber);
+        target?.Dispose();
+        var graphicsDevice = Main.graphics.GraphicsDevice;
+
+        return new RenderTarget2D(graphicsDevice, width, height, false,
+            graphicsDevice.PresentationParameters.BackBufferFormat, DepthFormat.None);
     }
 }

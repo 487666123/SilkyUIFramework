@@ -116,8 +116,7 @@ public abstract partial class BaseBody
 
             device.Viewport = new Viewport(-rect.X, -rect.Y, rect.Right, rect.Bottom);
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null,
-                SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
+            spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
 
             DrawBodyCore(gameTime, spriteBatch);
             spriteBatch.End();
@@ -128,15 +127,16 @@ public abstract partial class BaseBody
                 SilkyUI.ScissorRasterizerState, null, RenderTargetMatrix);
             spriteBatch.Draw(renderTarget, new Vector2(rect.X, rect.Y), null, Color.White * Opacity, 0f, Vector2.Zero, Vector2.One, 0, 0);
 
-            if (captureScreenshot)
-            {
-                SaveScreenshot(renderTarget);
-            }
+            // 保存截图
+            if (captureScreenshot) SaveScreenshot(renderTarget);
         }
         finally
         {
             renderTargetPool.Return(renderTarget);
             _captureRequested = false;
+
+            spriteBatch.End();
+            spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, null, null, Main.UIScaleMatrix);
         }
     }
 
@@ -158,7 +158,7 @@ public abstract partial class BaseBody
 
         using var stream = new FileStream(savePath, FileMode.Create);
         renderTarget.SaveAsPng(stream, renderTarget.Width, renderTarget.Height);
-        Main.NewText($"ScreenshotSavePath Save Path: {savePath}");
+        Main.NewText($"Screenshot Save Path: {savePath}");
     }
 
     /// <summary>
@@ -168,30 +168,18 @@ public abstract partial class BaseBody
     /// <param name="spriteBatch">当前绘制批次。</param>
     protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
-        if (ShouldDrawBlur())
+        if (EnableBlur && BlurMakeSystem.BlurAvailable && !Main.gameMenu)
         {
-            PrepareBlur(spriteBatch, SilkyUI.TransformMatrix);
+            if (BlurMakeSystem.SingleBlur)
+            {
+                spriteBatch.End();
+                BlurMakeSystem.RefreshBlur(BlurMakeSystem.UserInterfaceRenderTarget);
+                spriteBatch.Begin(0, null, null, null, SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
+            }
             DrawBlurRegions();
         }
 
         base.Draw(gameTime, spriteBatch);
-    }
-
-    /// <summary>
-    /// 判断当前帧是否满足模糊绘制条件。
-    /// </summary>
-    private bool ShouldDrawBlur() => EnableBlur && BlurMakeSystem.BlurAvailable && !Main.gameMenu;
-
-    /// <summary>
-    /// 在单次全局模糊模式下，刷新模糊纹理并重建批次状态。
-    /// </summary>
-    private static void PrepareBlur(SpriteBatch spriteBatch, Matrix transformMatrix)
-    {
-        if (!BlurMakeSystem.SingleBlur) return;
-
-        spriteBatch.End();
-        BlurMakeSystem.KawaseBlur();
-        spriteBatch.Begin(0, null, null, null, SilkyUI.ScissorRasterizerState, null, transformMatrix);
     }
 
     /// <summary>

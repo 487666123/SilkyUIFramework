@@ -72,7 +72,7 @@ public static class SDFRectangle
         var edgePadding = 1 / matrix.M11;
         matrix = PrepareSdfMatrix(matrix);
         var device = GraphicsDevice;
-        var screenSize = new Vector2(device.Viewport.Width, device.Viewport.Height);
+        var screenSize = new Vector2(device.PresentationParameters.BackBufferWidth, device.PresentationParameters.BackBufferHeight);
 
         var effect = Effect;
 

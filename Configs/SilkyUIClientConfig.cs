@@ -23,7 +23,6 @@ public class SilkyUIClientConfig : ModConfig
     [CustomModConfigItem(typeof(DeathTextOffsetPreview))]
     public float DeathTextOffset { get; set; }
 
-    //[Header("Blur Settings")]
     [DefaultValue(true)]
     public bool EnableBlur { get; set; }
 
