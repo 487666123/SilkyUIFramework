@@ -11,7 +11,7 @@ public static class BlurHelper
     /// 将源图复制到目标并执行模糊。调用前绘制批次应处于关闭状态。
     /// 降采样尺寸由目标纹理决定。
     /// </summary>
-    public static void Apply(RenderTarget2D[] sources, RenderTarget2D destination,
+    public static void Apply(ReadOnlySpan<RenderTarget2D> sources, RenderTarget2D destination,
         int iterationCount, float offsetMultiplier, BlurMixingNumber mixingNumber)
     {
         CopySource(sources, destination);
@@ -22,7 +22,7 @@ public static class BlurHelper
     /// <summary>
     /// 复制源图，为后续模糊准备目标纹理。
     /// </summary>
-    private static void CopySource(RenderTarget2D[] sources, RenderTarget2D destination)
+    private static void CopySource(ReadOnlySpan<RenderTarget2D> sources, RenderTarget2D destination)
     {
         var batch = Main.spriteBatch;
         var device = Main.graphics.GraphicsDevice;

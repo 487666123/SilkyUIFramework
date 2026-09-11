@@ -173,7 +173,7 @@ public abstract partial class BaseBody
             if (BlurMakeSystem.SingleBlur)
             {
                 spriteBatch.End();
-                BlurMakeSystem.RefreshBlur([BlurMakeSystem.UserInterfaceRenderTarget]);
+                BlurMakeSystem.ApplyBlur([BlurMakeSystem.UserInterfaceRenderTarget]);
                 spriteBatch.Begin(0, null, null, null, SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
             }
             DrawBlurRegions();
