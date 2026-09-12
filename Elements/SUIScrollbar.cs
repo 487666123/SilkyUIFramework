@@ -24,9 +24,11 @@ public class SUIScrollbarThumb : UIView
     }
 }
 
-public class SUIScrollbar : UIElementGroup
+public class SUIScrollbar : UIDragControl
 {
     public readonly SUIScrollbarThumb Thumb = new();
+
+    protected override UIView DragThumb => Thumb;
 
     public event EventHandler<Vector2> Drag;
 
@@ -71,40 +73,20 @@ public class SUIScrollbar : UIElementGroup
         Thumb.Join(this);
     }
 
-    public Vector2 GetValueAtMousePosition()
-    {
-        var start = InnerBounds.Position + Thumb.Bounds.Size / 2f;
-        var space = InnerBounds.Size - Thumb.Bounds.Size;
+    private Vector2 _valueAtPress;
 
-        return (Main.MouseScreen - start) / space;
+    protected override void SetValueAtMousePosition()
+    {
+        Value = GetValueAtMousePosition();
     }
 
-    private Vector2 _mousePositionAtPress;
-    private Vector2 _valuetAtPress;
-
-    public override void OnLeftMouseDown(UIMouseEvent evt)
+    protected override void CaptureValueAtPress()
     {
-        base.OnLeftMouseDown(evt);
-
-        // 支持直接点条确定位置
-        if (evt.Source != Thumb)
-            Value = GetValueAtMousePosition();
-
-        // 记录按下时的状态
-        _valuetAtPress = Value;
-        _mousePositionAtPress = evt.MousePosition;
+        _valueAtPress = Value;
     }
 
-    protected override void UpdateStatus(GameTime gameTime)
+    protected override void UpdateValueByDrag(Vector2 offset, Vector2 availableSpace)
     {
-        base.UpdateStatus(gameTime);
-
-        if (LeftMousePressed)
-        {
-            var space = (Vector2)(InnerBounds.Size - Thumb.Bounds.Size);
-            var offset = Main.MouseScreen - _mousePositionAtPress;
-
-            OnDrag(_valuetAtPress + offset / space);
-        }
+        OnDrag(_valueAtPress + offset / availableSpace);
     }
 }

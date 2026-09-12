@@ -46,6 +46,9 @@ internal sealed class TweenProperty<TTarget, TValue> : TweenEntry
     /// <summary>是否已从 getter 捕获起始值</summary>
     private bool _fromCaptured;
 
+    /// <summary>当前循环是否反向播放</summary>
+    private bool _reverse;
+
     internal TweenProperty(
         TTarget target,
         Action<TTarget, TValue> setter,
@@ -75,9 +78,12 @@ internal sealed class TweenProperty<TTarget, TValue> : TweenEntry
             _fromCaptured = true;
         }
 
+        TValue from = _reverse ? _to : _from;
+        TValue to = _reverse ? _from : _to;
+
         if (Duration <= 0f)
         {
-            _setter(_target, _to);
+            _setter(_target, to);
             IsCompleted = true;
             return;
         }
@@ -86,18 +92,21 @@ internal sealed class TweenProperty<TTarget, TValue> : TweenEntry
 
         if (rawT >= 1f)
         {
-            _setter(_target, _to);
+            _setter(_target, to);
             IsCompleted = true;
             return;
         }
 
         float easedT = ApplyEasing(rawT);
-        _setter(_target, _lerpFunc(_from, _to, easedT));
+        _setter(_target, _lerpFunc(from, to, easedT));
     }
 
-    internal override void Reset()
+    internal override void Reset(bool reverse)
     {
-        base.Reset();
-        _fromCaptured = false;
+        base.Reset(reverse);
+        _reverse = reverse;
+
+        if (_fromCaptured)
+            _setter(_target, reverse ? _to : _from);
     }
 }

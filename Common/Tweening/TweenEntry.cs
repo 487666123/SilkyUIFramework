@@ -45,11 +45,14 @@ public abstract class TweenEntry
     /// <summary>是否已完成（内部使用）</summary>
     internal bool IsCompleted;
 
+    /// <summary>该条目完成一轮所需的有效时间（秒）</summary>
+    internal virtual float TotalDuration => Delay + Duration;
+
     /// <summary>每帧调用，由 Tween.Update 驱动</summary>
     internal abstract void Tick(float delta);
 
-    /// <summary>重置条目到初始状态</summary>
-    internal virtual void Reset()
+    /// <summary>重置条目到指定播放方向的初始状态</summary>
+    internal virtual void Reset(bool reverse)
     {
         Elapsed = 0;
         IsCompleted = false;

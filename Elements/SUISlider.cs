@@ -1,4 +1,4 @@
-﻿using System.Windows.Input;
+using System.Windows.Input;
 using SilkyUIFramework.Animation;
 
 namespace SilkyUIFramework.Elements;
@@ -27,6 +27,8 @@ public class SUISliderTrack : UIElementGroup
 {
     public SUISliderTrackProgress ProgressBar { get; }
 
+    public Orientation Orientation { get; set; } = Orientation.Horizontal;
+
     public SUISliderTrack()
     {
         Positioning = Positioning.Absolute;
@@ -48,7 +50,10 @@ public class SUISliderTrack : UIElementGroup
 
         var minSize = Math.Min(Bounds.Width, Bounds.Height);
 
-        Width = new Dimension(-(minSize), 1f);
+        if (Orientation == Orientation.Horizontal)
+            Width = new Dimension(-minSize, 1f);
+        else
+            Height = new Dimension(-minSize, 1f);
 
         BorderRadius = new(minSize / 2f);
         ProgressBar.BorderRadius = new(Math.Min(ProgressBar.Bounds.Width, ProgressBar.Bounds.Height) / 2f);
@@ -61,6 +66,8 @@ public class SUISliderTrack : UIElementGroup
 /// </summary>
 public class SUISliderThumb : UIView
 {
+    public Orientation Orientation { get; set; } = Orientation.Horizontal;
+
     private readonly struct ThumbAnimationArgs(float border) : IInterpolable<ThumbAnimationArgs>
     {
         public float Border { get; } = border;
@@ -98,7 +105,10 @@ public class SUISliderThumb : UIView
 
         BorderRadius = new(Math.Min(Bounds.Width, Bounds.Height) / 2f - 0.75f);
 
-        SetWidth(Bounds.Height);
+        if (Orientation == Orientation.Horizontal)
+            SetWidth(Bounds.Height);
+        else
+            SetHeight(Bounds.Width);
     }
 }
 
@@ -106,26 +116,39 @@ public class SUISliderThumb : UIView
 /// 滑块条
 /// </summary>
 [XmlElementMapping("Slider")]
-public class SUISlider : UIElementGroup
+public class SUISlider : UIDragControl
 {
     public SUISliderThumb Thumb { get; }
     public SUISliderTrack Track { get; }
 
-    public event EventHandler<float> ValueChanged;
+    protected override UIView DragThumb => Thumb;
 
-    public float Value
+    public Orientation Orientation
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            field = value;
+            ConfigureOrientationLayout();
+        }
+    } = Orientation.Horizontal;
+
+    public event EventHandler<Vector2> ValueChanged;
+
+    public Vector2 Value
     {
         get => field;
         set
         {
-            var clamped = Math.Clamp(value, 0f, 1f);
-            if (field == clamped) return;
-            field = clamped;
+            var normalized = NormalizeValue(value);
+            if (field == normalized) return;
+            field = normalized;
             OnValueChanged(field);
         }
     }
 
-    public float Step
+    public Vector2 Step
     {
         get; set
         {
@@ -146,22 +169,29 @@ public class SUISlider : UIElementGroup
     /// <para/>
     /// 因此，将核心更新逻辑置于父类方法中，并在触发事件前完成，是更一致且可维护的设计方式。
     /// </summary>
-    protected virtual void OnValueChanged(float value)
+    protected virtual void OnValueChanged(Vector2 value)
     {
-        Thumb?.SetLeft(0f, 0f, value);
-        Track?.ProgressBar.SetWidth(null, value);
+        if (Orientation == Orientation.Horizontal)
+        {
+            Thumb?.SetLeft(0f, 0f, value.X);
+            Track?.ProgressBar.SetSize(0f, 0f, value.X, 1f);
+        }
+        else
+        {
+            Thumb?.SetTop(0f, 0f, value.Y);
+            Track?.ProgressBar.SetSize(0f, 0f, 1f, value.Y);
+        }
 
         ValueChanged?.Invoke(this, value);
     }
 
-    public event EventHandler<float> Drag;
+    public event EventHandler<Vector2> Drag;
 
     public ICommand DragCommand { get; set; }
 
-    protected virtual void OnDrag(float value)
+    protected virtual void OnDrag(Vector2 value)
     {
-        if (Step > 0)
-            value = SnapByStep(value, Step);
+        value = SnapByStep(value, Step);
         Value = value;
 
         if (DragCommand != null && DragCommand.CanExecute(Value))
@@ -170,58 +200,88 @@ public class SUISlider : UIElementGroup
         Drag?.Invoke(this, Value);
     }
 
-    public static float SnapByStep(float value, float step) => MathF.Round(value / step) * step;
+    public static Vector2 SnapByStep(Vector2 value, Vector2 step)
+    {
+        if (step.X > 0f)
+            value.X = MathF.Round(value.X / step.X) * step.X;
+        if (step.Y > 0f)
+            value.Y = MathF.Round(value.Y / step.Y) * step.Y;
+        return value;
+    }
 
-    public SUISlider()
+    public SUISlider(Orientation orientation = Orientation.Horizontal)
     {
         Width = new Dimension(0f, 1f);
         Height = new Dimension(0f, 1f);
 
         Track = new SUISliderTrack().Join(this);
         Thumb = new SUISliderThumb().Join(this);
+
+        Orientation = orientation;
+        ConfigureOrientationLayout();
     }
 
-    private Vector2 _mousePositionAtPress;
-    private float _valuetAtPress;
+    private Vector2 _valueAtPress;
 
-    public override void OnLeftMouseDown(UIMouseEvent evt)
+    protected override void SetValueAtMousePosition()
     {
-        base.OnLeftMouseDown(evt);
+        var value = GetValueAtMousePosition();
+        Value = Orientation == Orientation.Horizontal
+            ? new Vector2(value.X, 0f)
+            : new Vector2(0f, value.Y);
+    }
 
-        // 支持直接点条确定位置
-        if (evt.Source != Thumb)
+    protected override void CaptureValueAtPress()
+    {
+        _valueAtPress = Value;
+    }
+
+    protected override void UpdateValueByDrag(Vector2 offset, Vector2 availableSpace)
+    {
+        var value = _valueAtPress;
+        if (Orientation == Orientation.Horizontal)
+            value.X += offset.X / availableSpace.X;
+        else
+            value.Y += offset.Y / availableSpace.Y;
+
+        OnDrag(value);
+    }
+
+    private Vector2 NormalizeValue(Vector2 value) => Orientation == Orientation.Horizontal
+        ? new Vector2(Math.Clamp(value.X, 0f, 1f), 0f)
+        : new Vector2(0f, Math.Clamp(value.Y, 0f, 1f));
+
+    private void ConfigureOrientationLayout()
+    {
+        if (Track is null || Thumb is null)
+            return;
+
+        Track.Orientation = Orientation;
+        Thumb.Orientation = Orientation;
+
+        if (Orientation == Orientation.Horizontal)
         {
-            Value = GetValueAtMousePosition().X;
+            Track.SetLeft(0f, 0f, 0.5f);
+            Track.SetTop(0f, 0f, 0.5f);
+            Track.Width = new Dimension(0f, 1f);
+            Track.Height = new Dimension(0f, 0.5f);
+            Track.ProgressBar.SetSize(0f, 0f, Value.X, 1f);
+
+            Thumb.SetLeft(0f, 0f, Value.X);
+            Thumb.SetTop(0f, 0f, 0.5f);
+            Thumb.SetSize(0f, 0f, 0f, 1f);
         }
-
-        // 记录按下时的状态
-        _valuetAtPress = Value;
-        _mousePositionAtPress = evt.MousePosition;
-    }
-
-    protected override void UpdateStatus(GameTime gameTime)
-    {
-        base.UpdateStatus(gameTime);
-
-        if (LeftMousePressed)
+        else
         {
-            var space = InnerBounds.Size - Thumb.Bounds.Size;
-            var offset = Main.MouseScreen - _mousePositionAtPress;
+            Track.SetLeft(0f, 0f, 0.5f);
+            Track.SetTop(0f, 0f, 0.5f);
+            Track.Width = new Dimension(0f, 0.5f);
+            Track.Height = new Dimension(0f, 1f);
+            Track.ProgressBar.SetSize(0f, 0f, 1f, Value.Y);
 
-            var value = _valuetAtPress + offset.X / space.Width;
-
-            OnDrag(value);
+            Thumb.SetLeft(0f, 0f, 0.5f);
+            Thumb.SetTop(0f, 0f, Value.Y);
+            Thumb.SetSize(0f, 0f, 1f, 0f);
         }
-    }
-
-    /// <summary>
-    /// 根据当前鼠标位置获取 Value 理论值
-    /// </summary>
-    public Vector2 GetValueAtMousePosition()
-    {
-        var start = InnerBounds.Position + Thumb.Bounds.Size / 2f;
-        var space = InnerBounds.Size - Thumb.Bounds.Size;
-
-        return (Main.MouseScreen - start) / space;
     }
 }

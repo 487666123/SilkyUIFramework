@@ -10,6 +10,18 @@ public partial class UIElementGroup
 
     public IReadOnlyList<GridTrack> TemplateRows => _templateRows;
 
+    private GridTrack[] _autoRows = [];
+
+    /// <summary>隐式行轨道的循环模板；未配置时使用 Auto。</summary>
+    public IReadOnlyList<GridTrack> AutoRows => _autoRows;
+
+    public void SetAutoRows(GridTrack[] rows)
+    {
+        if (_autoRows == rows) return;
+        _autoRows = rows is null ? [] : [.. rows];
+        MarkLayoutDirty();
+    }
+
     public GridDirection GridDirection
     {
         get; set
@@ -30,6 +42,18 @@ public partial class UIElementGroup
     private GridTrack[] _templateColumns = [];
 
     public IReadOnlyList<GridTrack> TemplateColumns => _templateColumns;
+
+    private GridTrack[] _autoColumns = [];
+
+    /// <summary>隐式列轨道的循环模板；未配置时使用 Auto。</summary>
+    public IReadOnlyList<GridTrack> AutoColumns => _autoColumns;
+
+    public void SetAutoColumns(GridTrack[] columns)
+    {
+        if (_autoColumns == columns) return;
+        _autoColumns = columns is null ? [] : [.. columns];
+        MarkLayoutDirty();
+    }
 
     public void SetTemplateColumns(GridTrack[] columns)
     {

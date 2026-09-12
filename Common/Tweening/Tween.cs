@@ -20,6 +20,17 @@ public enum TweenState
 }
 
 /// <summary>
+/// Tween 的循环模式。
+/// </summary>
+public enum LoopType
+{
+    /// <summary>每轮从起点重新正向播放</summary>
+    Restart = 0,
+    /// <summary>每轮交替正向和反向播放</summary>
+    Yoyo = 1,
+}
+
+/// <summary>
 /// Tween 编排器。Step 间顺序执行，Step 内并行执行。
 /// <example>
 /// 基本用法：
@@ -50,6 +61,9 @@ public class Tween
     /// <summary>当前正在执行的 Step 索引</summary>
     private int _currentStepIndex;
 
+    /// <summary>当前 Step 已消耗的时间</summary>
+    private float _currentStepElapsed;
+
     /// <summary>并行模式标记：true 时后续条目加入当前 Step</summary>
     private bool _isParallel;
 
@@ -58,6 +72,12 @@ public class Tween
 
     /// <summary>已完成的循环次数</summary>
     private int _completedLoops;
+
+    /// <summary>循环模式</summary>
+    private LoopType _loopType = LoopType.Restart;
+
+    /// <summary>当前循环是否反向执行</summary>
+    private bool _isReversed;
 
     /// <summary>后续添加条目的默认缓动方向</summary>
     private EaseType _defaultEaseType = EaseType.InOut;
@@ -218,6 +238,17 @@ public class Tween
         return this;
     }
 
+    /// <summary>设置循环模式。默认是每轮从起点重新正向播放。</summary>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="loopType"/> 不是已知模式时抛出。</exception>
+    public Tween SetLoopType(LoopType loopType)
+    {
+        if (loopType is not (LoopType.Restart or LoopType.Yoyo))
+            throw new ArgumentOutOfRangeException(nameof(loopType), loopType, "Unknown loop type.");
+
+        _loopType = loopType;
+        return this;
+    }
+
     #endregion
 
     #region 生命周期控制
@@ -271,30 +302,60 @@ public class Tween
 
         deltaSeconds = Math.Clamp(deltaSeconds, 0f, float.MaxValue);
 
-        // 全部 Step 已完成
-        if (_currentStepIndex >= _steps.Count)
+        if (_steps.Count == 0)
         {
             AdvanceLoop();
             return;
         }
 
-        var step = _steps[_currentStepIndex];
-        var allDone = true;
+        float remaining = deltaSeconds;
+        int zeroProgressSteps = 0;
 
-        foreach (var entry in step.Entries)
+        while (State == TweenState.Playing)
         {
-            if (!entry.IsCompleted)
-                entry.Tick(deltaSeconds);
-            if (!entry.IsCompleted)
-                allDone = false;
-        }
+            if (_currentStepIndex < 0 || _currentStepIndex >= _steps.Count)
+            {
+                if (!AdvanceLoop() || remaining <= 0f)
+                    return;
 
-        if (allDone)
-        {
-            _currentStepIndex++;
+                continue;
+            }
 
-            if (_currentStepIndex >= _steps.Count)
-                AdvanceLoop();
+            var step = _steps[_currentStepIndex];
+            float stepDuration = GetStepDuration(step);
+            float stepRemaining = MathF.Max(0f, stepDuration - _currentStepElapsed);
+            float tickDelta = MathF.Min(remaining, stepRemaining);
+            var allDone = true;
+
+            foreach (var entry in step.Entries)
+            {
+                if (!entry.IsCompleted)
+                    entry.Tick(tickDelta);
+                if (State != TweenState.Playing)
+                    return;
+                if (!entry.IsCompleted)
+                    allDone = false;
+            }
+
+            _currentStepElapsed += tickDelta;
+
+            if (!allDone)
+                return;
+
+            remaining -= tickDelta;
+            if (tickDelta <= 0f)
+            {
+                zeroProgressSteps++;
+                if (zeroProgressSteps > _steps.Count)
+                    return;
+            }
+            else
+            {
+                zeroProgressSteps = 0;
+            }
+
+            if (!MoveToNextStep() || remaining <= 0f)
+                return;
         }
     }
 
@@ -321,25 +382,53 @@ public class Tween
         }
     }
 
-    /// <summary> 推进循环 </summary>
-    private void AdvanceLoop()
+    private static float GetStepDuration(TweenStep step)
+    {
+        float duration = 0f;
+        foreach (var entry in step.Entries)
+        {
+            if (entry.TotalDuration > duration)
+                duration = entry.TotalDuration;
+        }
+
+        return duration;
+    }
+
+    private bool MoveToNextStep()
+    {
+        _currentStepElapsed = 0f;
+        _currentStepIndex += _isReversed ? -1 : 1;
+
+        if (_currentStepIndex >= 0 && _currentStepIndex < _steps.Count)
+            return true;
+
+        return AdvanceLoop();
+    }
+
+    /// <summary>推进循环，并准备下一轮的播放方向。</summary>
+    private bool AdvanceLoop()
     {
         _completedLoops++;
 
-        if (_loopCount == -1)
+        if (_loopCount != -1 && _completedLoops >= _loopCount)
         {
-            ResetSteps(); return;
+            Finish(completed: true);
+            return false;
         }
 
-        if (_completedLoops < _loopCount) ResetSteps();
-        else Finish(completed: true);
+        bool reverse = _loopType == LoopType.Yoyo && !_isReversed;
+        ResetSteps(reverse);
+        return true;
     }
 
-    private void ResetSteps()
+    private void ResetSteps(bool reverse)
     {
-        _currentStepIndex = 0;
+        _currentStepIndex = reverse ? _steps.Count - 1 : 0;
+        _currentStepElapsed = 0f;
+        _isReversed = reverse;
+
         foreach (var entry in _steps.SelectMany(s => s.Entries))
-            entry.Reset();
+            entry.Reset(reverse);
     }
 
     #endregion

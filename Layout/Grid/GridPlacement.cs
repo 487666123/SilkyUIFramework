@@ -22,7 +22,11 @@ public static class GridPlacement
         PlaceSemiDefiniteItems(context, direction, placedItems, ref rowCount, ref columnCount);
         PlaceAutoItems(context, direction, placedItems, ref rowCount, ref columnCount);
 
-        context.EnsureTrackCapacity(rowCount, columnCount);
+        context.EnsureTrackCapacity(
+            rowCount,
+            columnCount,
+            context.Container.AutoRows,
+            context.Container.AutoColumns);
     }
 
     /// <summary>

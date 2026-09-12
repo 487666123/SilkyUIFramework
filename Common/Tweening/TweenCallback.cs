@@ -21,6 +21,8 @@ public class TweenCallback : TweenEntry
         Duration = 0f;
     }
 
+    internal override float TotalDuration => Delay;
+
     internal override void Tick(float delta)
     {
         if (IsCompleted) return;

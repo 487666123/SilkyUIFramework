@@ -30,7 +30,15 @@ public class SUIScrollView : UIElementGroup
     /// <summary>
     /// 当前滚动方向。
     /// </summary>
-    public Orientation Orientation { get; }
+    public Orientation Orientation
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+            ConfigureOrientationLayout();
+        }
+    }
 
     /// <summary>
     /// 滚动条。负责显示滚动进度，并在用户拖动滑块时发出滚动请求。
@@ -226,7 +234,6 @@ public class SUIScrollView : UIElementGroup
 
     public SUIScrollView(Orientation orientation = Orientation.Vertical)
     {
-        Orientation = orientation;
         Gap = new Size(8f);
 
         Mask = new SUIScrollMask(this)
@@ -261,20 +268,17 @@ public class SUIScrollView : UIElementGroup
         }.Join(this);
 
         // 滑块拖动只产生进度请求，滚动位置仍由 ScrollView 统一管理。
-        ScrollBar.Drag += (_, vec2) =>
-        {
-            ScrollTo(MaxScrollPosition * vec2, false);
-        };
+        ScrollBar.Drag += (_, vec2) => ScrollTo(MaxScrollPosition * vec2, false);
 
         ScrollPositionUpdated += SyncScrollBar;
 
-        ConfigureOrientationLayout();
+        Orientation = orientation;
     }
 
     /// <summary>
     /// 根据滚动方向配置视图自身和滚动条的排列方式。
     /// </summary>
-    private void ConfigureOrientationLayout()
+    public void ConfigureOrientationLayout()
     {
         switch (Orientation)
         {
