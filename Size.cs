@@ -1,8 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace SilkyUIFramework;
 
-public readonly struct Size(float width, float height) : IEquatable<Size>, IParsable<Size>
+public readonly struct Size(float width, float height) : IEquatable<Size>, IParsable<Size>, IFormattable
 {
     public static readonly Size Zero = new(0, 0);
 
@@ -115,50 +116,62 @@ public readonly struct Size(float width, float height) : IEquatable<Size>, IPars
             MathHelper.Clamp(value.Height, min.Height, max.Height));
     }
 
-    public override string ToString() => $"{Width}x{Height}";
+    public override string ToString() => ToString(null, CultureInfo.CurrentCulture);
 
-    // Parse 调用 TryParse
+    public string ToString(IFormatProvider provider) => ToString(null, provider);
+
+    /// <summary> 始终按宽、高输出两个数字；provider 为 null 时使用当前文化。 </summary>
+    public string ToString(string format, IFormatProvider formatProvider) =>
+        $"{Width.ToString(format, formatProvider)} {Height.ToString(format, formatProvider)}";
+
     public static Size Parse(string s, IFormatProvider provider)
     {
-        if (!TryParse(s, provider, out var result))
+        ArgumentNullException.ThrowIfNull(s);
+
+        return TryParse(s, provider, out var result) ? result :
             throw new FormatException($"Cannot parse '{s}' as Size.");
-        return result;
     }
 
-    // TryParse 核心逻辑
-    public static bool TryParse(string s, IFormatProvider provider, out Size result)
+    /// <summary>
+    /// 解析一个或两个空白分隔的裸数字：单值用于宽高，两值按宽、高顺序读取。
+    /// 不接受 x 分隔或单位后缀。数字允许正负号、小数和科学计数法，但必须有限。
+    /// provider 为 null 时使用当前文化。
+    /// </summary>
+    public static bool TryParse([NotNullWhen(true)] string s, IFormatProvider provider, out Size result)
     {
-        result = Zero;
+        result = default;
+        return s is not null && TryParseCore(s.AsSpan(), provider, out result);
+    }
 
-        if (s is null)
-            throw new ArgumentNullException(nameof(s));
+    private static bool TryParseCore(ReadOnlySpan<char> text, IFormatProvider provider, out Size result)
+    {
+        result = default;
 
-        if (string.IsNullOrWhiteSpace(s))
-            return false;
+        var remaining = text.Trim();
+        if (remaining.IsEmpty) return false;
 
-        var parts = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        switch (parts.Length)
+        Span<float> values = stackalloc float[2];
+        var count = 0;
+        while (!remaining.IsEmpty)
         {
-            case 1:
-                if (float.TryParse(parts[0], NumberStyles.Float, provider, out var size))
-                {
-                    result = new Size(size);
-                    return true;
-                }
-                return false;
+            if (count == values.Length) return false;
 
-            case 2:
-                if (float.TryParse(parts[0], NumberStyles.Float, provider, out var width) &&
-                    float.TryParse(parts[1], NumberStyles.Float, provider, out var height))
-                {
-                    result = new Size(width, height);
-                    return true;
-                }
-                return false;
+            var length = 0;
+            while (length < remaining.Length && !char.IsWhiteSpace(remaining[length]))
+            {
+                length++;
+            }
 
-            default:
-                return false;
+            var token = remaining[..length];
+            remaining = remaining[length..].TrimStart();
+
+            if (!float.TryParse(token, NumberStyles.Float, provider, out var value) ||
+                !float.IsFinite(value)) return false;
+
+            values[count++] = value;
         }
+
+        result = count == 1 ? new Size(values[0]) : new Size(values[0], values[1]);
+        return true;
     }
 }

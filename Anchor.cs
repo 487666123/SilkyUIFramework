@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace SilkyUIFramework;
@@ -6,7 +6,7 @@ namespace SilkyUIFramework;
 /// <summary>
 /// 表示一个定位锚点，包含像素偏移、百分比偏移和对齐比例
 /// </summary>
-public readonly struct Anchor(float pixels = 0f, float percent = 0f, float alignment = 0f) : IEquatable<Anchor>, IParsable<Anchor>
+public readonly struct Anchor(float pixels = 0f, float percent = 0f, float alignment = 0f) : IEquatable<Anchor>, IParsable<Anchor>, IFormattable
 {
     public float Pixels { get; } = pixels;
     public float Percent { get; } = percent;
@@ -50,80 +50,94 @@ public readonly struct Anchor(float pixels = 0f, float percent = 0f, float align
 
     public override int GetHashCode() => HashCode.Combine(Pixels, Percent, Alignment);
 
-    public override string ToString() => $"{Pixels}px, {Percent * 100f}%, {Alignment * 100f}#";
+    public override string ToString() => ToString(null, CultureInfo.CurrentCulture);
+
+    public string ToString(IFormatProvider provider) => ToString(null, provider);
+
+    /// <summary> 始终按 px、%、# 顺序输出；provider 为 null 时使用当前文化。 </summary>
+    public string ToString(string format, IFormatProvider formatProvider) =>
+        $"{Pixels.ToString(format, formatProvider)}px {(Percent * 100f).ToString(format, formatProvider)}% {(Alignment * 100f).ToString(format, formatProvider)}#";
 
     public static Anchor Parse(string s, IFormatProvider provider)
     {
-        if (!TryParse(s, provider, out var result))
-            throw new FormatException("Invalid anchor format. Expected: '<number>px [<number>% [<number>#]]'");
-        return result;
-    }
-
-    public static bool TryParse(string s, IFormatProvider provider, out Anchor result)
-    {
-        result = default;
-
         ArgumentNullException.ThrowIfNull(s);
 
-        if (string.IsNullOrWhiteSpace(s))
-            return false;
-
-        var parts = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        switch (parts.Length)
-        {
-            case 1:
-                return TryParseSingle(parts[0], provider, out result);
-
-            case 3:
-                if (TryParseWithSuffix(parts[0], "px", provider, out var px) &&
-                    TryParseWithSuffix(parts[1], "%", provider, out var percent) &&
-                    TryParseWithSuffix(parts[2], "#", provider, out var align))
-                {
-                    result = new Anchor(px, percent / 100f, align / 100f);
-                    return true;
-                }
-                return false;
-
-            default:
-                return false;
-        }
+        return TryParse(s, provider, out var result) ? result :
+            throw new FormatException($"Cannot parse '{s}' as Anchor.");
     }
 
-    private static bool TryParseSingle([NotNullWhen(true)] string part, IFormatProvider provider, out Anchor result)
+    /// <summary>
+    /// 解析任意顺序的 1～3 个空白分隔分量，例如 50# -20px 100%。
+    /// 单位必须紧贴数字，px 不区分大小写，每种单位最多出现一次；% 和 # 均按百分数读取。
+    /// 数字允许正负号、小数和科学计数法，但必须有限；provider 为 null 时使用当前文化。
+    /// </summary>
+    public static bool TryParse([NotNullWhen(true)] string s, IFormatProvider provider, out Anchor result)
+    {
+        result = default;
+        return s is not null && TryParseCore(s.AsSpan(), provider, out result);
+    }
+
+    private static bool TryParseCore(ReadOnlySpan<char> text, IFormatProvider provider, out Anchor result)
     {
         result = default;
 
-        if (part.EndsWith("px", StringComparison.OrdinalIgnoreCase) &&
-            TryParseWithSuffix(part, "px", provider, out var px))
+        var remaining = text.Trim();
+        if (remaining.IsEmpty) return false;
+
+        var pixels = 0f;
+        var percent = 0f;
+        var alignment = 0f;
+        var hasPixels = false;
+        var hasPercent = false;
+        var hasAlignment = false;
+
+        while (!remaining.IsEmpty)
         {
-            result = new Anchor(px);
-            return true;
+            var length = 0;
+            while (length < remaining.Length && !char.IsWhiteSpace(remaining[length]))
+            {
+                length++;
+            }
+
+            var token = remaining[..length];
+            remaining = remaining[length..].TrimStart();
+
+            if (TryParseWithSuffix(token, "px", provider, out var px))
+            {
+                if (hasPixels) return false;
+                pixels = px;
+                hasPixels = true;
+            }
+            else if (TryParseWithSuffix(token, "%", provider, out var percentValue))
+            {
+                if (hasPercent) return false;
+                percent = percentValue / 100f;
+                hasPercent = true;
+            }
+            else if (TryParseWithSuffix(token, "#", provider, out var alignmentValue))
+            {
+                if (hasAlignment) return false;
+                alignment = alignmentValue / 100f;
+                hasAlignment = true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
-        if (part.EndsWith("%", StringComparison.OrdinalIgnoreCase) &&
-            TryParseWithSuffix(part, "%", provider, out var percent))
-        {
-            result = new Anchor(0f, percent / 100f);
-            return true;
-        }
-
-        if (part.EndsWith("#", StringComparison.OrdinalIgnoreCase) &&
-            TryParseWithSuffix(part, "#", provider, out var align))
-        {
-            result = new Anchor(0f, 0f, align / 100f);
-            return true;
-        }
-
-        return false;
+        // 完整输入通过检查后才生成结果，失败时始终输出 default。
+        result = new Anchor(pixels, percent, alignment);
+        return true;
     }
 
-    private static bool TryParseWithSuffix(string input, string suffix, IFormatProvider provider, out float value)
+    private static bool TryParseWithSuffix(ReadOnlySpan<char> input, ReadOnlySpan<char> suffix,
+        IFormatProvider provider, out float value)
     {
         value = 0f;
-        if (!input.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-            return false;
+        if (!input.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return false;
 
-        var numberPart = input[..^suffix.Length];
-        return float.TryParse(numberPart, NumberStyles.Float, provider, out value);
+        return float.TryParse(input[..^suffix.Length], NumberStyles.Float, provider, out value) &&
+               float.IsFinite(value);
     }
 }

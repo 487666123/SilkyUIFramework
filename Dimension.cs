@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace SilkyUIFramework;
 
-public readonly struct Dimension(float pixels = 0f, float percent = 0f) : IEquatable<Dimension>, IParsable<Dimension>
+public readonly struct Dimension(float pixels = 0f, float percent = 0f) : IEquatable<Dimension>, IParsable<Dimension>, IFormattable
 {
     public float Pixels { get; } = pixels;
     public float Percent { get; } = percent;
@@ -24,67 +24,94 @@ public readonly struct Dimension(float pixels = 0f, float percent = 0f) : IEquat
     public override bool Equals(object obj) => obj is Dimension other && Equals(other);
     public override int GetHashCode() => HashCode.Combine(Pixels, Percent);
 
-    public override string ToString() => $"{Pixels}px {Percent * 100f}%";
+    public override string ToString() => ToString(null, CultureInfo.CurrentCulture);
 
-    // Parse 调用 TryParse
+    public string ToString(IFormatProvider provider) => ToString(null, provider);
+
+    /// <summary> 始终按 px、% 顺序输出；数字格式应用于两个分量，provider 为 null 时使用当前文化。 </summary>
+    public string ToString(string format, IFormatProvider formatProvider) =>
+        $"{Pixels.ToString(format, formatProvider)}px {(Percent * 100f).ToString(format, formatProvider)}%";
+
+    // Parse 调用 TryParse，空值和格式错误分别抛出对应异常。
     public static Dimension Parse(string s, IFormatProvider provider)
     {
-        return !TryParse(s, provider, out var result)
-            ? throw new FormatException($"Cannot parse '{s}' as Dimension.")
-            : result;
+        ArgumentNullException.ThrowIfNull(s);
+
+        return TryParse(s, provider, out var result) ? result :
+            throw new FormatException($"Cannot parse '{s}' as Dimension.");
     }
 
-    // TryParse 负责核心逻辑
+    /// <summary>
+    /// 解析一个或两个以空白分隔的分量，例如 20px、50%、50% -20px。
+    /// 单位必须紧贴数字，px 不区分大小写，每种单位最多出现一次。
+    /// 数字允许正负号、小数和科学计数法，但必须有限；provider 为 null 时使用当前文化。
+    /// </summary>
     public static bool TryParse([NotNullWhen(true)] string s, IFormatProvider provider, out Dimension result)
     {
         result = default;
-
-        ArgumentNullException.ThrowIfNull(s);
-
-        if (string.IsNullOrWhiteSpace(s)) return false;
-
-        var parts = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        switch (parts.Length)
-        {
-            case 1:
-                return TryParseSingle(parts[0], provider, out result);
-
-            case 2:
-                if (!TryParseWithSuffix(parts[0], "px", provider, out var px) ||
-                    !TryParseWithSuffix(parts[1], "%", provider, out var percent)) return false;
-                result = new Dimension(px, percent / 100f);
-                return true;
-
-            default:
-                return false;
-        }
+        return s is not null && TryParseCore(s.AsSpan(), provider, out result);
     }
 
-    private static bool TryParseSingle(string part, IFormatProvider provider, out Dimension result)
+    private static bool TryParseCore(ReadOnlySpan<char> text, IFormatProvider provider, out Dimension result)
     {
         result = default;
 
-        if (part.EndsWith("px", StringComparison.OrdinalIgnoreCase) &&
-            TryParseWithSuffix(part, "px", provider, out var px))
+        var remaining = text.Trim();
+        if (remaining.IsEmpty) return false;
+
+        var pixels = 0f;
+        var percent = 0f;
+        var hasPixels = false;
+        var hasPercent = false;
+
+        while (!remaining.IsEmpty)
         {
-            result = new Dimension(px);
-            return true;
+            // 只切分原字符串的视图，不为分量或数字创建子字符串。
+            var length = 0;
+            while (length < remaining.Length && !char.IsWhiteSpace(remaining[length]))
+            {
+                length++;
+            }
+
+            var token = remaining[..length];
+            remaining = remaining[length..].TrimStart();
+
+            bool isPercent;
+            ReadOnlySpan<char> number;
+            if (token.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+            {
+                if (hasPixels) return false;
+                isPercent = false;
+                number = token[..^2];
+            }
+            else if (token.EndsWith("%", StringComparison.Ordinal))
+            {
+                if (hasPercent) return false;
+                isPercent = true;
+                number = token[..^1];
+            }
+            else
+            {
+                return false;
+            }
+
+            if (!float.TryParse(number, NumberStyles.Float, provider, out var value) ||
+                !float.IsFinite(value)) return false;
+
+            if (isPercent)
+            {
+                percent = value / 100f;
+                hasPercent = true;
+            }
+            else
+            {
+                pixels = value;
+                hasPixels = true;
+            }
         }
 
-        if (!part.EndsWith("%", StringComparison.OrdinalIgnoreCase) ||
-            !TryParseWithSuffix(part, "%", provider, out var percent)) return false;
-        result = new Dimension(0f, percent / 100f);
+        // 完整输入通过检查后才生成结果，失败时始终输出 default。
+        result = new Dimension(pixels, percent);
         return true;
-    }
-
-    private static bool TryParseWithSuffix(string input, string suffix, IFormatProvider provider, out float value)
-    {
-        value = 0f;
-        if (!input.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        var numberPart = input[..^suffix.Length];
-        return float.TryParse(numberPart, NumberStyles.Float, provider, out value);
     }
 }

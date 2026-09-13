@@ -56,7 +56,7 @@ public static class GridTrackSizing
 
     /// <summary>
     /// 单轴轨道尺寸计算入口。
-    /// 顺序为：重置缓存 -> 固定/百分比轨道 -> 内容撑开的轨道 -> fr 轨道 -> 非负修正。
+    /// 顺序为：重置缓存 -> 固定/百分比轨道 -> 内容撑开的轨道 -> 有限上限轨道增长 -> fr 轨道 -> 非负修正。
     /// </summary>
     private static void ResolveTracks(
         GridTrackOutput[] tracks,
@@ -71,6 +71,7 @@ public static class GridTrackSizing
         ResetTracks(tracks);
         ResolveFixedTracks(tracks, fitAxis, availableSize);
         ResolveAutoTracks(tracks, items, isColumnAxis, fitAxis, gap);
+        GrowFixedLimitTracks(tracks, fitAxis, availableSize, gap);
         ResolveFractionTracks(tracks, fitAxis, availableSize, gap);
         ClampNegativeTracks(tracks);
     }
@@ -222,35 +223,106 @@ public static class GridTrackSizing
     }
 
     /// <summary>
-    /// 将剩余空间分配给 fr 轨道。
-    /// 如果容器对应轴是 Fit，则没有 definite free space，fr 轨道保留内容撑开的尺寸。
+    /// 在确定尺寸的轴上，将剩余空间平均分配给尚未达到固定/百分比上限的轨道。
+    /// 达到上限的轨道退出分配，剩余空间继续分给其他轨道；fr 轨道暂时保留基础尺寸。
     /// </summary>
-    private static void ResolveFractionTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize, float gap)
+    private static void GrowFixedLimitTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize, float gap)
     {
-        var totalFraction = 0f;
-        var usedSize = Math.Max(0, tracks.Length - 1) * gap;
+        if (fitAxis) return;
 
+        var remaining = availableSize - GridLayoutHelper.SumTracks(tracks, gap);
+        if (remaining <= 0f) return;
+
+        var growingTracks = new List<int>(tracks.Length);
         for (var i = 0; i < tracks.Length; i++)
         {
-            usedSize += tracks[i].Size;
-            if (tracks[i].Definition.Max.TemplateType is TemplateType.Fraction)
+            if (tracks[i].Definition.Max.TemplateType is TemplateType.Pixels or TemplateType.Percent &&
+                tracks[i].Size < tracks[i].MaxSize)
             {
-                totalFraction += Math.Max(0f, tracks[i].Definition.Max.Value);
+                growingTracks.Add(i);
             }
         }
 
-        if (totalFraction <= 0f) return;
+        while (growingTracks.Count > 0 && remaining > 0f)
+        {
+            var share = remaining / growingTracks.Count;
+            var reachedLimit = false;
+            for (var i = growingTracks.Count - 1; i >= 0; i--)
+            {
+                var index = growingTracks[i];
+                var capacity = tracks[index].MaxSize - tracks[index].Size;
+                if (capacity > share) continue;
 
+                tracks[index].Size = tracks[index].MaxSize;
+                remaining -= capacity;
+                growingTracks.RemoveAt(i);
+                reachedLimit = true;
+            }
+
+            // 先固定触及上限的轨道，再重算其他轨道的份额，避免丢失被上限截断的空间。
+            if (reachedLimit) continue;
+
+            foreach (var index in growingTracks)
+            {
+                tracks[index].Size += share;
+            }
+            break;
+        }
+    }
+
+    /// <summary>
+    /// 在确定尺寸的轴上求统一的 fr 单位；份额小于基础尺寸的轨道固定后，重新计算其余份额。
+    /// fr 总和不足 1 时保留未分配空间。Fit 轴继续保留内容撑开的尺寸。
+    /// </summary>
+    private static void ResolveFractionTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize, float gap)
+    {
         if (fitAxis) return;
 
-        var remaining = Math.Max(0f, availableSize - usedSize);
+        var remaining = availableSize - Math.Max(0, tracks.Length - 1) * gap;
+        var flexibleTracks = new List<int>(tracks.Length);
         for (var i = 0; i < tracks.Length; i++)
         {
-            if (tracks[i].Definition.Max.TemplateType is not TemplateType.Fraction) continue;
+            if (tracks[i].Definition.Max.TemplateType is TemplateType.Fraction &&
+                tracks[i].Definition.Max.Value > 0f)
+            {
+                flexibleTracks.Add(i);
+            }
+            else
+            {
+                // 非 fr 轨道及 0fr 轨道保留已有尺寸。
+                remaining -= tracks[i].Size;
+            }
+        }
 
-            var fraction = Math.Max(0f, tracks[i].Definition.Max.Value);
-            var size = tracks[i].Size + remaining * fraction / totalFraction;
-            tracks[i].Size = Math.Clamp(size, tracks[i].MinSize, tracks[i].MaxSize);
+        while (flexibleTracks.Count > 0)
+        {
+            var totalFraction = 0f;
+            foreach (var index in flexibleTracks)
+            {
+                totalFraction += tracks[index].Definition.Max.Value;
+            }
+
+            var fractionSize = Math.Max(0f, remaining) / Math.Max(1f, totalFraction);
+            var frozeTrack = false;
+            for (var i = flexibleTracks.Count - 1; i >= 0; i--)
+            {
+                var index = flexibleTracks[i];
+                var size = tracks[index].Definition.Max.Value * fractionSize;
+                if (size >= tracks[index].Size) continue;
+
+                // 基础尺寸包含最小值和已测得的内容贡献，不能因 fr 分配而缩小。
+                remaining -= tracks[index].Size;
+                flexibleTracks.RemoveAt(i);
+                frozeTrack = true;
+            }
+
+            if (frozeTrack) continue;
+
+            foreach (var index in flexibleTracks)
+            {
+                tracks[index].Size = tracks[index].Definition.Max.Value * fractionSize;
+            }
+            break;
         }
     }
 
