@@ -29,7 +29,7 @@ Grid 布局通过 `UIElementGroup.LayoutType = LayoutType.Grid` 启用。
 - 自动放置子项
 - 指定行列位置
 - 跨行跨列
-- `Auto` / `Pixels` / `Percent` / `Fraction` 轨道尺寸
+- `Auto` / `Pixels` / `Percent` / `Fraction` / `MinMax` 轨道尺寸
 - 间距（`Gap`）
 - 容器级默认子项对齐
 - 子项自身对齐
@@ -42,27 +42,30 @@ Grid 布局通过 `UIElementGroup.LayoutType = LayoutType.Grid` 启用。
 | `LayoutType.Grid`             | `display: grid`           | 启用 Grid 布局                        |
 | `TemplateRows`                | `grid-template-rows`      | 显式行轨道                            |
 | `TemplateColumns`             | `grid-template-columns`   | 显式列轨道                            |
+| `AutoRows`                   | `grid-auto-rows`          | 隐式行轨道循环模板                    |
+| `AutoColumns`                | `grid-auto-columns`       | 隐式列轨道循环模板                    |
 | `GridDirection`               | `grid-auto-flow`          | 自动放置方向，仅支持 `Row` / `Column` |
 | `Gap`                         | `gap`                     | 使用 `Size`，可分别控制列/行间距      |
 | `RowSpan`                     | `grid-row` / `grid-row-*` | 子项所在行与跨行数量                  |
 | `ColumnSpan`                  | `grid-column`             | 子项所在列与跨列数量                  |
 | `GridItemsHorizontalAlignment`| `justify-items`           | 容器对子项的默认水平对齐              |
 | `GridItemsVerticalAlignment`  | `align-items`             | 容器对子项的默认垂直对齐              |
+| `GridContentHorizontalAlignment` | `justify-content`      | 列轨道集合的整体水平分布              |
+| `GridContentVerticalAlignment` | `align-content`        | 行轨道集合的整体垂直分布              |
 | `GridHorizontalAlignment`     | `justify-self`            | 子项自身水平对齐                      |
 | `GridVerticalAlignment`       | `align-self`              | 子项自身垂直对齐                      |
 | `GridTrack.Fr(n)`             | `nfr`                     | 按剩余空间比例分配                    |
 | `GridTrack.Auto`              | `auto`                    | 根据内容外部尺寸撑开                  |
+| `GridTrack.MinMax(min, max)` | `minmax(min, max)`        | 限制轨道最小和最大尺寸                |
 
 当前未实现：
 
 - 命名线（named lines）
 - 命名区域（grid-template-areas）
 - `dense` 自动放置
-- `minmax()`
 - `fit-content()`
 - `repeat(auto-fill)` / `repeat(auto-fit)`
 - `subgrid`
-- `justify-content` / `align-content`
 - baseline 对齐
 
 ## 容器属性（UIElementGroup）
@@ -72,10 +75,14 @@ Grid 布局通过 `UIElementGroup.LayoutType = LayoutType.Grid` 启用。
 | `LayoutType`                   | `LayoutType`               | `Flexbox` | 设置为 `Grid` 启用布局 |
 | `TemplateRows`                 | `IReadOnlyList<GridTrack>` | 空        | 显式行模板             |
 | `TemplateColumns`              | `IReadOnlyList<GridTrack>` | 空        | 显式列模板             |
+| `AutoRows`                     | `IReadOnlyList<GridTrack>` | 空        | 隐式行循环模板         |
+| `AutoColumns`                  | `IReadOnlyList<GridTrack>` | 空        | 隐式列循环模板         |
 | `GridDirection`                | `GridDirection`           | `Row`     | 自动放置方向           |
 | `Gap`                          | `Size`                     | `0`       | 列间距与行间距         |
 | `GridItemsHorizontalAlignment` | `GridItemAlignment`        | `Stretch` | 子项默认水平对齐       |
 | `GridItemsVerticalAlignment`   | `GridItemAlignment`        | `Stretch` | 子项默认垂直对齐       |
+| `GridContentHorizontalAlignment` | `GridContentAlignment`  | `Start`   | 列轨道整体水平分布     |
+| `GridContentVerticalAlignment` | `GridContentAlignment`   | `Start`   | 行轨道整体垂直分布     |
 
 设置模板时使用：
 
@@ -89,6 +96,11 @@ group.SetTemplateColumns([
 group.SetTemplateRows([
     GridTrack.Pixels(40f),
     GridTrack.Auto,
+]);
+
+group.SetAutoColumns([
+    GridTrack.Pixels(120f),
+    GridTrack.Fr(1f),
 ]);
 ```
 
@@ -153,6 +165,19 @@ GridTrack.Fr(2f)
 
 如果对应轴是 `FitWidth` 或 `FitHeight`，`fr` 不分配剩余空间，只保留被内容撑开的尺寸。
 
+### `GridTrack.MinMax(min, max)`
+
+使用 `GridTrackSize` 同时定义轨道的最小和最大尺寸。最小值支持 `Pixels`、`Percent` 和 `Auto`，最大值还支持 `Fr`。
+
+```csharp
+GridTrack.MinMax(
+    GridTrackSize.Pixels(120f),
+    GridTrackSize.Fr(1f)
+)
+```
+
+该轨道至少为 `120px`，有剩余空间时按 `1fr` 扩展。`MinMax` 可同时用于 `TemplateRows` / `TemplateColumns` 和 `AutoRows` / `AutoColumns`。如果最小值使用 `Fr`，或尺寸值为 NaN/无穷数，创建轨道时会抛出配置异常。
+
 ### `GridTrack.Auto`
 
 自动尺寸轨道，根据子项当前 `OuterBounds` 尺寸撑开。
@@ -184,11 +209,24 @@ GridTrack.Auto
 - 优先向下查找。
 - 当前列放不下时进入下一列。
 
-当现有显式轨道不够时，会创建隐式 `Auto` 轨道。
+当现有显式轨道不够时，会创建隐式轨道；如果配置了 `AutoRows` / `AutoColumns`，则按对应数组循环取用，否则使用 `GridTrack.Auto`。
 
 内部实现使用已放置矩形列表判断冲突，不使用完整二维 cell 占用表。行列起点都明确的子项直接加入列表，不检查彼此冲突；只明确一轴和完全自动的子项会查找无冲突位置。
 
 ## 对齐规则
+
+### 轨道集合整体对齐
+
+Grid 可以控制整组列轨道或行轨道在容器中的分布：
+
+```csharp
+grid.GridContentHorizontalAlignment = GridContentAlignment.Center;
+grid.GridContentVerticalAlignment = GridContentAlignment.SpaceEvenly;
+```
+
+支持 `Start`、`Center`、`End`、`SpaceBetween` 和 `SpaceEvenly`。水平属性固定控制列轨道，垂直属性固定控制行轨道；`GridDirection` 不改变这两个属性的含义。`SpaceBetween` / `SpaceEvenly` 会用计算后的间距替换原始 `Gap`。Fit 轴没有剩余空间，按 `Start` 和原始 `Gap` 处理。
+
+### 子项区域内对齐
 
 Grid 子项在各自 Grid 区域内支持单轴对齐：
 
@@ -233,8 +271,9 @@ Measure -> ResizeChildrenWidth -> RecalculateHeight -> ResizeChildrenHeight -> U
 
 - Grid 先放置子项所在区域，再让子项按父容器可用空间进行一次普通测量。
 - Grid 根据子项本轮普通测量后的 `OuterBounds` 解析 `Auto` 轨道。
-- `Pixels` / `Percent` / `Auto` 先确定基础尺寸。
-- `Fraction` 根据剩余空间分配。
+- `Pixels` / `Percent` / `Auto` 先确定基础尺寸和内容约束。
+- `MinMax` 为轨道建立最小和最大尺寸边界。
+- `Fraction` 根据剩余空间分配，并遵守轨道最小最大边界。
 - 子项默认拉伸到它所在的 Grid 区域。
 - 子项非 `Stretch` 对齐时，会调用 `UpdateWidth` / `UpdateHeight`。Fit 子项只更新约束，非 Fit 子项会更新到可用尺寸。
 - 子项尺寸写入时会经过 `MinWidth` / `MaxWidth` / `MinHeight` / `MaxHeight` 约束。
@@ -303,7 +342,7 @@ for (var i = 0; i < 10; i++)
 }
 ```
 
-所有子项默认 `RowSpan = GridSpan.Auto`、`ColumnSpan = GridSpan.Auto`，所以会自动按行放置。超过显式行数量后会创建隐式 `Auto` 行。
+所有子项默认 `RowSpan = GridSpan.Auto`、`ColumnSpan = GridSpan.Auto`，所以会自动按行放置。超过显式行数量后会创建隐式行；本例未配置 `AutoRows`，因此使用隐式 `Auto` 行。
 
 ### 示例 3：跨列标题
 

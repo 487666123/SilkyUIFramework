@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
     <img src="icon_workshop.png" width="200"/>
     <h3>SilkyUI Framework</h3>
 </div>
@@ -22,7 +22,8 @@
 - 继承 **BaseBody** 并添加 **RegisterUI** 特性即可快速创建 UI
 - 内建层级关系，自动避免鼠标穿透，并支持类似 **Windows 窗口** 的层级更新
 - **UIView / UIElementGroup** 采用脏标记机制，属性变化会自动触发布局更新，无需显式调用 **Recalculate()**，还能局部更新
-- 已实现 [Flexbox 布局标准](https://www.w3.org/TR/css-flexbox-1/)，计划支持 Grid
+- 已实现 [Flexbox 布局标准](https://www.w3.org/TR/css-flexbox-1/) 和 Grid 布局
+- Grid 支持显式/隐式轨道、自动放置、轨道跨度、内容对齐以及 `MinMax` 轨道约束
 - 支持 **XML 布局**，可复用样式并生成元素映射
 
 ### 说明
@@ -39,11 +40,32 @@
 
 [Flexbox 文档](FlexboxModule.md)
 
+[Grid 布局文档](Layout/GridModule.md)
+
 [CSS Flexible Box Layout Module Level 1](https://www.w3.org/TR/css-flexbox-1/)
+
+### Grid 布局
+
+Grid 使用 `GridTrack[]` 配置显式和隐式轨道，单个轨道可以使用 `MinMax` 设置最小和最大尺寸：
+
+```csharp
+grid.SetTemplateColumns([
+    GridTrack.MinMax(
+        GridTrackSize.Pixels(120f),
+        GridTrackSize.Fr(1f)
+    ),
+    GridTrack.Pixels(200f)
+]);
+
+grid.SetAutoRows([GridTrack.Pixels(48f)]);
+grid.GridContentHorizontalAlignment = GridContentAlignment.Center;
+```
+
+`MinMax` 的最小值支持 `Pixels`、`Percent` 和 `Auto`，最大值还支持 `Fr`。
 
 ### TODO
 
-1. [ ] Grid 布局设计与实现
+1. [x] Grid 布局设计与实现
 
 ### XML 初始模板：
 

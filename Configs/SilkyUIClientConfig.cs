@@ -27,13 +27,13 @@ public class SilkyUIClientConfig : ModConfig
     public bool EnableBlur { get; set; }
 
     [DefaultValue(false)]
-    public bool SingleBlur { get; set; }
+    public bool PerWindowBlur { get; set; }
 
     [Slider]
     [DefaultValue(2f)]
     [Range(1f, 8f)]
     [Increment(0.5f)]
-    public float BlurZoomMultiplierDenominator { get; set; }
+    public float BlurDownsampleFactor { get; set; }
 
     [Slider]
     [DefaultValue(2)]
@@ -48,19 +48,19 @@ public class SilkyUIClientConfig : ModConfig
     public float IterationOffsetMultiplier { get; set; }
 
     [Slider]
-    [DefaultValue(BlurMixingNumber.Three)]
-    public BlurMixingNumber BlurMixingNumber { get; set; }
+    [DefaultValue(BlurSampleCount.Three)]
+    public BlurSampleCount BlurMixingNumber { get; set; }
 
     public override void OnChanged()
     {
         TextDrawingHelper.DeathTextOffset = DeathTextOffset;
         TextDrawingHelper.MouseTextOffset = MouseTextOffset;
 
-        BlurMakeSystem.EnableBlur = EnableBlur;
-        BlurMakeSystem.SingleBlur = SingleBlur;
-        BlurMakeSystem.BlurZoomMultiplierDenominator = BlurZoomMultiplierDenominator;
-        BlurMakeSystem.BlurIterationCount = BlurIterationCount;
-        BlurMakeSystem.IterationOffsetMultiplier = IterationOffsetMultiplier;
-        BlurMakeSystem.BlurMixingNumber = BlurMixingNumber;
+        BlurSystem.EnableBlur = EnableBlur;
+        BlurSystem.PerWindowBlur = PerWindowBlur;
+        BlurSystem.BlurDownsampleFactor = BlurDownsampleFactor;
+        BlurSystem.BlurIterationCount = BlurIterationCount;
+        BlurSystem.IterationOffsetMultiplier = IterationOffsetMultiplier;
+        BlurSystem.BlurSampleCount = BlurMixingNumber;
     }
 }

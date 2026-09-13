@@ -82,6 +82,26 @@ public partial class UIElementGroup
         }
     } = GridItemAlignment.Stretch;
 
+    public GridContentAlignment GridContentHorizontalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+            MarkLayoutDirty();
+        }
+    }
+
+    public GridContentAlignment GridContentVerticalAlignment
+    {
+        get; set
+        {
+            if (field == value) return;
+            field = value;
+            MarkLayoutDirty();
+        }
+    }
+
     #endregion
 
     public FlexDirection FlexDirection

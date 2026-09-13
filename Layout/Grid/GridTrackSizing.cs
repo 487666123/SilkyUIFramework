@@ -38,8 +38,20 @@ public static class GridTrackSizing
     /// </summary>
     public static void UpdateOffsets(GridContext context)
     {
-        GridLayoutHelper.UpdateOffsets(context.Columns, context.Container.Gap.Width);
-        GridLayoutHelper.UpdateOffsets(context.Rows, context.Container.Gap.Height);
+        GridLayoutHelper.UpdateOffsets(
+            context.Columns,
+            context.Container.Gap.Width,
+            context.Container.InnerBounds.Width,
+            context.Container.FitWidth
+                ? GridContentAlignment.Start
+                : context.Container.GridContentHorizontalAlignment);
+        GridLayoutHelper.UpdateOffsets(
+            context.Rows,
+            context.Container.Gap.Height,
+            context.Container.InnerBounds.Height,
+            context.Container.FitHeight
+                ? GridContentAlignment.Start
+                : context.Container.GridContentVerticalAlignment);
     }
 
     /// <summary>
@@ -71,28 +83,45 @@ public static class GridTrackSizing
         for (var i = 0; i < tracks.Length; i++)
         {
             tracks[i].Size = 0f;
+            tracks[i].MinSize = 0f;
+            tracks[i].MaxSize = float.PositiveInfinity;
         }
     }
 
     /// <summary>
-    /// 先解析无需依赖内容的轨道。
-    /// 当容器对应轴是 Fit 时，百分比没有明确参照尺寸，暂时按 0 处理，后续可由内容撑开。
+    /// 解析轨道的最小和最大边界，并以最小边界初始化轨道尺寸。
+    /// Fit 轴上的百分比没有明确参照尺寸，因此最小值按 0、最大值按无穷处理。
     /// </summary>
     private static void ResolveFixedTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize)
     {
         for (var i = 0; i < tracks.Length; i++)
         {
             var definition = tracks[i].Definition;
-            switch (definition.TemplateType)
-            {
-                case TemplateType.Pixels:
-                    tracks[i].Size = Math.Max(0f, definition.Value);
-                    break;
-                case TemplateType.Percent:
-                    tracks[i].Size = fitAxis ? 0f : Math.Max(0f, availableSize * definition.Value);
-                    break;
-            }
+            var minSize = ResolveBound(definition.Min, fitAxis, availableSize, isMin: true);
+            var maxSize = ResolveBound(definition.Max, fitAxis, availableSize, isMin: false);
+
+            tracks[i].MinSize = minSize;
+            tracks[i].MaxSize = Math.Max(minSize, maxSize);
+            tracks[i].Size = minSize;
         }
+    }
+
+    private static float ResolveBound(
+        GridTrackSize definition,
+        bool fitAxis,
+        float availableSize,
+        bool isMin)
+    {
+        return definition.TemplateType switch
+        {
+            TemplateType.Pixels => Math.Max(0f, definition.Value),
+            TemplateType.Percent => fitAxis
+                ? isMin ? 0f : float.PositiveInfinity
+                : Math.Max(0f, availableSize * definition.Value),
+            TemplateType.Auto or TemplateType.Fraction =>
+                isMin ? 0f : float.PositiveInfinity,
+            _ => 0f
+        };
     }
 
     /// <summary>
@@ -131,9 +160,9 @@ public static class GridTrackSizing
     /// </summary>
     private static void GrowContentSizedTrack(ref GridTrackOutput track, float size, bool fitAxis)
     {
-        if (!CanGrowByContent(track.Definition, fitAxis)) return;
+        if (!CanGrowByContent(track, fitAxis)) return;
 
-        track.Size = Math.Max(track.Size, size);
+        track.Size = Math.Min(track.MaxSize, Math.Max(track.Size, size));
     }
 
     /// <summary>
@@ -159,7 +188,7 @@ public static class GridTrackSizing
         for (var i = start; i < end; i++)
         {
             currentSize += tracks[i].Size;
-            if (CanGrowByContent(tracks[i].Definition, fitAxis))
+            if (CanGrowByContent(tracks[i], fitAxis))
             {
                 growableCount++;
             }
@@ -170,9 +199,9 @@ public static class GridTrackSizing
         var share = (targetSize - currentSize) / growableCount;
         for (var i = start; i < end; i++)
         {
-            if (!CanGrowByContent(tracks[i].Definition, fitAxis)) continue;
+            if (!CanGrowByContent(tracks[i], fitAxis)) continue;
 
-            tracks[i].Size += share;
+            tracks[i].Size = Math.Min(tracks[i].MaxSize, tracks[i].Size + share);
         }
     }
 
@@ -180,11 +209,16 @@ public static class GridTrackSizing
     /// 判断轨道是否允许被内容撑开。
     /// Auto 始终允许；Percent/Fr 只有在 Fit 轴上没有明确可用空间时才允许。
     /// </summary>
-    private static bool CanGrowByContent(GridTrack definition, bool fitAxis)
+    private static bool CanGrowByContent(GridTrackOutput track, bool fitAxis)
     {
-        if (definition.TemplateType is TemplateType.Auto) return true;
+        var definition = track.Definition;
+        if (definition.Min.TemplateType is TemplateType.Auto ||
+            definition.Max.TemplateType is TemplateType.Auto)
+        {
+            return true;
+        }
 
-        return fitAxis && definition.TemplateType is TemplateType.Percent or TemplateType.Fraction;
+        return fitAxis && definition.Max.TemplateType is TemplateType.Percent or TemplateType.Fraction;
     }
 
     /// <summary>
@@ -199,9 +233,9 @@ public static class GridTrackSizing
         for (var i = 0; i < tracks.Length; i++)
         {
             usedSize += tracks[i].Size;
-            if (tracks[i].Definition.TemplateType is TemplateType.Fraction)
+            if (tracks[i].Definition.Max.TemplateType is TemplateType.Fraction)
             {
-                totalFraction += Math.Max(0f, tracks[i].Definition.Value);
+                totalFraction += Math.Max(0f, tracks[i].Definition.Max.Value);
             }
         }
 
@@ -212,10 +246,11 @@ public static class GridTrackSizing
         var remaining = Math.Max(0f, availableSize - usedSize);
         for (var i = 0; i < tracks.Length; i++)
         {
-            if (tracks[i].Definition.TemplateType is not TemplateType.Fraction) continue;
+            if (tracks[i].Definition.Max.TemplateType is not TemplateType.Fraction) continue;
 
-            var fraction = Math.Max(0f, tracks[i].Definition.Value);
-            tracks[i].Size = remaining * fraction / totalFraction;
+            var fraction = Math.Max(0f, tracks[i].Definition.Max.Value);
+            var size = tracks[i].Size + remaining * fraction / totalFraction;
+            tracks[i].Size = Math.Clamp(size, tracks[i].MinSize, tracks[i].MaxSize);
         }
     }
 
@@ -226,7 +261,9 @@ public static class GridTrackSizing
     {
         for (var i = 0; i < tracks.Length; i++)
         {
-            tracks[i].Size = Math.Max(0f, tracks[i].Size);
+            tracks[i].MinSize = Math.Max(0f, tracks[i].MinSize);
+            tracks[i].MaxSize = Math.Max(tracks[i].MinSize, tracks[i].MaxSize);
+            tracks[i].Size = Math.Clamp(tracks[i].Size, tracks[i].MinSize, tracks[i].MaxSize);
         }
     }
 }

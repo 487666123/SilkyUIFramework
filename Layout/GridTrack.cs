@@ -1,41 +1,75 @@
 namespace SilkyUIFramework.Layout;
 
 /// <summary>
-/// 定义单个 Grid 轨道。
+/// 定义 Grid 轨道的一侧尺寸规则。
 /// </summary>
-public readonly struct GridTrack(TemplateType templateType, float value = 0f) : IEquatable<GridTrack>
+public readonly struct GridTrackSize(TemplateType templateType, float value = 0f) : IEquatable<GridTrackSize>
 {
-    /// <summary> 轨道尺寸类型。 </summary>
     public TemplateType TemplateType { get; } = templateType;
 
-    /// <summary> 轨道类型对应的数值，例如像素值、百分比或 fr 权重。 </summary>
     public float Value { get; } = value;
 
-    /// <summary> 创建 Auto 轨道。 </summary>
-    public static GridTrack Auto => new(TemplateType.Auto);
+    public static GridTrackSize Auto => new(TemplateType.Auto);
 
-    /// <summary> 创建 Fraction 轨道。 </summary>
-    public static GridTrack Fr(float value = 1f) => new(TemplateType.Fraction, value);
+    public static GridTrackSize Fr(float value = 1f) => new(TemplateType.Fraction, value);
 
-    /// <summary> 创建固定像素轨道。 </summary>
-    public static GridTrack Pixels(float value) => new(TemplateType.Pixels, value);
+    public static GridTrackSize Pixels(float value) => new(TemplateType.Pixels, value);
 
-    /// <summary> 创建百分比轨道，value 按父容器对应轴尺寸的倍率使用，不在这里限制到 0 到 1。 </summary>
-    public static GridTrack Percent(float value) => new(TemplateType.Percent, value);
+    public static GridTrackSize Percent(float value) => new(TemplateType.Percent, value);
 
-    /// <summary>
-    /// 创建一组重复轨道。
-    /// </summary>
+    public static bool operator ==(GridTrackSize left, GridTrackSize right) => left.Equals(right);
+
+    public static bool operator !=(GridTrackSize left, GridTrackSize right) => !left.Equals(right);
+
+    public bool Equals(GridTrackSize other) =>
+        TemplateType == other.TemplateType && Value.Equals(other.Value);
+
+    public override bool Equals(object obj) => obj is GridTrackSize other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(TemplateType, Value);
+}
+
+/// <summary>
+/// 定义单个 Grid 轨道的最小和最大尺寸规则。
+/// </summary>
+public readonly struct GridTrack : IEquatable<GridTrack>
+{
+    public GridTrackSize Min { get; }
+
+    public GridTrackSize Max { get; }
+
+    private GridTrack(GridTrackSize min, GridTrackSize max)
+    {
+        Min = min;
+        Max = max;
+    }
+
+    public static GridTrack Auto =>
+        new(GridTrackSize.Auto, GridTrackSize.Auto);
+
+    public static GridTrack Fr(float value = 1f) =>
+        new(GridTrackSize.Pixels(0f), GridTrackSize.Fr(value));
+
+    public static GridTrack Pixels(float value) =>
+        new(GridTrackSize.Pixels(value), GridTrackSize.Pixels(value));
+
+    public static GridTrack Percent(float value) =>
+        new(GridTrackSize.Percent(value), GridTrackSize.Percent(value));
+
+    public static GridTrack MinMax(GridTrackSize min, GridTrackSize max)
+    {
+        ValidateMin(min);
+        ValidateSize(max, nameof(max));
+        return new GridTrack(min, max);
+    }
+
     public static GridTrack[] Repeat(int quantity, TemplateType templateType, float value = 0f)
     {
         if (quantity <= 0) return [];
 
+        var track = CreateSingle(templateType, value);
         var tracks = new GridTrack[quantity];
-        for (var i = 0; i < tracks.Length; i++)
-        {
-            tracks[i] = new GridTrack(templateType, value);
-        }
-
+        Array.Fill(tracks, track);
         return tracks;
     }
 
@@ -43,9 +77,33 @@ public readonly struct GridTrack(TemplateType templateType, float value = 0f) : 
 
     public static bool operator !=(GridTrack left, GridTrack right) => !left.Equals(right);
 
-    public bool Equals(GridTrack other) => TemplateType == other.TemplateType && Value.Equals(other.Value);
+    public bool Equals(GridTrack other) => Min == other.Min && Max == other.Max;
 
     public override bool Equals(object obj) => obj is GridTrack other && Equals(other);
 
-    public override int GetHashCode() => HashCode.Combine(TemplateType, Value);
+    public override int GetHashCode() => HashCode.Combine(Min, Max);
+
+    private static GridTrack CreateSingle(TemplateType templateType, float value) =>
+        templateType switch
+        {
+            TemplateType.Auto => Auto,
+            TemplateType.Fraction => Fr(value),
+            TemplateType.Pixels => Pixels(value),
+            TemplateType.Percent => Percent(value),
+            _ => Auto
+        };
+
+    private static void ValidateMin(GridTrackSize min)
+    {
+        if (min.TemplateType is TemplateType.Fraction)
+            throw new ArgumentException("A Fraction track cannot be used as MinMax min size.", nameof(min));
+
+        ValidateSize(min, nameof(min));
+    }
+
+    private static void ValidateSize(GridTrackSize size, string parameterName)
+    {
+        if (float.IsNaN(size.Value) || float.IsInfinity(size.Value))
+            throw new ArgumentException("Grid track size must be finite.", parameterName);
+    }
 }

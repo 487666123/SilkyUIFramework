@@ -27,6 +27,8 @@
 [Service]
 public sealed class RenderTargetPool : IDisposable
 {
+    public static RenderTargetPool Instance => SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
+
     // 图形设备引用
     private readonly GraphicsDevice _graphicsDevice = Main.graphics.GraphicsDevice;
 

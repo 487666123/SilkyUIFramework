@@ -50,3 +50,24 @@ public enum GridItemAlignment
     /// <summary> 拉伸到填满 Grid 区域。 </summary>
     Stretch
 }
+
+/// <summary>
+/// Grid 轨道集合在容器对应轴上的整体对齐方式。
+/// </summary>
+public enum GridContentAlignment
+{
+    /// <summary> 从容器对应轴的起点排列轨道。 </summary>
+    Start,
+
+    /// <summary> 将轨道集合整体居中。 </summary>
+    Center,
+
+    /// <summary> 将轨道集合整体靠近容器对应轴的终点。 </summary>
+    End,
+
+    /// <summary> 将剩余空间分配到轨道之间，两端不留额外空间。 </summary>
+    SpaceBetween,
+
+    /// <summary> 将剩余空间平均分配到两端和轨道之间。 </summary>
+    SpaceEvenly
+}

@@ -15,9 +15,9 @@ public sealed class GridContext(UIElementGroup container)
     private int _explicitRowCount;
     private int _explicitColumnCount;
 
-    public float TotalRowsHeight => GridLayoutHelper.SumTracks(Rows, Container.Gap.Height);
+    public float TotalRowsHeight => GridLayoutHelper.SumTracks(Rows, GetRowGap());
 
-    public float TotalColumnsWidth => GridLayoutHelper.SumTracks(Columns, Container.Gap.Width);
+    public float TotalColumnsWidth => GridLayoutHelper.SumTracks(Columns, GetColumnGap());
 
     /// <summary>
     /// 重建本轮布局的子项和显式轨道。
@@ -79,17 +79,35 @@ public sealed class GridContext(UIElementGroup container)
     /// <summary>
     /// 获取一个 Grid 区域覆盖的总宽度，包含区域内部的列间距。
     /// </summary>
-    public float GetAreaWidth(GridArea area)
-    {
-        return GridLayoutHelper.SumTracks(Columns, area.Column, area.ColumnSpan, Container.Gap.Width);
-    }
+    public float GetAreaWidth(GridArea area) =>
+        GridLayoutHelper.SumTracks(Columns, area.Column, area.ColumnSpan, GetColumnGap());
 
     /// <summary>
     /// 获取一个 Grid 区域覆盖的总高度，包含区域内部的行间距。
     /// </summary>
-    public float GetAreaHeight(GridArea area)
+    public float GetAreaHeight(GridArea area) =>
+        GridLayoutHelper.SumTracks(Rows, area.Row, area.RowSpan, GetRowGap());
+
+    public float GetColumnGap()
     {
-        return GridLayoutHelper.SumTracks(Rows, area.Row, area.RowSpan, Container.Gap.Height);
+        return Container.FitWidth
+            ? Container.Gap.Width
+            : GridLayoutHelper.ResolveContentGap(
+                Columns,
+                Container.Gap.Width,
+                Container.InnerBounds.Width,
+                Container.GridContentHorizontalAlignment);
+    }
+
+    public float GetRowGap()
+    {
+        return Container.FitHeight
+            ? Container.Gap.Height
+            : GridLayoutHelper.ResolveContentGap(
+                Rows,
+                Container.Gap.Height,
+                Container.InnerBounds.Height,
+                Container.GridContentVerticalAlignment);
     }
 
     private static GridTrackOutput[] CreateTrackStates(IReadOnlyList<GridTrack> tracks)

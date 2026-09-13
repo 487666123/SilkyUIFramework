@@ -168,12 +168,12 @@ public abstract partial class BaseBody
     /// <param name="spriteBatch">当前绘制批次。</param>
     protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
-        if (EnableBlur && BlurMakeSystem.BlurAvailable && !Main.gameMenu)
+        if (EnableBlur && BlurSystem.IsBlurAvailable && !Main.gameMenu)
         {
-            if (BlurMakeSystem.SingleBlur)
+            if (BlurSystem.PerWindowBlur)
             {
                 spriteBatch.End();
-                BlurMakeSystem.ApplyBlur([BlurMakeSystem.UserInterfaceRenderTarget]);
+                BlurSystem.ApplyBlur([BlurSystem.InterfaceCaptureTarget]);
                 spriteBatch.Begin(0, null, null, null, SilkyUI.ScissorRasterizerState, null, SilkyUI.TransformMatrix);
             }
             DrawBlurRegions();
@@ -199,7 +199,7 @@ public abstract partial class BaseBody
             var size = bounds.Size * scale;
             var borderRadius = el.BorderRadius * scale;
 
-            SDFRectangle.SampleVersion(BlurMakeSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
+            SDFRectangle.SampleVersion(BlurSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
         }
     }
 }
