@@ -70,7 +70,7 @@ public static class GridTrackSizing
 
         ResetTracks(tracks);
         ResolveFixedTracks(tracks, fitAxis, availableSize);
-        ResolveAutoTracks(tracks, items, isColumnAxis, fitAxis, gap);
+        ResolveAutoTracks(tracks, items, isColumnAxis, gap);
         GrowFixedLimitTracks(tracks, fitAxis, availableSize, gap);
         ResolveFractionTracks(tracks, fitAxis, availableSize, gap);
         ClampNegativeTracks(tracks);
@@ -91,7 +91,7 @@ public static class GridTrackSizing
 
     /// <summary>
     /// 解析轨道的最小和最大边界，并以最小边界初始化轨道尺寸。
-    /// Fit 轴上的百分比没有明确参照尺寸，因此最小值按 0、最大值按无穷处理。
+    /// Fit 轴上的百分比端点失效：最小值按 0、最大值不设限；含 Auto 的轨道仍可按内容撑开。
     /// </summary>
     private static void ResolveFixedTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize)
     {
@@ -126,14 +126,13 @@ public static class GridTrackSizing
     }
 
     /// <summary>
-    /// 根据子项当前 OuterBounds 解析内容相关轨道。
-    /// 第一版只做工程化近似：单轨道子项直接撑开轨道，跨轨道子项把不足尺寸平均分配给可被内容撑开的轨道。
+    /// 根据子项本轮 OuterBounds 解析内容相关轨道。
+    /// 单轨道需求先合并为基础尺寸；跨轨道需求独立计算后逐轨道取最大值，避免子项顺序影响结果。
     /// </summary>
     private static void ResolveAutoTracks(
         GridTrackOutput[] tracks,
         IReadOnlyList<GridItem> items,
         bool isColumnAxis,
-        bool fitAxis,
         float gap)
     {
         if (items.Count == 0) return;
@@ -143,84 +142,114 @@ public static class GridTrackSizing
             var area = item.Area;
             var start = isColumnAxis ? area.Column : area.Row;
             var span = isColumnAxis ? area.ColumnSpan : area.RowSpan;
-            if (span <= 0 || start >= tracks.Length) continue;
+            if (span != 1 || start >= tracks.Length) continue;
 
             var outerSize = isColumnAxis ? item.Element.OuterBounds.Width : item.Element.OuterBounds.Height;
-            if (span == 1)
-            {
-                GrowContentSizedTrack(ref tracks[start], outerSize, fitAxis);
-                continue;
-            }
+            GrowContentSizedTrack(ref tracks[start], outerSize);
+        }
 
-            DistributeSpanningAutoSize(tracks, start, span, outerSize, fitAxis, gap);
+        // 所有跨轨道子项读取同一份基础尺寸，不读取其他跨轨道子项刚刚增加的尺寸。
+        var baseSizes = new float[tracks.Length];
+        for (var i = 0; i < tracks.Length; i++)
+        {
+            baseSizes[i] = tracks[i].Size;
+        }
+
+        foreach (var item in items)
+        {
+            var area = item.Area;
+            var start = isColumnAxis ? area.Column : area.Row;
+            var span = isColumnAxis ? area.ColumnSpan : area.RowSpan;
+            if (span <= 1 || start >= tracks.Length) continue;
+
+            var outerSize = isColumnAxis ? item.Element.OuterBounds.Width : item.Element.OuterBounds.Height;
+            var end = Math.Min(tracks.Length, start + span);
+            var candidateSizes = (float[])baseSizes.Clone();
+            DistributeSpanningAutoSize(tracks, candidateSizes, start, end, outerSize, gap);
+
+            for (var i = start; i < end; i++)
+            {
+                tracks[i].Size = Math.Max(tracks[i].Size, candidateSizes[i]);
+            }
         }
     }
 
-    /// <summary>
-    /// 让单个可内容撑开的轨道至少达到指定尺寸。
-    /// </summary>
-    private static void GrowContentSizedTrack(ref GridTrackOutput track, float size, bool fitAxis)
+    /// <summary> 让含 Auto 的轨道按内容增长，但不突破本轮有效的上限。 </summary>
+    private static void GrowContentSizedTrack(ref GridTrackOutput track, float size)
     {
-        if (!CanGrowByContent(track, fitAxis)) return;
+        if (!CanGrowByContent(track)) return;
 
         track.Size = Math.Min(track.MaxSize, Math.Max(track.Size, size));
     }
 
     /// <summary>
-    /// 处理跨多条轨道的子项。
-    /// 子项尺寸先扣除区域内部 gap，再把不足部分平均分摊给 Auto 轨道；
-    /// 如果容器对应轴是 Fit，Percent/Fr 轨道也允许按内容撑开。
+    /// 基础尺寸加内部 gap 已经足够时不增长；否则先扣除 gap 和不可增长轨道的尺寸，
+    /// 剩余需求除以 Auto 轨道数量得到统一目标，仅提升低于目标的轨道。
+    /// 若实际总尺寸仍不足，固定达到上限的轨道，重新求其余轨道的统一目标。
     /// </summary>
     private static void DistributeSpanningAutoSize(
         GridTrackOutput[] tracks,
+        float[] candidateSizes,
         int start,
-        int span,
+        int end,
         float outerSize,
-        bool fitAxis,
         float gap)
     {
-        if (span <= 1) return; // 调用方应保证 span > 1，此处为防御性检查
-
-        var end = Math.Min(tracks.Length, start + span);
-        var growableCount = 0;
-        var currentSize = 0f;
-        var targetSize = Math.Max(0f, outerSize - Math.Max(0, span - 1) * gap);
+        var targetSize = Math.Max(0f, outerSize - Math.Max(0, end - start - 1) * gap);
+        var baseSize = 0f;
+        var remainingSize = targetSize;
+        var growingTracks = new List<int>(end - start);
 
         for (var i = start; i < end; i++)
         {
-            currentSize += tracks[i].Size;
-            if (CanGrowByContent(tracks[i], fitAxis))
+            baseSize += candidateSizes[i];
+            if (CanGrowByContent(tracks[i]))
             {
-                growableCount++;
+                growingTracks.Add(i);
+            }
+            else
+            {
+                // 固定轨道等不可被内容撑开的轨道只计入已有尺寸，不参与分配。
+                remainingSize -= candidateSizes[i];
             }
         }
 
-        if (growableCount <= 0 || targetSize <= currentSize) return;
+        if (targetSize <= baseSize) return;
 
-        var share = (targetSize - currentSize) / growableCount;
-        for (var i = start; i < end; i++)
+        while (growingTracks.Count > 0)
         {
-            if (!CanGrowByContent(tracks[i], fitAxis)) continue;
+            var target = Math.Max(0f, remainingSize) / growingTracks.Count;
+            foreach (var index in growingTracks)
+            {
+                candidateSizes[index] = Math.Min(tracks[index].MaxSize, Math.Max(candidateSizes[index], target));
+            }
 
-            tracks[i].Size = Math.Min(tracks[i].MaxSize, tracks[i].Size + share);
+            var currentSize = 0f;
+            for (var i = start; i < end; i++) currentSize += candidateSizes[i];
+            if (currentSize >= targetSize) break;
+
+            // 只在区域实际放不下时补偿；到顶的轨道退出后，从需求中扣除它实际承担的尺寸。
+            var reachedLimit = false;
+            for (var i = growingTracks.Count - 1; i >= 0; i--)
+            {
+                var index = growingTracks[i];
+                if (candidateSizes[index] < tracks[index].MaxSize) continue;
+
+                remainingSize -= candidateSizes[index];
+                growingTracks.RemoveAt(i);
+                reachedLimit = true;
+            }
+
+            if (!reachedLimit) break;
         }
     }
 
     /// <summary>
-    /// 判断轨道是否允许被内容撑开。
-    /// Auto 始终允许；Percent/Fr 只有在 Fit 轴上没有明确可用空间时才允许。
+    /// 仅显式含 Auto 的轨道允许被内容撑开；纯百分比和纯 fr 在 Fit 轴上也不例外。
     /// </summary>
-    private static bool CanGrowByContent(GridTrackOutput track, bool fitAxis)
-    {
-        var definition = track.Definition;
-        if (definition.Min.TemplateType is TemplateType.Auto ||
-            definition.Max.TemplateType is TemplateType.Auto)
-        {
-            return true;
-        }
-
-        return fitAxis && definition.Max.TemplateType is TemplateType.Percent or TemplateType.Fraction;
-    }
+    private static bool CanGrowByContent(GridTrackOutput track) =>
+        track.Definition.Min.TemplateType is TemplateType.Auto ||
+        track.Definition.Max.TemplateType is TemplateType.Auto;
 
     /// <summary>
     /// 在确定尺寸的轴上，将剩余空间平均分配给尚未达到固定/百分比上限的轨道。
@@ -272,7 +301,7 @@ public static class GridTrackSizing
 
     /// <summary>
     /// 在确定尺寸的轴上求统一的 fr 单位；份额小于基础尺寸的轨道固定后，重新计算其余份额。
-    /// fr 总和不足 1 时保留未分配空间。Fit 轴继续保留内容撑开的尺寸。
+    /// fr 总和不足 1 时保留未分配空间。Fit 轴不分配 fr 空间，只保留明确下限或显式 Auto 的内容尺寸。
     /// </summary>
     private static void ResolveFractionTracks(GridTrackOutput[] tracks, bool fitAxis, float availableSize, float gap)
     {
