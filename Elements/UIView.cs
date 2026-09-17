@@ -1,4 +1,4 @@
-﻿using SilkyUIFramework.Common.Tweening;
+using SilkyUIFramework.Common.Tweening;
 
 namespace SilkyUIFramework.Elements;
 
@@ -125,6 +125,8 @@ public partial class UIView
 
     #endregion
 
+    public string Id { get; set; } = string.Empty;
+
     private bool _initialized = false;
 
     /// <summary>
@@ -135,6 +137,8 @@ public partial class UIView
         if (_initialized) return;
         _initialized = true;
         OnInitialize();
+        // 动态加入树的元素会先 EnterTree 再 Initialize，样式需等初始化完成。
+        if (IsInsideTree) ApplyCurrentStyle();
     }
 
     protected virtual void OnInitialize() { }
@@ -147,12 +151,15 @@ public partial class UIView
         SilkyUI = silkyUI;
         SubscribeDataContext();
         OnEnterTree();
+        // 已初始化的元素进入或重新进入时，先建立当前样式。
+        if (_initialized && IsInsideTree) ApplyCurrentStyle();
     }
 
     internal virtual void HandleExitTree()
     {
         if (SilkyUI == null) return;
         SilkyUI = null;
+        StyleSheet?.Release();
         UnsubscribeDataContext();
         OnExitTree();
     }

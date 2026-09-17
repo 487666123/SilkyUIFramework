@@ -1,5 +1,6 @@
 using SilkyUIFramework.Common.Reflection;
 using SilkyUIFramework.Common.Tweening;
+using SilkyUIFramework.Extensions.Tweening;
 
 namespace SilkyUIFramework.Extensions;
 
@@ -11,6 +12,33 @@ public static class TweenReflectionExtensions
 {
     extension(Tween tween)
     {
+        /// <summary>
+        /// 按对象的运行时类型绑定单个实例成员，不解析嵌套路径。
+        /// 对象和值以 object 传入时使用此入口；动画始终操作创建时的对象，延迟到期才读取起点。
+        /// 值类型通过此重载插值会装箱；已知类型的调用仍可使用泛型重载。
+        /// </summary>
+        public TweenEntry MemberTo(object target, string memberName, object to, float duration)
+        {
+            ArgumentNullException.ThrowIfNull(tween);
+            ArgumentNullException.ThrowIfNull(target);
+            ArgumentException.ThrowIfNullOrWhiteSpace(memberName);
+
+            var accessor = ObjectAccessorCache.GetAccessor(target);
+            var memberType = accessor.GetMemberType(memberName);
+            var underlyingType = Nullable.GetUnderlyingType(memberType);
+            var compatible = to == null
+                ? underlyingType != null || !memberType.IsValueType
+                : (underlyingType ?? memberType).IsInstanceOfType(to);
+            if (!compatible)
+                throw new ArgumentException($"目标值不能赋给成员 '{target.GetType().FullName}.{memberName}' ({memberType.FullName})。", nameof(to));
+
+            if (!TweenLerpRegistry.TryGet(memberType, out var interpolate))
+                throw TweenLerpRegistry.CreateMissingLerpException(memberType);
+
+            return tween.TweenProperty(target, accessor.GetSetter(memberName), accessor.GetGetter(memberName),
+                to, duration, interpolate);
+        }
+
         /// <summary>
         /// 使用显式插值函数补间目标对象的实例属性或字段。
         /// </summary>

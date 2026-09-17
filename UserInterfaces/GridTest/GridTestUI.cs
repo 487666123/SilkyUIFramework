@@ -7,12 +7,13 @@ public partial class GridTestUI : BaseBody
 {
     protected override void OnInitialize()
     {
+        InitializeComponent();
 
 #if DEBUG
         Enabled = true;
+#else
+        Enabled = false;
 #endif
-
-        InitializeComponent();
 
         Grid1.SetTemplateColumns([GridTrack.Fr(1f), GridTrack.Fr(1f)]);
         Grid1.SetTemplateRows([GridTrack.Fr(1f), GridTrack.Fr(1f)]);

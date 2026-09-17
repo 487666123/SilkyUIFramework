@@ -293,9 +293,31 @@ public class Tween
 
     /// <summary>
     /// 驱动 Tween 的每帧更新。调用者应在自己的更新循环中传入 <c>deltaSeconds</c>。
+    /// 更新失败时终止动画并传播异常；终止回调也失败时以 AggregateException 保留两份异常。
     /// </summary>
     /// <param name="deltaSeconds">距上一帧的时间（秒）</param>
     public void Update(float deltaSeconds)
+    {
+        try
+        {
+            UpdateCore(deltaSeconds);
+        }
+        catch (Exception updateException)
+        {
+            // 用户回调失败后终止动画；清理回调也失败时保留两份异常，避免丢失最初原因。
+            try
+            {
+                Kill();
+            }
+            catch (Exception cleanupException)
+            {
+                throw new AggregateException("Tween update and termination callbacks both failed.", updateException, cleanupException);
+            }
+            throw;
+        }
+    }
+
+    private void UpdateCore(float deltaSeconds)
     {
         if (State != TweenState.Playing)
             return;

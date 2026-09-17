@@ -6,6 +6,5 @@
 	<!-- 标题 -->
 	<TextView s:Name="Title" Width="25%" Height="100%" Padding="12 0" TextScale="0.45" TextAlign="0 0.5" />
 	<!-- 关闭 -->
-	<Cross s:Name="CloseButton" BoxSizing="Content"
-		Width="24px" Height="100%" Padding="12 0" CrossSize="22" CrossBorderRadius="3.5" />
+	<Cross s:Name="CloseButton" BoxSizing="Content" Width="24px" Height="100%" Padding="12 0" />
 </Body>

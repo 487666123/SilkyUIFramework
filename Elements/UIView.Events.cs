@@ -1,4 +1,6 @@
-﻿namespace SilkyUIFramework.Elements;
+using SilkyUIFramework.StyleSystem;
+
+namespace SilkyUIFramework.Elements;
 
 public delegate void MouseEventHandler(UIView sender, UIMouseEvent evt);
 public delegate void MouseWheelEventHandler(UIView sender, UIScrollWheelEvent evt);
@@ -46,6 +48,7 @@ public partial class UIView
     public void HandleSelected()
     {
         IsSelected = true;
+        AddState(UIElementState.Selected);
         Selected?.Invoke(this);
         OnSelected();
     }
@@ -53,6 +56,7 @@ public partial class UIView
     public void HandleDeselected()
     {
         IsSelected = false;
+        RemoveState(UIElementState.Selected);
         OnDeselected();
         Deselected?.Invoke(this);
     }
@@ -64,6 +68,7 @@ public partial class UIView
     public virtual void OnLeftMouseDown(UIMouseEvent evt)
     {
         LeftMousePressed = true;
+        AddState(UIElementState.Active);
         LeftMouseDown?.Invoke(this, evt);
         evt.Previous = this;
         Parent?.OnLeftMouseDown(evt);
@@ -74,6 +79,7 @@ public partial class UIView
     public virtual void OnLeftMouseUp(UIMouseEvent evt)
     {
         LeftMousePressed = false;
+        RemoveState(UIElementState.Active);
         LeftMouseUp?.Invoke(this, evt);
         evt.Previous = this;
         Parent?.OnLeftMouseUp(evt);
@@ -136,6 +142,7 @@ public partial class UIView
     public virtual void OnGotFocus(UIMouseEvent evt)
     {
         IsFocus = true;
+        AddState(UIElementState.Focus);
         GotFocus?.Invoke(this, evt);
         evt.Previous = this;
         Parent?.OnGotFocus(evt);
@@ -144,6 +151,7 @@ public partial class UIView
     public virtual void OnLostFocus(UIMouseEvent evt)
     {
         IsFocus = false;
+        RemoveState(UIElementState.Focus);
         LostFocus?.Invoke(this, evt);
         evt.Previous = this;
         Parent?.OnLostFocus(evt);
@@ -153,6 +161,7 @@ public partial class UIView
     public virtual void OnMouseEnter(UIMouseEvent evt)
     {
         IsMouseHovering = true;
+        AddState(UIElementState.Hover);
         MouseEnter?.Invoke(this, evt);
         evt.Previous = this;
         Parent?.OnMouseEnter(evt);
@@ -161,6 +170,7 @@ public partial class UIView
     public virtual void OnMouseLeave(UIMouseEvent evt)
     {
         IsMouseHovering = false;
+        RemoveState(UIElementState.Hover);
         MouseLeave?.Invoke(this, evt);
         evt.Previous = this;
         Parent?.OnMouseLeave(evt);

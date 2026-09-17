@@ -1,31 +1,36 @@
-﻿namespace SilkyUIFramework.Elements;
+﻿using SilkyUIFramework.StyleSystem;
 
-public struct CrossStyle
-{
-    public Size Size;
-    public float Border, BorderRadius;
-    public Color BorderColor, BackgroundColor;
-}
+namespace SilkyUIFramework.Elements;
 
 [XmlElementMapping("Cross")]
 public class SUICross : UIView
 {
-    private CrossStyle _style = new()
-    {
-        Size = new Size(24f),
-        BorderRadius = 4f,
-        Border = 2f
-    };
+    public Size CrossSize { get; set; } = new Size(22f);
+    public float CrossBorderRadius { get; set; } = 3.5f;
+    public float CrossBorder { get; set; } = 2f;
 
-    public Size CrossSize { get => _style.Size; set => _style.Size = value; }
-    public float CrossBorderRadius { get => _style.BorderRadius; set => _style.BorderRadius = value; }
-    public float CrossBorder { get => _style.Border; set => _style.Border = value; }
-
-    public Color CrossBorderColor { get => _style.BorderColor; set => _style.BorderColor = value; }
-    public Color CrossBackgroundColor { get => _style.BackgroundColor; set => _style.BackgroundColor = value; }
+    public Color CrossBorderColor { get; set; }
+    public Color CrossBackgroundColor { get; set; }
 
     public Anchor CrossLeft = new(0, 0, 0.5f);
     public Anchor CrossTop = new(0, 0, 0.5f);
+
+    public SUICross()
+    {
+        StyleSheet.AllTransition.Duration = 0.2f;
+
+        StyleSheet.SetStyle(UIElementState.Normal, new StyleDefinition
+        {
+            [$"{nameof(CrossBorderColor)}"] = SUIColor.Border * 0.75f,
+            [$"{nameof(CrossBackgroundColor)}"] = SUIColor.Warn * 0.75f,
+        });
+
+        StyleSheet.SetStyle(UIElementState.Hover, new StyleDefinition
+        {
+            [$"{nameof(CrossBorderColor)}"] = SUIColor.Highlight,
+            [$"{nameof(CrossBackgroundColor)}"] = SUIColor.Warn,
+        });
+    }
 
     public override void OnMouseEnter(UIMouseEvent evt)
     {
@@ -37,12 +42,12 @@ public class SUICross : UIView
     {
         base.Draw(gameTime, spriteBatch);
 
-        var left = CrossLeft.CalculatePosition(InnerBounds.Width, _style.Size.Width);
-        var top = CrossLeft.CalculatePosition(InnerBounds.Height, _style.Size.Height);
+        var left = CrossLeft.CalculatePosition(InnerBounds.Width, CrossSize.Width);
+        var top = CrossLeft.CalculatePosition(InnerBounds.Height, CrossSize.Height);
 
         var position = InnerBounds.Position + new Vector2(left, top);
 
-        SDFGraphics.HasBorderCross(position, _style.Size, _style.BorderRadius,
-            _style.BackgroundColor, _style.Border, _style.BorderColor, SilkyUI.TransformMatrix);
+        SDFGraphics.HasBorderCross(position, CrossSize, CrossBorderRadius,
+            CrossBackgroundColor, CrossBorder, CrossBorderColor, SilkyUI.TransformMatrix);
     }
 }

@@ -67,7 +67,7 @@ public class SilkyUIInputState(IUIInteractionService interactionService)
     {
         if (FocusTarget is not { OccupyPlayerInput: true }) return;
 
-        if (!FocusHelper.AllowUIInputs) return; // 焦点不在游戏
+        if (!FocusHelper.AllowInputProcessing) return; // 焦点不在游戏
 
         Main.oldInputText = Main.inputText;
         Main.inputText = Keyboard.GetState();

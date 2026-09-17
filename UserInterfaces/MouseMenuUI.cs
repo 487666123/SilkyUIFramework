@@ -40,7 +40,7 @@ public partial class MouseMenuUI : BaseBody, IMouseMenu
 
         var tween = StartTween = CreateTween().Parallel().SetEase(EaseType.Out).SetTrans(TransitionType.Quint);
         StartTween.FadeTo(this, opacity, 0.2f);
-        StartTween.MemberTo(this, nameof(RenderTargetMatrix), matrix, 0.2f, static (left, right, t) => Matrix.Lerp(left, right, t));
+        StartTween.MemberTo(this, nameof(RenderTargetMatrix), matrix, 0.2f);
         StartTween.OnFinished += () =>
         {
             Enabled = enabled;

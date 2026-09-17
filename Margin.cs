@@ -29,6 +29,13 @@ public readonly struct Margin(float left, float top, float right, float bottom) 
     public Margin With(float? left = null, float? top = null, float? right = null, float? bottom = null) =>
         new(left ?? Left, top ?? Top, right ?? Right, bottom ?? Bottom);
 
+    /// <summary>按左、上、右、下分别进行线性插值。</summary>
+    public static Margin Lerp(Margin a, Margin b, float t) =>
+        new(MathHelper.Lerp(a.Left, b.Left, t),
+            MathHelper.Lerp(a.Top, b.Top, t),
+            MathHelper.Lerp(a.Right, b.Right, t),
+            MathHelper.Lerp(a.Bottom, b.Bottom, t));
+
     public static Vector2 operator +(Vector2 position, Margin margin) =>
         new(position.X + margin.Left, position.Y + margin.Top);
 

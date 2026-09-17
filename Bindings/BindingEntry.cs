@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using SilkyUIFramework.Common.Reflection;
 
@@ -120,7 +120,7 @@ public sealed class BindingEntry : IDisposable
     {
         if (SourcePropertyPath.Length > 1)
         {
-            _sourcePropertyGetter = PropertyPathAccessor.Create(Source, [.. SourcePropertyPath]).GetValue;
+            _sourcePropertyGetter = new PropertyPathAccessor(typeof(object), [.. SourcePropertyPath]).GetValue;
             return;
         }
 
