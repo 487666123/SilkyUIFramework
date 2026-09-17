@@ -138,7 +138,7 @@ public class SUISlider : UIDragControl
 
     public Vector2 Value
     {
-        get => field;
+        get;
         set
         {
             var normalized = NormalizeValue(value);

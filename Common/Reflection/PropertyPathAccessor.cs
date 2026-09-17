@@ -13,10 +13,10 @@ public sealed class PropertyPathAccessor
         public Action<object, object> Setter => field ??= accessor.GetSetter(memberName);
     }
 
-    private readonly string[] _propertyPath;
-    private readonly Dictionary<(int SegmentIndex, Type RuntimeType), MemberAccess> _memberCache = [];
     public Type RootType { get; }
+    private readonly string[] _propertyPath;
     public string[] PropertyPath => [.. _propertyPath];
+    private readonly Dictionary<(int SegmentIndex, Type RuntimeType), MemberAccess> _memberCache = [];
 
     /// <summary>
     /// 根据根类型创建嵌套属性访问器；成员在访问时按实际运行时类型解析。
@@ -120,16 +120,14 @@ public sealed class PropertyPathAccessor
 
         for (var i = 0; i < _propertyPath.Length - 1; i++)
         {
-            if (current == null) return false;
-
             var parentMember = GetOrCreateMemberAccess(i, current.GetType());
             current = parentMember.Getter(current);
+
+            if (current == null) return false;
         }
 
-        if (current == null) return false;
-
-        member = GetOrCreateMemberAccess(_propertyPath.Length - 1, current.GetType());
         owner = current;
+        member = GetOrCreateMemberAccess(_propertyPath.Length - 1, current.GetType());
         return true;
     }
 
