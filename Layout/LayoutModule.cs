@@ -41,7 +41,7 @@ public abstract class LayoutModule(UIElementGroup container)
     public virtual void ResizeChildrenHeight()
     {
         // 固高, 更子高
-        if (Container.FitHeight) return;
+        if (Container.FitHeightToContent) return;
 
         var height = Container.InnerBounds.Height;
         foreach (var element in Container.InFlowChildren)

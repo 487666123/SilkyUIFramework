@@ -46,11 +46,11 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
 
     /// <summary>
     /// 子项完成宽度变化后的高度重算后，若容器需要按内容收缩高度，则同步回写容器高度。
-    /// 这时子项高度已经是最终值，容器高度不会再落在旧的粗测结果上。
+    /// 行轨道已经统计宽度变化后的内容及比例高度，容器不再使用初始粗测结果。
     /// </summary>
     public override void RecalculateHeight()
     {
-        if (!Container.FitHeight) return;
+        if (!Container.FitHeightToContent) return;
 
         Container.SetInnerHeightClamped(_context.TotalRowsHeight);
     }
@@ -94,13 +94,25 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
 
     /// <summary>
     /// 根据已解析的行高更新每个子项的高度。
-    /// Stretch 直接设置外部高度；其他对齐方式调用 UpdateHeight 更新可用高度。
+    /// 非比例子项的 Stretch 直接设置外部高度；比例子项保留按宽度和高度约束计算的高度。
     /// </summary>
     public override void ResizeChildrenHeight()
     {
         var currentHeight = Container.InnerBounds.Height;
         if (Math.Abs(currentHeight - _lastResolvedRowsHeight) > 0.001f)
         {
+            // 父级分配可能改变容器高度；先刷新 Auto 行的子树贡献，再解析行。
+            var availableHeight = Container.FitHeightToContent ? 0f : currentHeight;
+            foreach (var item in _context.Items)
+            {
+                if (!_context.HasContentSizedRows(item.Area)) continue;
+                if (Container.FitHeightToContent && !item.Element.UsesAspectRatio) continue;
+
+                item.Element.UpdateHeight(availableHeight);
+                item.Element.RecalculateHeight();
+                item.Element.ApplyAspectRatioHeight();
+            }
+
             GridTrackSizing.ResolveRows(_context);
             _lastResolvedRowsHeight = currentHeight;
         }
@@ -108,7 +120,14 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
         foreach (var item in _context.Items)
         {
             var areaHeight = _context.GetAreaHeight(item.Area);
-            if (ResolveVerticalAlignment(item.Element) == GridItemAlignment.Stretch)
+            if (item.Element.UsesAspectRatio && _context.HasContentSizedRows(item.Area))
+            {
+                // Auto 行已按容器测量基准（内容自适应时为 0）统计比例高度；
+                // 不再改用区域高度解析百分比约束，避免子项与行高循环依赖。
+                item.Element.ApplyAspectRatioHeight();
+            }
+            else if (!item.Element.UsesAspectRatio &&
+                     ResolveVerticalAlignment(item.Element) == GridItemAlignment.Stretch)
             {
                 item.Element.SetOuterHeightClamped(areaHeight);
             }

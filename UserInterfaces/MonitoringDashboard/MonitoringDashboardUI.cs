@@ -13,6 +13,8 @@ public partial class MonitoringDashboardUI : BaseBody
     {
         InitializeComponent();
 
+        Enabled = false;
+
         Metrics.SetTemplateColumns([GridTrack.Fr(1f), GridTrack.Fr(1f), GridTrack.Fr(1f)]);
         Metrics.SetTemplateRows([GridTrack.Pixels(24f), GridTrack.Fr(1f)]);
         SetTableColumns(TableHeader);
@@ -21,13 +23,6 @@ public partial class MonitoringDashboardUI : BaseBody
         TargetTable.ScrollBar.Width = new Dimension(8f);
         TargetTable.ScrollBar.BackgroundColor = new Color(65, 73, 80);
         TargetTable.ScrollBar.Thumb.BarColor = (new Color(154, 184, 199), new Color(114, 216, 171));
-
-
-#if DEBUG
-        Enabled = true;
-#else
-        Enabled = false;
-#endif
     }
 
     protected override void UpdateStatus(GameTime gameTime)

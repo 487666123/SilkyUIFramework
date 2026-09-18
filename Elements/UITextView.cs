@@ -148,7 +148,8 @@ public class UITextView : UIView
             RecalculateString(InnerBounds.Width);
         }
 
-        if (FitHeight)
+        if (UsesAspectRatio) ApplyAspectRatioHeight();
+        else if (FitHeight)
         {
             SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(TextSize.Y * TextScale));
         }
@@ -159,7 +160,8 @@ public class UITextView : UIView
     {
         RecalculateString(InnerBounds.Width);
 
-        if (FitHeight) SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(TextSize.Y * TextScale));
+        if (FitHeightToContent) SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(TextSize.Y * TextScale));
+        ApplyAspectRatioHeight();
     }
 
     protected virtual void RecalculateString(float maxWidth)

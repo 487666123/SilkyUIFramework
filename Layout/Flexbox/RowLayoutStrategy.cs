@@ -21,7 +21,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     {
         MeasureSize(context, context.Container.Gap.Width, out var mainSize, out var crossSize);
         if (context.Container.FitWidth) context.Container.SetInnerWidthClamped(mainSize);
-        if (context.Container.FitHeight) context.Container.SetInnerHeightClamped(crossSize);
+        if (context.Container.FitHeightToContent) context.Container.SetInnerHeightClamped(crossSize);
     }
 
     /// <inheritdoc />
@@ -42,7 +42,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void RecalculateHeight(FlexboxContext context)
     {
-        if (!context.Container.FitHeight) return;
+        if (!context.Container.FitHeightToContent) return;
         context.Container.SetInnerHeightClamped(FlexboxHelper.CalculateCrossSize(context.Lines, context.Container.Gap.Height));
     }
 
@@ -56,6 +56,10 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void ResizeChildrenHeight(FlexboxContext context)
     {
+        // 子项的百分比高度或高度约束可能刚被刷新，先更新行高再做拉伸与对齐。
+        foreach (var line in context.Lines)
+            line.CrossSize = line.MaxOuterHeight();
+
         if (context.Container.CrossContentAlignment == CrossContentAlignment.Stretch)
         {
             var remaining = context.Container.InnerBounds.Height - FlexboxHelper.CalculateCrossSize(context.Lines, context.Container.Gap.Height);
@@ -72,7 +76,7 @@ public class RowLayoutStrategy : IFlexboxLayoutStrategy
             foreach (var line in context.Lines)
             {
                 foreach (var el in line.Elements.Where(el =>
-                         el.Parent.FitHeight || !(el.OuterBounds.Height >= line.CrossSize)))
+                         !el.UsesAspectRatio && (el.Parent.FitHeightToContent || !(el.OuterBounds.Height >= line.CrossSize))))
                 {
                     el.SetOuterHeightClamped(line.CrossSize);
                 }

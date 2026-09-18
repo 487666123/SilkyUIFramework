@@ -88,6 +88,19 @@ public sealed class GridContext(UIElementGroup container)
     public float GetAreaHeight(GridArea area) =>
         GridLayoutHelper.SumTracks(Rows, area.Row, area.RowSpan, GetRowGap());
 
+    internal bool HasContentSizedRows(GridArea area)
+    {
+        var end = Math.Min(Rows.Length, area.Row + area.RowSpan);
+        for (var i = area.Row; i < end; i++)
+        {
+            var definition = Rows[i].Definition;
+            if (definition.Min.TemplateType is TemplateType.Auto ||
+                definition.Max.TemplateType is TemplateType.Auto) return true;
+        }
+
+        return false;
+    }
+
     public float GetColumnGap()
     {
         return Container.FitWidth
@@ -101,7 +114,7 @@ public sealed class GridContext(UIElementGroup container)
 
     public float GetRowGap()
     {
-        return Container.FitHeight
+        return Container.FitHeightToContent
             ? Container.Gap.Height
             : GridLayoutHelper.ResolveContentGap(
                 Rows,

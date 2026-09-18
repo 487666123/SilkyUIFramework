@@ -59,10 +59,12 @@ public class SUIGif : UIView
             SetInnerBoundsWidthRaw(GifRenderer.Width);
         }
 
-        if (FitHeight)
+        if (FitHeightToContent)
         {
             SetInnerBoundsWidthRaw(GifRenderer.Height);
         }
+
+        ApplyAspectRatioHeight();
     }
 
     protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

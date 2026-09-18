@@ -10,7 +10,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void MeasureChildren(FlexboxContext context)
     {
-        if (context.Container.FlexWrap && !context.Container.FitHeight)
+        if (context.Container.FlexWrap && !context.Container.FitHeightToContent)
             WrapColumn(context);
         else
             SingleColumn(context);
@@ -21,7 +21,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
     {
         MeasureSize(context, context.Container.Gap.Height, out var mainSize, out var crossSize);
         if (context.Container.FitWidth) context.Container.SetInnerWidthClamped(crossSize);
-        if (context.Container.FitHeight) context.Container.SetInnerHeightClamped(mainSize);
+        if (context.Container.FitHeightToContent) context.Container.SetInnerHeightClamped(mainSize);
     }
 
     /// <inheritdoc />
@@ -54,7 +54,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void RecalculateHeight(FlexboxContext context)
     {
-        if (!context.Container.FitHeight) return;
+        if (!context.Container.FitHeightToContent) return;
         context.Container.SetInnerHeightClamped(context.GetMaxMainSize());
     }
 
@@ -68,6 +68,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
     /// <inheritdoc />
     public void ResizeChildrenHeight(FlexboxContext context)
     {
+        // 按最终高度重新分列；列宽仅读取现有尺寸，不重新分配宽度。
         if (context.Container.FlexWrap)
             WrapColumn(context);
         else
@@ -174,7 +175,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
                 case > 0:
                 {
                     var sortedElements = line.Elements
-                        .Where(el => el.FlexGrow > 0)
+                        .Where(el => !el.UsesAspectRatio && el.FlexGrow > 0)
                         .Select(el => (Element: el, AvailableGrowth: el.HeightMertrics.MaxOuter - el.OuterBounds.Height))
                         .Where(item => item.AvailableGrowth > 0)
                         .OrderBy(item => item.AvailableGrowth).ToArray();
@@ -199,7 +200,7 @@ public class ColumnLayoutStrategy : IFlexboxLayoutStrategy
                 case < 0:
                 {
                     var sortedElements = line.Elements
-                        .Where(el => el.FlexShrink > 0)
+                        .Where(el => !el.UsesAspectRatio && el.FlexShrink > 0)
                         .Select(el => (Element: el, AvailableShrink: el.HeightMertrics.MinOuter - el.OuterBounds.Height))
                         .Where(item => item.AvailableShrink < 0)
                         .OrderByDescending(item => item.AvailableShrink).ToArray();

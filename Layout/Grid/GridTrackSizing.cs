@@ -20,13 +20,13 @@ public static class GridTrackSizing
     }
 
     /// <summary>
-    /// 解析行轨道尺寸。非 FitHeight 时，行百分比和 fr 基于父容器 InnerBounds.Height。
+    /// 解析行轨道尺寸。高度不由内容决定时（含比例高度），行百分比和 fr 基于父容器 InnerBounds.Height。
     /// </summary>
     public static void ResolveRows(GridContext context)
     {
         ResolveTracks(
             context.Rows,
-            context.Container.FitHeight,
+            context.Container.FitHeightToContent,
             context.Container.InnerBounds.Height,
             context.Container.Gap.Height,
             context.Items,
@@ -49,7 +49,7 @@ public static class GridTrackSizing
             context.Rows,
             context.Container.Gap.Height,
             context.Container.InnerBounds.Height,
-            context.Container.FitHeight
+            context.Container.FitHeightToContent
                 ? GridContentAlignment.Start
                 : context.Container.GridContentVerticalAlignment);
     }

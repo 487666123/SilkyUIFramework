@@ -87,10 +87,12 @@ public class SUIImage : UIView
             SetInnerBoundsWidthRaw(Texture2D.Value.Width);
         }
 
-        if (FitHeight)
+        if (FitHeightToContent)
         {
             SetInnerBoundsHeightRaw(Texture2D.Value.Height);
         }
+
+        ApplyAspectRatioHeight();
     }
 
     private bool _imageLoading = false;

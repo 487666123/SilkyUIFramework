@@ -84,6 +84,25 @@ public partial class UIView
         }
     }
 
+    /// <summary>
+    /// 宽高比（宽 / 高），0 表示关闭。仅 FitHeight 时生效，遵循 BoxSizing 和高度上下限。
+    /// </summary>
+    public float AspectRatio
+    {
+        get;
+        set
+        {
+            if (!float.IsFinite(value) || value < 0f)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Aspect ratio must be finite and non-negative.");
+            if (field == value) return;
+            field = value;
+            MarkLayoutDirty();
+        }
+    }
+
+    internal bool UsesAspectRatio => FitHeight && AspectRatio > 0f;
+    internal bool FitHeightToContent => FitHeight && !UsesAspectRatio;
+
     private Dimension _minWidth;
     private Dimension _maxWidth = new(ushort.MaxValue * 100);
     private Dimension _width;
@@ -171,7 +190,7 @@ public partial class UIView
 
     /// <summary>
     /// 获取当前元素布局测量所用的可用尺寸。
-    /// 根节点使用屏幕可用空间；Fit 维度返回 0，由内容反向决定。
+    /// 根节点使用屏幕可用空间；内容自适应维度返回 0，比例高度则使用已计算的可用空间。
     /// </summary>
     protected Size GetAvailableSize()
     {
@@ -181,7 +200,7 @@ public partial class UIView
 
         if (Positioning.IsOutOfFlow)
             return parent.InnerBounds.Size;
-        return new Size(parent.FitWidth ? 0f : parent.InnerBounds.Width, parent.FitHeight ? 0f : parent.InnerBounds.Height);
+        return new Size(parent.FitWidth ? 0f : parent.InnerBounds.Width, parent.FitHeightToContent ? 0f : parent.InnerBounds.Height);
     }
 
     public virtual void UpdateLayout()
@@ -190,7 +209,9 @@ public partial class UIView
 
         var availableSize = GetAvailableSize();
         Measure(availableSize.Width, availableSize.Height);
+        ApplyAspectRatioHeight();
         RecalculateHeight();
+        ApplyAspectRatioHeight();
         CleanupDirtyMark();
     }
 
@@ -205,7 +226,8 @@ public partial class UIView
         if (FitWidth) SetInnerBoundsWidthRaw(WidthMertrics.ClampInner(0f));
         else UpdateBoundsWidth(width);
 
-        if (FitHeight) SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(0f));
+        if (UsesAspectRatio) ApplyAspectRatioHeight();
+        else if (FitHeight) SetInnerBoundsHeightRaw(HeightMertrics.ClampInner(0f));
         else UpdateBoundsHeight(height);
     }
 
@@ -221,7 +243,17 @@ public partial class UIView
         UpdateBoundsWidth(availableWidth);
     }
 
-    public virtual void RecalculateHeight() { }
+    public virtual void RecalculateHeight() => ApplyAspectRatioHeight();
+
+    internal void ApplyAspectRatioHeight()
+    {
+        if (!UsesAspectRatio) return;
+
+        if (BoxSizing == BoxSizing.Content)
+            SetInnerHeightClamped(InnerBounds.Width / AspectRatio);
+        else
+            SetOuterHeightClamped(Bounds.Width / AspectRatio + Margin.Vertical);
+    }
 
     /// <summary>
     /// 在父级高度变化时更新当前高度。
@@ -230,9 +262,8 @@ public partial class UIView
     {
         UpdateHeightConstraints(availableHeight);
 
-        if (FitHeight) return;
-
-        UpdateBoundsHeight(availableHeight);
+        if (UsesAspectRatio) ApplyAspectRatioHeight();
+        else if (!FitHeight) UpdateBoundsHeight(availableHeight);
     }
 
     /// <summary>

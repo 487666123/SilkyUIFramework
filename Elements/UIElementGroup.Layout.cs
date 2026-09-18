@@ -67,6 +67,7 @@ public partial class UIElementGroup
 
         if (InFlowElements.Count <= 0) return;
         LayoutModule?.Measure();
+        ApplyAspectRatioHeight();
     }
 
     /// <summary>
@@ -80,13 +81,14 @@ public partial class UIElementGroup
         LayoutModule?.PrepareData();
 
         var availableWidth = FitWidth ? 0 : InnerBounds.Width;
-        var availableHeight = FitHeight ? 0 : InnerBounds.Height;
+        var availableHeight = FitHeightToContent ? 0 : InnerBounds.Height;
 
         for (var i = 0; i < InFlowElements.Count; i++)
         {
             var cacheWidth = availableWidth;
             var cacheHeight = availableHeight;
             InFlowElements[i].Measure(cacheWidth, cacheHeight);
+            InFlowElements[i].ApplyAspectRatioHeight();
         }
 
         LayoutModule?.MeasureChildren();
@@ -115,15 +117,20 @@ public partial class UIElementGroup
         RecalculateChildrenHeight();
 
         LayoutModule?.RecalculateHeight();
+        ApplyAspectRatioHeight();
     }
 
     protected virtual void RecalculateChildrenHeight()
     {
         if (InFlowElements.Count <= 0) return;
 
+        // 先向下传递确定高度，再让子树自底向上统计内容尺寸。
+        var availableHeight = FitHeightToContent ? 0f : InnerBounds.Height;
         foreach (var el in InFlowElements)
         {
+            if (!FitHeightToContent || el.UsesAspectRatio) el.UpdateHeight(availableHeight);
             el.RecalculateHeight();
+            el.ApplyAspectRatioHeight();
         }
 
         LayoutModule?.RecalculateChildrenHeight();
