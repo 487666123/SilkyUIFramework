@@ -1,3 +1,4 @@
+using SilkyUIFramework.Interfaces;
 using SilkyUIFramework.Layout;
 
 namespace SilkyUIFramework.Elements;
@@ -7,7 +8,7 @@ namespace SilkyUIFramework.Elements;
 /// 负责子元素管理、布局分组、更新链路与可选裁剪绘制。
 /// </summary>
 [XmlElementMapping("ElementGroup")]
-public partial class UIElementGroup : UIView
+public partial class UIElementGroup : UIView, IContainer<UIView>
 {
     /// <summary>
     /// 创建一个元素容器，并初始化默认布局模块。
@@ -174,9 +175,9 @@ public partial class UIElementGroup : UIView
     /// 从当前容器移除指定直接子元素。
     /// </summary>
     /// <param name="child">要移除的子元素。</param>
-    public void RemoveChild(UIView child)
+    public bool RemoveChild(UIView child)
     {
-        if (!Elements.Remove(child)) return;
+        if (!Elements.Remove(child)) return false;
 
         child.Parent = null;
         child.UpdateDataContext();
@@ -185,6 +186,8 @@ public partial class UIElementGroup : UIView
 
         OnRemoveChild(child);
         child.HandleExitTree();
+
+        return true;
     }
 
     /// <summary>
@@ -494,6 +497,9 @@ public partial class UIElementGroup : UIView
         // 子元素未命中时，命中当前元素则返回自身。
         return ContainsPoint(mousePosition) ? this : null;
     }
+
+    public void Add(UIView item) => AddChild(item);
+    public bool Remove(UIView item) => RemoveChild(item);
 
     /// <summary>
     /// 容器滚动偏移量；更新时会标记位置脏状态。

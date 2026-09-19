@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Body xmlns:s="https://github.com/487666123/SilkyUIFramework"
+	  xmlns:prop="https://github.com/487666123/SilkyUIFramework/Properties"
       s:Class="SilkyUIFramework.UserInterfaces.GridTest.GridTestUI"
-      Width="680px" Height="660px" MaxWidth="95%" MaxHeight="90%"
+      Width="680px" Height="660px" MaxWidth="95%" MaxHeight="90%" Enabled="false"
       Border="1" BorderRadius="6" BorderColor="#59616a" BackgroundColor="#23272c"
       Gap="0" FlexDirection="Column" FlexWrap="false" MainAlignment="Start"
       CrossAlignment="Stretch" OverflowHidden="true" IndependentRenderTarget="false">
@@ -17,10 +18,10 @@
 
 	<ScrollView s:Name="TestScroll" Width="100%" Height="0px" FlexGrow="1" FlexShrink="1"
                 CrossAlignment="Stretch" Gap="8">
-		<M.Mask Width="0px" Height="100%" FlexGrow="1"
+		<prop:Mask Width="0px" Height="100%" FlexGrow="1"
                 OverflowHidden="true" IndependentRenderTarget="false" />
 		<!-- 滚动内容按高度增长，不换列；每个测试网格都有明确的可用宽度。 -->
-		<M.Container Width="100%" FitWidth="false" FitHeight="true"
+		<prop:Container Width="100%" FitWidth="false" FitHeight="true"
                      FlexDirection="Column" FlexWrap="false" MainAlignment="Start"
                      CrossAlignment="Stretch" CrossContentAlignment="Stretch" Padding="16" Gap="12">
 			<ElementGroup Width="100%" Height="28px" FlexDirection="Row" CrossAlignment="Center" Gap="10">
@@ -134,7 +135,7 @@
                           FitWidth="false" FitHeight="false" Height="36px" Padding="10 4"
                           BackgroundColor="#30373f" Border="1" BorderColor="#48525b" BorderRadius="4" />
 			</ElementGroup>
-		</M.Container>
+		</prop:Container>
 	</ScrollView>
 	<View Width="100%" Height="1px" BackgroundColor="#414950" />
 	<ElementGroup Width="100%" Height="38px" Padding="16 6" BackgroundColor="#2e343a"
