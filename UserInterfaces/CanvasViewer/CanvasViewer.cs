@@ -1,9 +1,9 @@
 using SilkyUIFramework.Layout;
 
-namespace SilkyUIFramework.UserInterfaces.MonitoringDashboard;
+namespace SilkyUIFramework.UserInterfaces.CanvasViewer;
 
 [RegisterUI]
-public partial class MonitoringDashboardUI : BaseBody
+public partial class CanvasViewer : BaseBody
 {
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(250);
     private readonly List<TargetRow> _rows = [];
