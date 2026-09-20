@@ -13,7 +13,7 @@ public partial class CanvasViewer : BaseBody
     {
         InitializeComponent();
 
-        Enabled = false;
+        Enabled = true;
 
         Metrics.SetTemplateColumns([GridTrack.Fr(1f), GridTrack.Fr(1f), GridTrack.Fr(1f)]);
         Metrics.SetTemplateRows([GridTrack.Pixels(24f), GridTrack.Fr(1f)]);
@@ -112,8 +112,8 @@ public partial class CanvasViewer : BaseBody
         {
             return new UITextView
             {
-                FitWidth = false,
-                FitHeight = false,
+                FitWidth = true,
+                FitHeight = true,
                 TextScale = 1f,
                 TextBorder = 1f,
                 TextColor = color,

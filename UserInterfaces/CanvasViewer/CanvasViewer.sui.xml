@@ -27,11 +27,11 @@
 			<TextView Text="使用中" TextScale="1" TextBorder="1" TextColor="#a5b2bc" />
 			<TextView Text="纹理估算" TextScale="1" TextBorder="1" TextColor="#a5b2bc" />
 			<TextView s:Name="AvailableValue" Text="--" TextScale="1" TextBorder="1" TextColor="#72d8ab"
-                      FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+                      FitWidth="true" FitHeight="true" TextAlign="0 0.5" />
 			<TextView s:Name="OccupiedValue" Text="--" TextScale="1" TextBorder="1" TextColor="#cfa862"
-                      FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+                      FitWidth="true" FitHeight="true" TextAlign="0 0.5" />
 			<TextView s:Name="MemoryValue" Text="-- MiB" TextScale="1" TextBorder="1" TextColor="#9ab8c7"
-                      FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+                      FitWidth="true" FitHeight="true" TextAlign="0 0.5" />
 		</ElementGroup>
 		<View Width="100%" Height="1px" BackgroundColor="#3d444c" />
 		<ElementGroup Width="100%" Height="28px" FlexDirection="Row" CrossAlignment="Center" Gap="12">
@@ -45,13 +45,13 @@
 				<ElementGroup s:Name="TableHeader" LayoutType="Grid" Width="0px" FlexGrow="1" Height="36px"
                               Padding="12 4" Gap="12" BackgroundColor="#30373f">
 					<TextView Text="尺寸 / px" TextScale="1" TextBorder="1" TextColor="#a5b2bc"
-                              FitWidth="false" FitHeight="false" TextAlign="0 0.5" />
+                              FitWidth="true" FitHeight="true" TextAlign="0 0.5" />
 					<TextView Text="可用" TextScale="1" TextBorder="1" TextColor="#72d8ab"
-                              FitWidth="false" FitHeight="false" TextAlign="1 0.5" />
+                              FitWidth="true" FitHeight="true" TextAlign="1 0.5" />
 					<TextView Text="使用中" TextScale="1" TextBorder="1" TextColor="#cfa862"
-                              FitWidth="false" FitHeight="false" TextAlign="1 0.5" />
+                              FitWidth="true" FitHeight="true" TextAlign="1 0.5" />
 					<TextView Text="估算 / MiB" TextScale="1" TextBorder="1" TextColor="#9ab8c7"
-                              FitWidth="false" FitHeight="false" TextAlign="1 0.5" />
+                              FitWidth="true" FitHeight="true" TextAlign="1 0.5" />
 				</ElementGroup>
 				<View Width="16px" />
 			</ElementGroup>

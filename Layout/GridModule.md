@@ -33,7 +33,7 @@ Grid 布局通过 `UIElementGroup.LayoutType = LayoutType.Grid` 启用。
 - 间距（`Gap`）
 - 容器级默认子项对齐
 - 子项自身对齐
-- 子项默认拉伸到 Grid 区域
+- Fit 子项默认拉伸到 Grid 区域，非 Fit 子项使用声明尺寸
 
 ## 属性映射（SilkyUI -> CSS 概念）
 
@@ -128,7 +128,7 @@ GridSpan.At(1, 2)      // 从第 1 条轨道开始，占 2 格
 new GridSpan(null, 3)  // 自动寻找位置，占 3 格
 ```
 
-当前实现使用 0-based 索引。第一个行/列轨道索引是 `0`。`GridSpan` 会原样保存 `Start` 和 `Size`；进入 `GridArea` 后，负数起点按 `0` 处理，小于 `1` 的跨度按 `1` 处理。
+当前实现使用 0-based 索引。第一个行/列轨道索引是 `0`。`GridSpan` 会原样保存 `Start` 和 `Size`；初始化 `GridArea` 时，负数起点按 `0` 处理，小于 `1` 的跨度按 `1` 处理。放置边界判断、冲突检测及最终占用区域统一使用归一化后的起点和跨度。
 
 ## 轨道类型
 
@@ -178,6 +178,8 @@ GridTrack.MinMax(
 
 该轨道至少为 `120px`，有剩余空间时按 `1fr` 扩展。`MinMax` 可同时用于 `TemplateRows` / `TemplateColumns` 和 `AutoRows` / `AutoColumns`。如果最小值使用 `Fr`，或尺寸值为 NaN/无穷数，创建轨道时会抛出配置异常。
 
+单轨道子项所在轨道的最小端点为 `Auto` 时，子项明确设置的 `MinWidth` / `MinHeight`（换算成外部尺寸）会建立轨道下限。若该下限超过轨道声明的最大值，有效最大值随下限提高。例如 `MinMax(Auto, 100px)` 中的子项设置 `MinWidth = 200px`，列宽至少为 `200px`。普通内容测量值仍受有效上限限制。跨轨道子项的明确最小尺寸按下述跨轨道分配规则建立 Auto 下限，必要时提高有效上限。
+
 ### `GridTrack.Auto`
 
 自动尺寸轨道，根据子项当前 `OuterBounds` 尺寸撑开。
@@ -186,7 +188,11 @@ GridTrack.MinMax(
 GridTrack.Auto
 ```
 
-单轨道子项会直接撑开所在 `Auto` 轨道。跨轨道子项会把不足尺寸平均分摊到覆盖的可内容撑开的轨道上。
+单轨道子项会直接撑开所在 `Auto` 轨道。跨轨道子项先扣除已有轨道尺寸与内部 Gap，再分配不足的尺寸，而不是把各轨道补到相同宽度。例如两列已有 `100 / 0px`，跨列项需要 `200px`，两列各增加 `50px`，得到 `150 / 50px`。
+
+不跨 `Fr` 的子项按跨度从小到大分组；同组独立计算增量，再逐轨道取最大值，避免子项遍历顺序影响结果。可增长轨道达到上限后退出分配，其余轨道继续接收剩余增量。跨 `Fr` 的子项最后统一处理，只向其中含 Auto 下限的 flexible 轨道分配，并按 fr 比例分配增量；fr 总和不足 1 时，对应比例之外的部分均分。纯 `Fr` 的零下限以及 Fit 容器中 `Fr` / 百分比轨道的处理本次未改变。
+
+这套分配仍使用框架已有的普通测量值和明确 min/max 约束，并未新增完整 CSS 的 min-content / max-content 测量模式。
 
 ## 自动放置规则
 
@@ -209,7 +215,7 @@ GridTrack.Auto
 - 优先向下查找。
 - 当前列放不下时进入下一列。
 
-当现有显式轨道不够时，会创建隐式轨道；如果配置了 `AutoRows` / `AutoColumns`，则按对应数组循环取用，否则使用 `GridTrack.Auto`。
+当现有显式轨道不够时，会创建隐式轨道；如果配置了 `AutoRows` / `AutoColumns`，则按对应数组循环取用，否则使用 `GridTrack.Auto`。完全自动子项开始放置前，换行边界会计入前面已放置子项扩出的隐式轨道，以及待放置子项所需的跨度；Row 方向计算列边界，Column 方向计算行边界。
 
 内部实现使用已放置矩形列表判断冲突，不使用完整二维 cell 占用表。行列起点都明确的子项直接加入列表，不检查彼此冲突；只明确一轴和完全自动的子项会查找无冲突位置。
 
@@ -254,8 +260,8 @@ item.GridVerticalAlignment = GridItemAlignment.End;
 
 1. 子项为 `Inherit` 时，使用父容器对应轴的默认对齐。
 2. 如果父容器对应轴也是 `Inherit`，最终退化为 `Stretch`。
-3. `Stretch` 会把子项外部尺寸设置为 Grid 区域尺寸。
-4. `Start` / `Center` / `End` 会调用 `UpdateWidth` / `UpdateHeight` 更新可用尺寸；`FitWidth` / `FitHeight` 子项保留自身测量尺寸，非 Fit 子项会按可用尺寸更新。
+3. `FitWidth = true` 或按内容计算高度的 `FitHeight = true` 在该轴按 auto 参与 `Stretch`，填满 Grid 区域并受 min/max 约束。非 Fit 轴使用声明的 `Width` / `Height`（百分比按 Grid 区域解析），不会因为 `Stretch` 而覆盖声明尺寸；`Stretch` 下未填满的显式尺寸子项靠区域起点放置。
+4. `Start` / `Center` / `End` 会调用 `UpdateWidth` / `UpdateHeight` 更新可用尺寸；Fit 子项仍以内容测量尺寸为基础应用新约束，非 Fit 子项解析声明尺寸，再按对应方式定位。比例高度继续遵循原有比例计算规则。
 
 ## 尺寸与拉伸规则
 
@@ -274,9 +280,11 @@ Measure -> ResizeChildrenWidth -> RecalculateHeight -> ResizeChildrenHeight -> U
 - `Pixels` / `Percent` / `Auto` 先确定基础尺寸和内容约束。
 - `MinMax` 为轨道建立最小和最大尺寸边界。
 - `Fraction` 根据剩余空间分配，并遵守轨道最小最大边界。
-- 子项默认拉伸到它所在的 Grid 区域。
-- 子项非 `Stretch` 对齐时，会调用 `UpdateWidth` / `UpdateHeight`。Fit 子项只更新约束，非 Fit 子项会更新到可用尺寸。
+- 子项对齐默认是 Stretch，但只有对应轴为 Fit 才拉伸；明确设置尺寸的非 Fit 子项保留声明尺寸。
+- 子项非 `Stretch` 对齐时，会调用 `UpdateWidth` / `UpdateHeight`。内容自适应子项会用刷新后的约束钳制已有尺寸，非 Fit 子项会更新到可用尺寸；宽度受限后的文本换行和高度回算由后续布局阶段完成。
 - 子项尺寸写入时会经过 `MinWidth` / `MaxWidth` / `MinHeight` / `MaxHeight` 约束。
+- 无流内子项时仍计算显式行列模板；例如两列各 `100px`、列间距 `10px` 的空 Grid，自适应内容宽度为 `210px`。没有子项也没有显式模板时，不凭空创建隐式轨道；移除最后一个子项后会重新计算。
+- 此处的 Fit 子项语义仅调整 Grid 分配行为；容器的 Fit 尺寸测量、Flexbox 的 Grow/Shrink 和宽高比规则保持原样。
 
 ## 使用示例
 
@@ -304,12 +312,16 @@ root.SetTemplateRows([
 
 var sidebar = new UIView
 {
+    FitWidth = true,
+    FitHeight = true,
     ColumnSpan = GridSpan.At(0),
     RowSpan = GridSpan.At(0),
 };
 
 var content = new UIView
 {
+    FitWidth = true,
+    FitHeight = true,
     ColumnSpan = GridSpan.At(1),
     RowSpan = GridSpan.At(0),
 };
@@ -337,6 +349,7 @@ for (var i = 0; i < 10; i++)
 {
     grid.AddChild(new UIView
     {
+        FitWidth = true,
         Height = new Dimension(64f),
     });
 }
@@ -369,13 +382,15 @@ grid.SetTemplateRows([
 
 grid.AddChild(new UIView
 {
+    FitWidth = true,
+    FitHeight = true,
     RowSpan = GridSpan.At(0),
     ColumnSpan = GridSpan.At(0, 3),
 });
 
-grid.AddChild(new UIView { RowSpan = GridSpan.At(1), ColumnSpan = GridSpan.At(0) });
-grid.AddChild(new UIView { RowSpan = GridSpan.At(1), ColumnSpan = GridSpan.At(1) });
-grid.AddChild(new UIView { RowSpan = GridSpan.At(1), ColumnSpan = GridSpan.At(2) });
+grid.AddChild(new UIView { FitWidth = true, FitHeight = true, RowSpan = GridSpan.At(1), ColumnSpan = GridSpan.At(0) });
+grid.AddChild(new UIView { FitWidth = true, FitHeight = true, RowSpan = GridSpan.At(1), ColumnSpan = GridSpan.At(1) });
+grid.AddChild(new UIView { FitWidth = true, FitHeight = true, RowSpan = GridSpan.At(1), ColumnSpan = GridSpan.At(2) });
 ```
 
 ### 示例 4：子项对齐
@@ -406,7 +421,7 @@ grid.AddChild(new UIView
     Width = new Dimension(40f),
     Height = new Dimension(40f),
     GridHorizontalAlignment = GridItemAlignment.End,
-    GridVerticalAlignment = GridItemAlignment.Stretch,
+    GridVerticalAlignment = GridItemAlignment.Stretch, // FitHeight=false，仍使用声明的 40px 高度。
 });
 ```
 
@@ -438,7 +453,7 @@ grid.AddChild(new UIView
 
 ### 4. 子项尺寸被拉伸
 
-Grid 默认把子项拉伸到 Grid 区域。可以通过两种方式调整：
+Grid 默认对 Fit 子项执行 Stretch。若要使用明确尺寸，设 `FitWidth = false` / `FitHeight = false` 并声明 `Width` / `Height`。若要保持内容测量尺寸，可以调整对齐方式：
 
 - 设置 `GridItemsHorizontalAlignment` / `GridItemsVerticalAlignment` 改变容器默认对齐。
 - 设置子项 `GridHorizontalAlignment` / `GridVerticalAlignment` 覆盖单个子项。

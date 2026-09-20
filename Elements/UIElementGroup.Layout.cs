@@ -65,7 +65,7 @@ public partial class UIElementGroup
 
         MeasureChildren();
 
-        if (InFlowElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0 && LayoutType != LayoutType.Grid) return;
         LayoutModule?.Measure();
         ApplyAspectRatioHeight();
     }
@@ -76,7 +76,7 @@ public partial class UIElementGroup
     public virtual void MeasureChildren()
     {
         ClassifyChildren();
-        if (InFlowElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0 && LayoutType != LayoutType.Grid) return;
 
         LayoutModule?.PrepareData();
 
@@ -97,7 +97,7 @@ public partial class UIElementGroup
     /// <summary> 重设宽度 </summary>
     public virtual void ResizeChildrenWidth()
     {
-        if (InFlowElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0 && LayoutType != LayoutType.Grid) return;
 
         LayoutModule?.ResizeChildrenWidth();
 
@@ -122,7 +122,7 @@ public partial class UIElementGroup
 
     protected virtual void RecalculateChildrenHeight()
     {
-        if (InFlowElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0 && LayoutType != LayoutType.Grid) return;
 
         // 先向下传递确定高度，再让子树自底向上统计内容尺寸。
         var availableHeight = FitHeightToContent ? 0f : InnerBounds.Height;
@@ -141,7 +141,7 @@ public partial class UIElementGroup
     /// </summary>
     protected virtual void ResizeChildrenHeight()
     {
-        if (InFlowElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0 && LayoutType != LayoutType.Grid) return;
 
         LayoutModule?.ResizeChildrenHeight();
 
@@ -157,7 +157,7 @@ public partial class UIElementGroup
     /// </summary>
     protected virtual void UpdateChildrenLayoutPosition()
     {
-        if (InFlowElements.Count <= 0) return;
+        if (InFlowElements.Count <= 0 && LayoutType != LayoutType.Grid) return;
 
         LayoutModule.UpdateChildrenLayoutPosition();
 

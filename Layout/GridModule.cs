@@ -57,7 +57,7 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
 
     /// <summary>
     /// 根据已解析的列宽更新每个子项的宽度。
-    /// Stretch 直接设置外部宽度；其他对齐方式调用 UpdateWidth 更新可用宽度。
+    /// FitWidth 作为 auto 尺寸参与 Stretch；非 Fit 子项使用声明宽度。约束均按网格区域宽度刷新。
     /// </summary>
     public override void ResizeChildrenWidth()
     {
@@ -71,13 +71,20 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
         foreach (var item in _context.Items)
         {
             var areaWidth = _context.GetAreaWidth(item.Area);
-            if (ResolveHorizontalAlignment(item.Element) == GridItemAlignment.Stretch)
+            if (item.Element.FitWidth &&
+                ResolveHorizontalAlignment(item.Element) == GridItemAlignment.Stretch)
             {
+                item.Element.UpdateWidthConstraints(areaWidth);
                 item.Element.SetOuterWidthClamped(areaWidth);
             }
             else
             {
                 item.Element.UpdateWidth(areaWidth);
+                if (item.Element.FitWidth)
+                {
+                    // 保留内容测量结果，但必须应用按 Grid 区域重新解析的约束。
+                    item.Element.SetOuterWidthClamped(item.Element.OuterBounds.Width);
+                }
             }
         }
     }
@@ -94,7 +101,7 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
 
     /// <summary>
     /// 根据已解析的行高更新每个子项的高度。
-    /// 非比例子项的 Stretch 直接设置外部高度；比例子项保留按宽度和高度约束计算的高度。
+    /// 按内容计算高度的 Fit 子项作为 auto 尺寸参与 Stretch；非 Fit 子项使用声明高度，比例高度规则不变。
     /// </summary>
     public override void ResizeChildrenHeight()
     {
@@ -126,14 +133,19 @@ public sealed class GridModule(UIElementGroup container) : LayoutModule(containe
                 // 不再改用区域高度解析百分比约束，避免子项与行高循环依赖。
                 item.Element.ApplyAspectRatioHeight();
             }
-            else if (!item.Element.UsesAspectRatio &&
+            else if (item.Element.FitHeightToContent &&
                      ResolveVerticalAlignment(item.Element) == GridItemAlignment.Stretch)
             {
+                item.Element.UpdateHeightConstraints(areaHeight);
                 item.Element.SetOuterHeightClamped(areaHeight);
             }
             else
             {
                 item.Element.UpdateHeight(areaHeight);
+                if (item.Element.FitHeightToContent)
+                {
+                    item.Element.SetOuterHeightClamped(item.Element.OuterBounds.Height);
+                }
             }
         }
     }

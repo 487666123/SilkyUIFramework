@@ -280,7 +280,7 @@ public partial class UIView
     /// 更新宽度约束缓存。
     /// </summary>
     /// <param name="availableWidth">当前可用宽度。</param>
-    protected void UpdateWidthConstraints(float availableWidth)
+    protected internal void UpdateWidthConstraints(float availableWidth)
     {
         WidthMertrics.UpdateConstraints(
             _minWidth, _maxWidth, availableWidth, BoxSizing,
@@ -291,7 +291,7 @@ public partial class UIView
     /// 更新高度约束缓存。
     /// </summary>
     /// <param name="availableHeight">当前可用高度。</param>
-    protected void UpdateHeightConstraints(float availableHeight)
+    protected internal void UpdateHeightConstraints(float availableHeight)
     {
         HeightMertrics.UpdateConstraints(
             _minHeight, _maxHeight, availableHeight, BoxSizing,

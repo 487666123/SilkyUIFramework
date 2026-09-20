@@ -127,7 +127,7 @@ public static class GridTrackSizing
 
     /// <summary>
     /// 根据子项本轮 OuterBounds 解析内容相关轨道。
-    /// 单轨道需求先合并为基础尺寸；跨轨道需求独立计算后逐轨道取最大值，避免子项顺序影响结果。
+    /// 单轨道需求先合并为基础尺寸；非 flexible 跨项按跨度分组，flexible 跨项最后处理，组内合并增量。
     /// </summary>
     private static void ResolveAutoTracks(
         GridTrackOutput[] tracks,
@@ -145,16 +145,13 @@ public static class GridTrackSizing
             if (span != 1 || start >= tracks.Length) continue;
 
             var outerSize = isColumnAxis ? item.Element.OuterBounds.Width : item.Element.OuterBounds.Height;
-            GrowContentSizedTrack(ref tracks[start], outerSize);
+            var minimumOuterSize = isColumnAxis
+                ? item.Element.WidthMertrics.MinOuter
+                : item.Element.HeightMertrics.MinOuter;
+            GrowContentSizedTrack(ref tracks[start], outerSize, minimumOuterSize);
         }
 
-        // 所有跨轨道子项读取同一份基础尺寸，不读取其他跨轨道子项刚刚增加的尺寸。
-        var baseSizes = new float[tracks.Length];
-        for (var i = 0; i < tracks.Length; i++)
-        {
-            baseSizes[i] = tracks[i].Size;
-        }
-
+        var spanningItems = new List<SpanningItem>();
         foreach (var item in items)
         {
             var area = item.Area;
@@ -162,86 +159,136 @@ public static class GridTrackSizing
             var span = isColumnAxis ? area.ColumnSpan : area.RowSpan;
             if (span <= 1 || start >= tracks.Length) continue;
 
-            var outerSize = isColumnAxis ? item.Element.OuterBounds.Width : item.Element.OuterBounds.Height;
             var end = Math.Min(tracks.Length, start + span);
-            var candidateSizes = (float[])baseSizes.Clone();
-            DistributeSpanningAutoSize(tracks, candidateSizes, start, end, outerSize, gap);
-
+            var crossesFlexible = false;
             for (var i = start; i < end; i++)
-            {
-                tracks[i].Size = Math.Max(tracks[i].Size, candidateSizes[i]);
-            }
+                crossesFlexible |= tracks[i].Definition.Max.TemplateType is TemplateType.Fraction;
+
+            spanningItems.Add(new SpanningItem(start, end,
+                isColumnAxis ? item.Element.OuterBounds.Width : item.Element.OuterBounds.Height,
+                isColumnAxis ? item.Element.WidthMertrics.MinOuter : item.Element.HeightMertrics.MinOuter,
+                crossesFlexible));
         }
+
+        // 非 flexible 跨项按跨度递增处理。同一组先独立求增量再逐轨道取最大值，避免元素顺序影响结果。
+        foreach (var group in spanningItems.Where(item => !item.CrossesFlexible)
+                     .GroupBy(item => item.End - item.Start).OrderBy(group => group.Key))
+        {
+            ResolveSpanningGroup(tracks, group.ToArray(), gap, flexible: false);
+        }
+
+        // 跨 flexible 轨道的项单独作为一组，只向其中允许内容增长的 flexible 轨道分配。
+        ResolveSpanningGroup(tracks, spanningItems.Where(item => item.CrossesFlexible).ToArray(), gap, flexible: true);
     }
 
-    /// <summary> 让含 Auto 的轨道按内容增长，但不突破本轮有效的上限。 </summary>
-    private static void GrowContentSizedTrack(ref GridTrackOutput track, float size)
+    private readonly record struct SpanningItem(int Start, int End, float Size, float MinimumSize, bool CrossesFlexible);
+
+    /// <summary> 单轨道子项的明确最小尺寸优先于 Auto 下限轨道的上限；其余内容增长仍受有效上限限制。 </summary>
+    private static void GrowContentSizedTrack(ref GridTrackOutput track, float size, float minimumOuterSize)
     {
         if (!CanGrowByContent(track)) return;
+
+        if (track.Definition.Min.TemplateType is TemplateType.Auto)
+        {
+            track.MinSize = Math.Max(track.MinSize, minimumOuterSize);
+            track.Size = Math.Max(track.Size, track.MinSize);
+            // Auto 下限解析后可能超过声明的 max，此时提高有效增长上限，而不是压低最小尺寸。
+            track.MaxSize = Math.Max(track.MaxSize, track.Size);
+        }
 
         track.Size = Math.Min(track.MaxSize, Math.Max(track.Size, size));
     }
 
-    /// <summary>
-    /// 基础尺寸加内部 gap 已经足够时不增长；否则先扣除 gap 和不可增长轨道的尺寸，
-    /// 剩余需求除以 Auto 轨道数量得到统一目标，仅提升低于目标的轨道。
-    /// 若实际总尺寸仍不足，固定达到上限的轨道，重新求其余轨道的统一目标。
-    /// </summary>
-    private static void DistributeSpanningAutoSize(
-        GridTrackOutput[] tracks,
-        float[] candidateSizes,
-        int start,
-        int end,
-        float outerSize,
-        float gap)
+    private static void ResolveSpanningGroup(GridTrackOutput[] tracks, SpanningItem[] items, float gap, bool flexible)
     {
-        var targetSize = Math.Max(0f, outerSize - Math.Max(0, end - start - 1) * gap);
-        var baseSize = 0f;
-        var remainingSize = targetSize;
-        var growingTracks = new List<int>(end - start);
+        if (items.Length == 0) return;
 
-        for (var i = start; i < end; i++)
+        // 明确的子项最小尺寸先建立 Auto 下限；普通内容测量值再按有效上限增长。
+        ResolveSpanningContributions(tracks, items, gap, flexible, minimum: true);
+        ResolveSpanningContributions(tracks, items, gap, flexible, minimum: false);
+    }
+
+    private static void ResolveSpanningContributions(
+        GridTrackOutput[] tracks, SpanningItem[] items, float gap, bool flexible, bool minimum)
+    {
+        var baseSizes = tracks.Select(track => track.Size).ToArray();
+        var plannedSizes = (float[])baseSizes.Clone();
+        foreach (var item in items)
         {
-            baseSize += candidateSizes[i];
-            if (CanGrowByContent(tracks[i]))
+            var candidateSizes = (float[])baseSizes.Clone();
+            var extra = (minimum ? item.MinimumSize : item.Size) - (item.End - item.Start - 1) * gap;
+            var affected = new List<int>();
+            for (var i = item.Start; i < item.End; i++)
             {
-                growingTracks.Add(i);
+                extra -= baseSizes[i];
+                if (flexible && tracks[i].Definition.Max.TemplateType is not TemplateType.Fraction) continue;
+                if (minimum ? tracks[i].Definition.Min.TemplateType is TemplateType.Auto : CanGrowByContent(tracks[i]))
+                    affected.Add(i);
             }
-            else
+
+            if (extra <= 0f || affected.Count == 0) continue;
+
+            // 分配缺少的尺寸，而不是把各轨道补到相同总宽度。
+            var remaining = DistributeExtraSpace(tracks, candidateSizes, affected, extra, flexible, beyondLimits: false);
+            if (minimum && remaining > 0f)
             {
-                // 固定轨道等不可被内容撑开的轨道只计入已有尺寸，不参与分配。
-                remainingSize -= candidateSizes[i];
+                // 显式最小尺寸无法在增长上限内满足时，优先扩大具有内容最大值的轨道；否则扩大 Auto 下限轨道。
+                var intrinsicMaximums = affected.Where(index => tracks[index].Definition.Max.TemplateType is TemplateType.Auto).ToList();
+                DistributeExtraSpace(tracks, candidateSizes,
+                    intrinsicMaximums.Count > 0 ? intrinsicMaximums : affected,
+                    remaining, flexible, beyondLimits: true);
             }
+
+            foreach (var index in affected)
+                plannedSizes[index] = Math.Max(plannedSizes[index], candidateSizes[index]);
         }
 
-        if (targetSize <= baseSize) return;
-
-        while (growingTracks.Count > 0)
+        for (var i = 0; i < tracks.Length; i++)
         {
-            var target = Math.Max(0f, remainingSize) / growingTracks.Count;
-            foreach (var index in growingTracks)
-            {
-                candidateSizes[index] = Math.Min(tracks[index].MaxSize, Math.Max(candidateSizes[index], target));
-            }
-
-            var currentSize = 0f;
-            for (var i = start; i < end; i++) currentSize += candidateSizes[i];
-            if (currentSize >= targetSize) break;
-
-            // 只在区域实际放不下时补偿；到顶的轨道退出后，从需求中扣除它实际承担的尺寸。
-            var reachedLimit = false;
-            for (var i = growingTracks.Count - 1; i >= 0; i--)
-            {
-                var index = growingTracks[i];
-                if (candidateSizes[index] < tracks[index].MaxSize) continue;
-
-                remainingSize -= candidateSizes[index];
-                growingTracks.RemoveAt(i);
-                reachedLimit = true;
-            }
-
-            if (!reachedLimit) break;
+            if (plannedSizes[i] <= baseSizes[i]) continue;
+            tracks[i].Size = plannedSizes[i];
+            if (!minimum) continue;
+            tracks[i].MinSize = Math.Max(tracks[i].MinSize, plannedSizes[i]);
+            tracks[i].MaxSize = Math.Max(tracks[i].MaxSize, tracks[i].Size);
         }
+    }
+
+    /// <summary> 均分额外尺寸，或按 fr 权重分配；达到上限的轨道冻结后，其余轨道继续分配。 </summary>
+    private static float DistributeExtraSpace(
+        GridTrackOutput[] tracks, float[] sizes, List<int> affected, float extra, bool flexible, bool beyondLimits)
+    {
+        var growing = affected.Where(index => beyondLimits || sizes[index] < tracks[index].MaxSize).ToList();
+        while (extra > 0f && growing.Count > 0)
+        {
+            var totalFraction = flexible ? growing.Sum(index => Math.Max(0f, tracks[index].Definition.Max.Value)) : 0f;
+            // fr 总和不足 1 时，先按比例分配对应部分，再均分其余部分（CSS 跨 flexible 轨道规则）。
+            var equalRemainder = flexible ? Math.Max(0f, 1f - totalFraction) / growing.Count : 1f;
+            var totalWeight = flexible ? Math.Max(1f, totalFraction) : growing.Count;
+            var frozen = false;
+            var available = extra;
+            for (var i = growing.Count - 1; i >= 0; i--)
+            {
+                var index = growing[i];
+                var weight = flexible ? Math.Max(0f, tracks[index].Definition.Max.Value) + equalRemainder : 1f;
+                var share = available * (weight / totalWeight);
+                var capacity = beyondLimits ? float.PositiveInfinity : tracks[index].MaxSize - sizes[index];
+                if (capacity > share) continue;
+
+                sizes[index] = tracks[index].MaxSize;
+                extra = Math.Max(0f, extra - capacity);
+                growing.RemoveAt(i);
+                frozen = true;
+            }
+
+            if (frozen) continue;
+            foreach (var index in growing)
+            {
+                var weight = flexible ? Math.Max(0f, tracks[index].Definition.Max.Value) + equalRemainder : 1f;
+                sizes[index] += extra * (weight / totalWeight);
+            }
+            return 0f;
+        }
+        return extra;
     }
 
     /// <summary>

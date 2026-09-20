@@ -13,6 +13,9 @@ public static class GridPlacement
     /// </summary>
     public static void PlaceItems(GridContext context)
     {
+        // 没有子项时只保留初始化的显式轨道，不创建隐式行列。
+        if (context.Items.Length == 0) return;
+
         var direction = context.Container.GridDirection;
         var placedItems = new List<PlacedGridItem>(context.Items.Length);
         var rowCount = Math.Max(1, context.Rows.Length);
@@ -44,11 +47,7 @@ public static class GridPlacement
             var element = context.Items[i].Element;
             if (!element.RowSpan.Start.HasValue || !element.ColumnSpan.Start.HasValue) continue;
 
-            var area = new GridArea(
-                element.RowSpan.Start.Value,
-                element.ColumnSpan.Start.Value,
-                element.RowSpan.Size,
-                element.ColumnSpan.Size);
+            var area = context.Items[i].Area;
 
             PlaceItem(context, direction, placedItems, i, area, ref rowCount, ref columnCount);
         }
@@ -71,18 +70,19 @@ public static class GridPlacement
             var hasColumn = element.ColumnSpan.Start.HasValue;
             if (hasRow == hasColumn) continue;
 
+            var initialArea = context.Items[i].Area;
             var area = hasRow
                 ? FindInFixedRow(
                     direction,
-                    element.RowSpan.Start!.Value,
-                    element.RowSpan.Size,
-                    element.ColumnSpan.Size,
+                    initialArea.Row,
+                    initialArea.RowSpan,
+                    initialArea.ColumnSpan,
                     placedItems)
                 : FindInFixedColumn(
                     direction,
-                    element.ColumnSpan.Start!.Value,
-                    element.RowSpan.Size,
-                    element.ColumnSpan.Size,
+                    initialArea.Column,
+                    initialArea.RowSpan,
+                    initialArea.ColumnSpan,
                     placedItems);
 
             PlaceItem(context, direction, placedItems, i, area, ref rowCount, ref columnCount);
@@ -108,8 +108,10 @@ public static class GridPlacement
             var element = context.Items[i].Element;
             if (element.RowSpan.Start.HasValue || element.ColumnSpan.Start.HasValue) continue;
 
-            var majorSpan = GetMajorSpan(direction, element.RowSpan.Size, element.ColumnSpan.Size);
-            var minorSpan = GetMinorSpan(direction, element.RowSpan.Size, element.ColumnSpan.Size);
+            // 初始 GridArea 已归一化跨度，边界判断与实际占用必须使用同一尺寸。
+            var initialArea = context.Items[i].Area;
+            var majorSpan = GetMajorSpan(direction, initialArea.RowSpan, initialArea.ColumnSpan);
+            var minorSpan = GetMinorSpan(direction, initialArea.RowSpan, initialArea.ColumnSpan);
             minorLimit = Math.Max(minorLimit, minorSpan);
 
             var rect = FindAuto(placedItems, majorSpan, minorSpan, minorLimit, ref cursorMajor, ref cursorMinor);
@@ -234,25 +236,12 @@ public static class GridPlacement
     {
         var limit = direction == GridDirection.Row ? context.Columns.Length : context.Rows.Length;
 
+        // 已放置项的 Area 包含新扩出的隐式轨道；未放置项的 Area 包含归一化后的跨度。
+        // 轨道数组尚未扩容，不能只使用模板数量和元素的原始声明计算换行边界。
         foreach (var item in context.Items)
         {
-            var element = item.Element;
-            if (direction == GridDirection.Row)
-            {
-                limit = Math.Max(limit, element.ColumnSpan.Size);
-                if (element.ColumnSpan.Start is { } start)
-                {
-                    limit = Math.Max(limit, start + element.ColumnSpan.Size);
-                }
-            }
-            else
-            {
-                limit = Math.Max(limit, element.RowSpan.Size);
-                if (element.RowSpan.Start is { } start)
-                {
-                    limit = Math.Max(limit, start + element.RowSpan.Size);
-                }
-            }
+            var end = direction == GridDirection.Row ? item.Area.ColumnEnd : item.Area.RowEnd;
+            limit = Math.Max(limit, end);
         }
 
         return Math.Max(1, limit);
