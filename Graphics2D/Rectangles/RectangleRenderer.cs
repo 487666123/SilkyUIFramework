@@ -44,7 +44,7 @@ public sealed class RectangleRenderer
     private readonly EffectParameter innerEnabledParameter;
 
     private readonly EffectPass fillPass;
-    private readonly EffectPass borderedPass;
+    private readonly EffectPass uniformBorderPass;
     private readonly EffectPass texturedPass;
     private readonly EffectPass shadowPass;
     private readonly EffectPass perSideBorderPass;
@@ -53,8 +53,8 @@ public sealed class RectangleRenderer
     /// <summary>
     /// 借用设备、RectangleEffect 和绘制结束后需要恢复的 pass，不接管它们的释放。
     /// Effect 必须来自同一设备，使用 <c>ModAsset.RectangleEffect.Value</c>。
-    /// 构造时要求全部参数及 NoBorder、HasBorder、Textured、Shadow、
-    /// HasPerSideBorder、HasPerSideBorderColors 六个 pass。
+    /// 构造时要求全部参数及 Fill、UniformBorder、Textured、Shadow、
+    /// PerSideBorder、PerSideBorderColors 六个 pass。
     /// 应复用绘制器实例；资源重新加载后，应使用新的 Effect 和恢复 pass 重新创建实例。
     /// </summary>
     public RectangleRenderer(GraphicsDevice graphicsDevice, Effect effect, EffectPass resumePass)
@@ -66,21 +66,21 @@ public sealed class RectangleRenderer
         this.graphicsDevice = graphicsDevice;
         this.resumePass = resumePass;
 
-        // shader 的既有名字只在这里出现，绘制逻辑使用各参数的实际语义。
+        // 集中绑定 shader 参数与 pass，绘制时复用缓存引用。
         transformParameter = RequireParameter(effect, "uTransformMatrix");
-        antialiasRangeParameter = RequireParameter(effect, "uSmoothstepRange");
-        colorParameter = RequireParameter(effect, "uBackgroundColor");
-        borderWidthParameter = RequireParameter(effect, "uBorder");
+        antialiasRangeParameter = RequireParameter(effect, "uAntialiasRange");
+        colorParameter = RequireParameter(effect, "uColor");
+        borderWidthParameter = RequireParameter(effect, "uBorderWidth");
         borderColorParameter = RequireParameter(effect, "uBorderColor");
         shadowBlurParameter = RequireParameter(effect, "uShadowBlurSize");
 
-        fillPass = RequirePass(effect, "NoBorder");
-        borderedPass = RequirePass(effect, "HasBorder");
+        fillPass = RequirePass(effect, "Fill");
+        uniformBorderPass = RequirePass(effect, "UniformBorder");
         texturedPass = RequirePass(effect, "Textured");
         shadowPass = RequirePass(effect, "Shadow");
 
-        perSideBorderPass = RequirePass(effect, "HasPerSideBorder");
-        perSideBorderColorsPass = RequirePass(effect, "HasPerSideBorderColors");
+        perSideBorderPass = RequirePass(effect, "PerSideBorder");
+        perSideBorderColorsPass = RequirePass(effect, "PerSideBorderColors");
 
         innerOriginParameter = RequireParameter(effect, "uInnerOrigin");
         innerSizeParameter = RequireParameter(effect, "uInnerSize");
@@ -121,7 +121,7 @@ public sealed class RectangleRenderer
         borderWidthParameter.SetValue(borderWidth);
         borderColorParameter.SetValue(borderColor.ToVector4());
         RectangleGeometryBuilder.WriteVertices(vertices, position, size, cornerRadii, 1f / transform.M11);
-        Submit(borderedPass);
+        Submit(uniformBorderPass);
     }
 
     /// <summary>
@@ -279,8 +279,8 @@ public sealed class RectangleRenderer
     private void BindTransform(Matrix transform)
     {
         const float halfDiagonal = 1.414213562373f / 2f;
-        var antialiasWidth = halfDiagonal / transform.M11;
-        antialiasRangeParameter.SetValue(new Vector2(-antialiasWidth, antialiasWidth));
+        var antialiasHalfWidth = halfDiagonal / transform.M11;
+        antialiasRangeParameter.SetValue(new Vector2(-antialiasHalfWidth, antialiasHalfWidth));
 
         // 与现有 MatrixHelper.Transform2SDFMatrix 保持相同投影约定，使用实例设备的 Viewport。
         var viewport = graphicsDevice.Viewport;

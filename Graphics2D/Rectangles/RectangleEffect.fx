@@ -5,10 +5,10 @@ sampler uImage0 : register(s0);
 cbuffer RectangleParameters : register(b0)
 {
     float4x4 uTransformMatrix;
-    float4 uBackgroundColor;
+    float4 uColor; // 填充色、纹理着色或阴影色，取决于绘制 pass。
     float4 uBorderColor;
-    float2 uSmoothstepRange;
-    float uBorder;
+    float2 uAntialiasRange;
+    float uBorderWidth;
     float uShadowBlurSize;
 
     float2 uInnerOrigin;
@@ -70,36 +70,36 @@ float RoundedRectangleDistance(float2 q, float radius)
 
 float DistanceCoverage(float distance)
 {
-    return 1.0 - smoothstep(uSmoothstepRange.x, uSmoothstepRange.y, distance);
+    return 1.0 - smoothstep(uAntialiasRange.x, uAntialiasRange.y, distance);
 }
 
 // 保留原统一宽度描边的混色公式。
-float4 HasBorder(PSInput input) : SV_Target
+float4 UniformBorder(PSInput input) : SV_Target
 {
     float distance = RoundedRectangleDistance(input.DistanceFromEdge, input.BorderRadius);
-    float4 color = lerp(uBackgroundColor, uBorderColor,
-        smoothstep(uSmoothstepRange.x, uSmoothstepRange.y, distance + uBorder));
+    float4 color = lerp(uColor, uBorderColor,
+        smoothstep(uAntialiasRange.x, uAntialiasRange.y, distance + uBorderWidth));
     return color * DistanceCoverage(distance);
 }
 
-float4 NoBorder(PSInput input) : SV_Target
+float4 Fill(PSInput input) : SV_Target
 {
     float distance = RoundedRectangleDistance(input.DistanceFromEdge, input.BorderRadius);
-    return uBackgroundColor * DistanceCoverage(distance);
+    return uColor * DistanceCoverage(distance);
 }
 
 float4 Textured(PSInput input) : SV_Target
 {
     float distance = RoundedRectangleDistance(input.DistanceFromEdge, input.BorderRadius);
-    return tex2D(uImage0, input.TextureCoordinates) * uBackgroundColor * DistanceCoverage(distance);
+    return tex2D(uImage0, input.TextureCoordinates) * uColor * DistanceCoverage(distance);
 }
 
 float4 Shadow(PSInput input) : SV_Target
 {
     float distance = RoundedRectangleDistance(input.DistanceFromEdge, input.BorderRadius);
     float coverage = 1.0 - smoothstep(
-        uSmoothstepRange.x - uShadowBlurSize, uSmoothstepRange.y, distance);
-    return uBackgroundColor * coverage;
+        uAntialiasRange.x - uShadowBlurSize, uAntialiasRange.y, distance);
+    return uColor * coverage;
 }
 
 // 椭圆边界附近的局部距离近似。圆形时退化为精确圆距离。
@@ -145,24 +145,24 @@ float InnerRectangleCoverage(float2 p, float outerCoverage)
 
     // 很窄的内部区域，其覆盖率随可用宽高趋于零。
     [branch]
-    if (min(uInnerSize.x, uInnerSize.y) < uSmoothstepRange.y - uSmoothstepRange.x)
+    if (min(uInnerSize.x, uInnerSize.y) < uAntialiasRange.y - uAntialiasRange.x)
     {
         float2 intervalCoverage = saturate(
-            smoothstep(uSmoothstepRange.x, uSmoothstepRange.y, p)
-            - smoothstep(uSmoothstepRange.x, uSmoothstepRange.y, p - uInnerSize));
+            smoothstep(uAntialiasRange.x, uAntialiasRange.y, p)
+            - smoothstep(uAntialiasRange.x, uAntialiasRange.y, p - uInnerSize));
         innerCoverage = min(innerCoverage, min(intervalCoverage.x, intervalCoverage.y));
     }
 
     return min(innerCoverage, outerCoverage);
 }
 
-float4 HasPerSideBorder(PSInput input) : SV_Target
+float4 PerSideBorder(PSInput input) : SV_Target
 {
     float outerDistance = RoundedRectangleDistance(input.DistanceFromEdge, input.BorderRadius);
     float outerCoverage = DistanceCoverage(outerDistance);
     float innerCoverage = InnerRectangleCoverage(input.InnerPosition, outerCoverage);
 
-    return uBackgroundColor * innerCoverage
+    return uColor * innerCoverage
          + uBorderColor * (outerCoverage - innerCoverage);
 }
 
@@ -171,8 +171,8 @@ float4 PerSideBorderColor(float2 p)
     // 像素属于 distance / width 最小的有效边。
     // CPU 已归一化六条分界线；这里的比较值是到分界线的有符号局部距离。
     float4 d = float4(p.x, p.y, uRectangleSize.x - p.x, uRectangleSize.y - p.y);
-    float lo = uSmoothstepRange.x;
-    float hi = uSmoothstepRange.y;
+    float lo = uAntialiasRange.x;
+    float hi = uAntialiasRange.y;
 
     // 名称中的第一条边获胜时，值趋于 1；第二条边获胜时，值趋于 0。
     float leftTop = smoothstep(lo, hi,
@@ -212,7 +212,7 @@ float4 PerSideBorderColor(float2 p)
         + uBorderColorRight * weights.z + uBorderColorBottom * weights.w) / total;
 }
 
-float4 HasPerSideBorderColors(PSInput input) : SV_Target
+float4 PerSideBorderColors(PSInput input) : SV_Target
 {
     float outerDistance = RoundedRectangleDistance(input.DistanceFromEdge, input.BorderRadius);
     float outerCoverage = DistanceCoverage(outerDistance);
@@ -223,22 +223,22 @@ float4 HasPerSideBorderColors(PSInput input) : SV_Target
         innerCoverage = InnerRectangleCoverage(input.InnerPosition, outerCoverage);
 
     float4 borderColor = PerSideBorderColor(input.RectanglePosition);
-    return uBackgroundColor * innerCoverage
+    return uColor * innerCoverage
          + borderColor * (outerCoverage - innerCoverage);
 }
 
-technique T1
+technique Rectangle
 {
-    pass HasBorder
+    pass UniformBorder
     {
         VertexShader = compile vs_3_0 VS_Rectangle();
-        PixelShader = compile ps_3_0 HasBorder();
+        PixelShader = compile ps_3_0 UniformBorder();
     }
 
-    pass NoBorder
+    pass Fill
     {
         VertexShader = compile vs_3_0 VS_Rectangle();
-        PixelShader = compile ps_3_0 NoBorder();
+        PixelShader = compile ps_3_0 Fill();
     }
 
     pass Shadow
@@ -253,15 +253,15 @@ technique T1
         PixelShader = compile ps_3_0 Textured();
     }
 
-    pass HasPerSideBorder
+    pass PerSideBorder
     {
         VertexShader = compile vs_3_0 VS_Rectangle();
-        PixelShader = compile ps_3_0 HasPerSideBorder();
+        PixelShader = compile ps_3_0 PerSideBorder();
     }
 
-    pass HasPerSideBorderColors
+    pass PerSideBorderColors
     {
         VertexShader = compile vs_3_0 VS_Rectangle();
-        PixelShader = compile ps_3_0 HasPerSideBorderColors();
+        PixelShader = compile ps_3_0 PerSideBorderColors();
     }
 }

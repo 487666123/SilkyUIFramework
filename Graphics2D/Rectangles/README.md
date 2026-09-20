@@ -4,7 +4,7 @@
 四边可以共用一种颜色，也可以分别指定颜色。每次调用仍提交一次绘制，复用原有的 16 个顶点和 8 个三角形。
 
 新增的 [RectangleEffect.fx](RectangleEffect.fx) 是本目录专用 shader。
-它包含原有四种 pass，以及 HasPerSideBorder 和 HasPerSideBorderColors。原 [SDFRectangle.fx](../SDFRectangle.fx) 未修改。
+它包含 Fill、UniformBorder、Textured、Shadow、PerSideBorder 和 PerSideBorderColors 六个 pass。原 [SDFRectangle.fx](../SDFRectangle.fx) 未修改。
 原顶点格式 [SDFGraphicsVertexType.cs](../SDFGraphicsVertexType.cs) 继续复用。
 
 ## 加载一次，复用绘制器
