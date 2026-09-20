@@ -27,7 +27,7 @@ public static class SDFRectangle
         Vector4 borderRadius, Color backgroundColor, float border, Color borderColor, Matrix matrix)
     {
         var edgePadding = 1 / matrix.M11;
-        matrix = PrepareSdfMatrix(matrix);
+        matrix = BindTransform(matrix);
 
         var effect = Effect;
 
@@ -50,7 +50,7 @@ public static class SDFRectangle
         Vector4 borderRadius, Color backgroundColor, Matrix matrix)
     {
         var edgePadding = 1 / matrix.M11;
-        matrix = PrepareSdfMatrix(matrix);
+        matrix = BindTransform(matrix);
 
         var effect = Effect;
 
@@ -67,10 +67,10 @@ public static class SDFRectangle
     /// 采样整张纹理并按圆角矩形裁剪后绘制。
     /// 纹理坐标根据当前 Viewport 自动推导。
     /// </summary>
-    public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size, Vector4 borderRadius, Matrix matrix)
+    public static void DrawScreenTexture(Texture2D texture2D, Vector2 position, Vector2 size, Vector4 borderRadius, Matrix matrix)
     {
         var edgePadding = 1 / matrix.M11;
-        matrix = PrepareSdfMatrix(matrix);
+        matrix = BindTransform(matrix);
         var device = GraphicsDevice;
         var screenSize = new Vector2(device.PresentationParameters.BackBufferWidth, device.PresentationParameters.BackBufferHeight);
 
@@ -78,7 +78,7 @@ public static class SDFRectangle
 
         effect.Parameters["uTransformMatrix"].SetValue(matrix);
         effect.Parameters["uBackgroundColor"].SetValue(Color.White.ToVector4());
-        effect.CurrentTechnique.Passes["SampleVersion"].Apply();
+        effect.CurrentTechnique.Passes["Textured"].Apply();
 
         device.Textures[0] = texture2D;
         SetRectanglePrimitives(edgePadding, position, size, borderRadius, position / screenSize, size / screenSize);
@@ -89,17 +89,17 @@ public static class SDFRectangle
     /// <summary>
     /// 采样纹理指定 UV 区域并按圆角矩形裁剪后绘制。
     /// </summary>
-    public static void SampleVersion(Texture2D texture2D, Vector2 position, Vector2 size,
+    public static void DrawTexture(Texture2D texture2D, Vector2 position, Vector2 size,
         Vector2 textureCoordinatesPosition, Vector2 textureCoordinatesSize, Vector4 borderRadius, Color color, Matrix matrix)
     {
-        matrix = PrepareSdfMatrix(matrix);
+        matrix = BindTransform(matrix);
         var device = GraphicsDevice;
 
         var effect = Effect;
 
         effect.Parameters["uTransformMatrix"].SetValue(matrix);
         effect.Parameters["uBackgroundColor"].SetValue(color.ToVector4());
-        effect.CurrentTechnique.Passes["SampleVersion"].Apply();
+        effect.CurrentTechnique.Passes["Textured"].Apply();
 
         device.Textures[0] = texture2D;
         SetRectanglePrimitives(0, position, size, borderRadius, textureCoordinatesPosition, textureCoordinatesSize);
@@ -113,7 +113,7 @@ public static class SDFRectangle
     public static void DrawShadow(Vector2 position, Vector2 size,
         Vector4 borderRadius, Color backgroundColor, float shadowBlurSize, Matrix matrix)
     {
-        matrix = PrepareSdfMatrix(matrix);
+        matrix = BindTransform(matrix);
 
         var effect = Effect;
 
@@ -130,7 +130,7 @@ public static class SDFRectangle
     /// 将 SpriteBatch 变换矩阵转换到 SDF 所需坐标空间，并设置边缘抗锯齿区间。
     /// smoothstep 计算依赖缩放分量 <c>M11</c>，调用方需保证其非 0。
     /// </summary>
-    private static Matrix PrepareSdfMatrix(Matrix matrix)
+    private static Matrix BindTransform(Matrix matrix)
     {
         const float root2Over2 = 1.414213562373f / 2f;
         var zoom = matrix.M11;

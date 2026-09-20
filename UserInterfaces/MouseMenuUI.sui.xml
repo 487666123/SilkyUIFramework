@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Body xmlns:s="https://github.com/487666123/SilkyUIFramework"
 	  xmlns:b="https://github.com/487666123/SilkyUIFramework/Binding"
+	  xmlns:prop="https://github.com/487666123/SilkyUIFramework/Properties"
 	  s:Class="SilkyUIFramework.UserInterfaces.MouseMenuUI"
 	  Enabled="false"
 	  Border="0" BorderColor="#00000000" BackgroundColor="#00000000"
@@ -13,8 +14,8 @@
 		FlexDirection="Column" FitWidth="true" FitHeight="true" Border="2" BorderRadius="8">
 		<ScrollView s:Name="ScrollView" FitWidth="true" FitHeight="true"
 			Padding="4" Gap="4" Width="100%" Height="100%" CrossAlignment="Stretch">
-			<M.Mask MaxHeight="300px" FitWidth="true" FitHeight="true" />
-			<M.Container FitWidth="true" FitHeight="true" Gap="4" FlexWrap="false" FlexDirection="Column"
+			<prop:Mask MaxHeight="300px" FitWidth="true" FitHeight="true" />
+			<prop:Container FitWidth="true" FitHeight="true" Gap="4" FlexWrap="false" FlexDirection="Column"
 						 MainAlignment="Start" CrossContentAlignment="Stretch" CrossAlignment="Stretch" />
 		</ScrollView>
 	</ElementGroup>

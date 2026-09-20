@@ -199,7 +199,7 @@ public abstract partial class BaseBody
             var size = bounds.Size * scale;
             var borderRadius = el.BorderRadius * scale;
 
-            SDFRectangle.SampleVersion(BlurSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
+            SDFRectangle.DrawScreenTexture(BlurSystem.BlurRenderTarget, position, size, borderRadius, Matrix.Identity);
         }
     }
 }

@@ -12,33 +12,33 @@ public partial class UIView
     /// <summary>
     /// 当前元素的矩形渲染器，负责背景、边框与阴影样式。
     /// </summary>
-    public readonly RectangleRender RectangleRender = new();
+    public readonly RectangleDecoration RectangleDecoration = new();
 
     /// <summary>
-    /// 背景色（代理到 <see cref="RectangleRender.BackgroundColor"/>）。
+    /// 背景色（代理到 <see cref="RectangleDecoration.BackgroundColor"/>）。
     /// </summary>
     public Color BackgroundColor
     {
-        get => RectangleRender.BackgroundColor;
-        set => RectangleRender.BackgroundColor = value;
+        get => RectangleDecoration.BackgroundColor;
+        set => RectangleDecoration.BackgroundColor = value;
     }
 
     /// <summary>
-    /// 圆角半径（代理到 <see cref="RectangleRender.BorderRadius"/>）。
+    /// 圆角半径（代理到 <see cref="RectangleDecoration.CornerRadii"/>）。
     /// </summary>
     public Vector4 BorderRadius
     {
-        get => RectangleRender.BorderRadius;
-        set => RectangleRender.BorderRadius = value;
+        get => RectangleDecoration.CornerRadii;
+        set => RectangleDecoration.CornerRadii = value;
     }
 
     /// <summary>
-    /// 边框颜色（代理到 <see cref="RectangleRender.BorderColor"/>）。
+    /// 边框颜色（代理到 <see cref="RectangleDecoration.BorderColor"/>）。
     /// </summary>
     public Color BorderColor
     {
-        get => RectangleRender.BorderColor;
-        set => RectangleRender.BorderColor = value;
+        get => RectangleDecoration.BorderColor;
+        set => RectangleDecoration.BorderColor = value;
     }
 
     /// <summary>
@@ -67,8 +67,8 @@ public partial class UIView
     {
         var position = Bounds.Position;
         var size = Bounds.Size;
-        RectangleRender.DrawShadow(position, size, ref SilkyUI.TransformMatrix);
-        RectangleRender.Draw(position, size, ref SilkyUI.TransformMatrix);
+        RectangleDecoration.DrawShadow(position, size, SilkyUI.TransformMatrix);
+        RectangleDecoration.DrawSurface(position, size, SilkyUI.TransformMatrix);
     }
 
     /// <summary>

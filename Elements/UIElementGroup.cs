@@ -411,7 +411,7 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
         var scale = Main.UIScale;
         spriteBatch.GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
 
-        SDFRectangle.SampleVersion(renderTarget, position, renderTarget.SizeVec2,
+        SDFRectangle.DrawTexture(renderTarget, position, renderTarget.SizeVec2,
             Vector2.Zero, Vector2.One, (BorderRadius - new Vector4(2)) * scale, Color.White, Matrix.Identity);
     }
 

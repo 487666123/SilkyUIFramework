@@ -18,7 +18,7 @@ public class SUIToggleSwitch : UIView
         BorderRadius = new Vector4(10f);
         BorderColor = SUIColor.Border * 0.75f;
 
-        InternalRectangleRender.BackgroundColor = SUIColor.Background * 0.75f;
+        InternalRectangleDecoration.BackgroundColor = SUIColor.Background * 0.75f;
     }
 
     /// <summary> 状态改变时触发 </summary>
@@ -38,7 +38,7 @@ public class SUIToggleSwitch : UIView
         }
     }
 
-    public readonly RectangleRender InternalRectangleRender = new();
+    public readonly RectangleDecoration InternalRectangleDecoration = new();
     public readonly AnimationTimer SwitchTimer = new(3);
 
     public virtual void StatusChanged(bool value)
@@ -69,7 +69,7 @@ public class SUIToggleSwitch : UIView
         var beadSize = new Vector2(MathHelper.Min(size.Width, size.Height));
         var end = InnerBounds.BottomRight - beadSize;
 
-        InternalRectangleRender.BorderRadius = new Vector4(beadSize.Y / 2f);
-        InternalRectangleRender.Draw(SwitchTimer.Lerp(position, end), beadSize, ref SilkyUI.TransformMatrix);
+        InternalRectangleDecoration.CornerRadii = new Vector4(beadSize.Y / 2f);
+        InternalRectangleDecoration.DrawSurface(SwitchTimer.Lerp(position, end), beadSize, SilkyUI.TransformMatrix);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using SilkyUIFramework.Animation;
 using SilkyUIFramework.Common.Tweening;
+using SilkyUIFramework.Graphics2D.Rectangles;
 
 namespace SilkyUIFramework.UserInterfaces;
 

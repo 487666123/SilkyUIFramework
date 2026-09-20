@@ -6,17 +6,18 @@ namespace SilkyUIFramework.Hooks;
 
 class UIHookInstaller : ILoadable
 {
-    static ILog _logger;
+    private static ILog _logger;
     public void Load(Mod mod)
     {
         _logger = mod.Logger;
-        On_Main.UpdateUIStates += (orig, self) =>
+
+        On_Main.UpdateUIStates += static (orig, self) =>
         {
             SilkyUISystem.Instance?.SilkyUIManager?.Update(Main.gameTimeCache);
             orig(self);
         };
 
-        On_Main.DrawThickCursor += (orig, smart) =>
+        On_Main.DrawThickCursor += static (orig, smart) =>
         {
             SilkyUISystem.Instance?.SilkyUIManager?.Draw(Main.gameTimeCache, Main.spriteBatch);
             return orig(smart);

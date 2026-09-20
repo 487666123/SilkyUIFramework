@@ -49,11 +49,11 @@ public partial class UIView
 
     public float Border
     {
-        get => RectangleRender.Border;
+        get => RectangleDecoration.BorderWidth;
         set
         {
-            if (RectangleRender.Border == value) return;
-            RectangleRender.Border = value;
+            if (RectangleDecoration.BorderWidth == value) return;
+            RectangleDecoration.BorderWidth = value;
             MarkLayoutDirty();
         }
     }

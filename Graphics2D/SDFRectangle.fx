@@ -1,7 +1,7 @@
 ﻿// --------------------------------
 // 常量缓冲区定义（按逻辑分组）
 // --------------------------------
-sampler uImage0 : register(s0); // 纹理采样器（虽然未使用，但保留以备扩展）
+sampler uImage0 : register(s0); // 纹理采样器
 
 cbuffer MatrixBuffer : register(b0)
 {
@@ -94,7 +94,7 @@ float4 NoBorder(PSInput input) : SV_Target
     );
 }
 
-float4 SampleVersion(PSInput input) : SV_Target
+float4 Textured(PSInput input) : SV_Target
 {
     float distance = RectangleDistance(input.DistanceFromEdge, input.BorderRadius);
     return lerp(
@@ -141,10 +141,10 @@ technique T1
         PixelShader = compile ps_3_0 Shadow();
     }
 
-    pass SampleVersion
+    pass Textured
     {
         VertexShader = compile vs_3_0 VS_PCR();
-        PixelShader = compile ps_3_0 SampleVersion();
+        PixelShader = compile ps_3_0 Textured();
     }
 
 }
