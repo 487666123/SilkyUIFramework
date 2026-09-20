@@ -7,10 +7,18 @@ public static class StyleDefinitionExtensions
         style.Set("BackgroundColor", color);
 
     public static StyleDefinition BorderColor(this StyleDefinition style, Color color) =>
-        style.Set("BorderColor", color);
+        style
+            .Set("RectangleDecoration.BorderColorLeft", color)
+            .Set("RectangleDecoration.BorderColorTop", color)
+            .Set("RectangleDecoration.BorderColorRight", color)
+            .Set("RectangleDecoration.BorderColorBottom", color);
 
     public static StyleDefinition BorderWidth(this StyleDefinition style, float width) =>
-        style.Set("Border", width);
+        style
+            .Set("RectangleDecoration.BorderWidthLeft", width)
+            .Set("RectangleDecoration.BorderWidthTop", width)
+            .Set("RectangleDecoration.BorderWidthRight", width)
+            .Set("RectangleDecoration.BorderWidthBottom", width);
 
     public static StyleDefinition Border(this StyleDefinition style, Color color, float width) =>
         style.BorderColor(color).BorderWidth(width);

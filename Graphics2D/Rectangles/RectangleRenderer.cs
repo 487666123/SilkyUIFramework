@@ -3,7 +3,8 @@ using System;
 namespace SilkyUIFramework.Graphics2D.Rectangles;
 
 /// <summary>
-/// 使用现有 SDFRectangle shader 立即绘制圆角矩形，每个实例复用自己的顶点与索引数组。
+/// 立即绘制圆角矩形，每个实例复用自己的顶点与索引数组。
+/// 使用 RectangleEffect shader，支持四边独立宽度与颜色。
 /// </summary>
 /// <remarks>
 /// 在图形线程串行调用。调用方负责 SpriteBatch 提交顺序、混合、采样、裁剪及光栅化状态。
@@ -24,14 +25,36 @@ public sealed class RectangleRenderer
     private readonly EffectParameter borderColorParameter;
     private readonly EffectParameter shadowBlurParameter;
 
+    private readonly EffectParameter innerOriginParameter;
+    private readonly EffectParameter innerSizeParameter;
+    private readonly EffectParameter innerInverseRadiusXParameter;
+    private readonly EffectParameter innerInverseRadiusYParameter;
+    private readonly EffectParameter innerCornerMaskParameter;
+
+    private readonly EffectParameter rectangleOriginParameter;
+    private readonly EffectParameter rectangleSizeParameter;
+    private readonly EffectParameter borderColorLeftParameter;
+    private readonly EffectParameter borderColorTopParameter;
+    private readonly EffectParameter borderColorRightParameter;
+    private readonly EffectParameter borderColorBottomParameter;
+    private readonly EffectParameter borderTopCornerWeightsParameter;
+    private readonly EffectParameter borderBottomCornerWeightsParameter;
+    private readonly EffectParameter borderOppositeSplitsParameter;
+    private readonly EffectParameter borderSideMaskParameter;
+    private readonly EffectParameter innerEnabledParameter;
+
     private readonly EffectPass fillPass;
     private readonly EffectPass borderedPass;
     private readonly EffectPass texturedPass;
     private readonly EffectPass shadowPass;
+    private readonly EffectPass perSideBorderPass;
+    private readonly EffectPass perSideBorderColorsPass;
 
     /// <summary>
-    /// 借用设备、现有矩形 Effect 和绘制结束后需要恢复的 pass，不接管它们的释放。
-    /// Effect 必须来自同一设备，并包含 NoBorder、HasBorder、Textured、Shadow 四个 pass。
+    /// 借用设备、RectangleEffect 和绘制结束后需要恢复的 pass，不接管它们的释放。
+    /// Effect 必须来自同一设备，使用 <c>ModAsset.RectangleEffect.Value</c>。
+    /// 构造时要求全部参数及 NoBorder、HasBorder、Textured、Shadow、
+    /// HasPerSideBorder、HasPerSideBorderColors 六个 pass。
     /// 应复用绘制器实例；资源重新加载后，应使用新的 Effect 和恢复 pass 重新创建实例。
     /// </summary>
     public RectangleRenderer(GraphicsDevice graphicsDevice, Effect effect, EffectPass resumePass)
@@ -56,6 +79,27 @@ public sealed class RectangleRenderer
         texturedPass = RequirePass(effect, "Textured");
         shadowPass = RequirePass(effect, "Shadow");
 
+        perSideBorderPass = RequirePass(effect, "HasPerSideBorder");
+        perSideBorderColorsPass = RequirePass(effect, "HasPerSideBorderColors");
+
+        innerOriginParameter = RequireParameter(effect, "uInnerOrigin");
+        innerSizeParameter = RequireParameter(effect, "uInnerSize");
+        innerInverseRadiusXParameter = RequireParameter(effect, "uInnerInvRadiusX");
+        innerInverseRadiusYParameter = RequireParameter(effect, "uInnerInvRadiusY");
+        innerCornerMaskParameter = RequireParameter(effect, "uInnerCornerMask");
+
+        rectangleOriginParameter = RequireParameter(effect, "uRectangleOrigin");
+        rectangleSizeParameter = RequireParameter(effect, "uRectangleSize");
+        borderColorLeftParameter = RequireParameter(effect, "uBorderColorLeft");
+        borderColorTopParameter = RequireParameter(effect, "uBorderColorTop");
+        borderColorRightParameter = RequireParameter(effect, "uBorderColorRight");
+        borderColorBottomParameter = RequireParameter(effect, "uBorderColorBottom");
+        borderTopCornerWeightsParameter = RequireParameter(effect, "uBorderTopCornerWeights");
+        borderBottomCornerWeightsParameter = RequireParameter(effect, "uBorderBottomCornerWeights");
+        borderOppositeSplitsParameter = RequireParameter(effect, "uBorderOppositeSplits");
+        borderSideMaskParameter = RequireParameter(effect, "uBorderSideMask");
+        innerEnabledParameter = RequireParameter(effect, "uInnerEnabled");
+
         RectangleGeometryBuilder.WriteIndices(indices);
     }
 
@@ -78,6 +122,109 @@ public sealed class RectangleRenderer
         borderColorParameter.SetValue(borderColor.ToVector4());
         RectangleGeometryBuilder.WriteVertices(vertices, position, size, cornerRadii, 1f / transform.M11);
         Submit(borderedPass);
+    }
+
+    /// <summary>
+    /// 绘制四边宽度独立、颜色相同的内描边。borderWidths 的顺序为左、上、右、下。
+    /// 负边宽和负圆角按零处理；等宽和不等宽都使用独立内轮廓。
+    /// 此重载统一用内外覆盖率之差绘制描边，避免宽度变动时切换混色公式。
+    /// </summary>
+    public void DrawBordered(Vector2 position, Vector2 size, Vector4 cornerRadii,
+        Color fillColor, Vector4 borderWidths, Color borderColor, Matrix transform)
+    {
+        if (size.X <= 0f || size.Y <= 0f)
+            return;
+
+        borderWidths = Vector4.Max(borderWidths, Vector4.Zero);
+        cornerRadii = Vector4.Max(cornerRadii, Vector4.Zero);
+
+        if (borderWidths == Vector4.Zero)
+        {
+            DrawFill(position, size, cornerRadii, fillColor, transform);
+            return;
+        }
+
+        var edgePadding = 1f / transform.M11;
+        var inner = RectangleGeometryBuilder.BuildInnerContour(
+            position, size, cornerRadii, borderWidths, edgePadding);
+
+        // 边宽吃完内部区域时，整个外轮廓都由边框色填充。
+        if (!inner.HasArea)
+        {
+            DrawFill(position, size, cornerRadii, borderColor, transform);
+            return;
+        }
+
+        BindTransform(transform);
+        colorParameter.SetValue(fillColor.ToVector4());
+        borderColorParameter.SetValue(borderColor.ToVector4());
+        BindInnerContour(inner);
+
+        RectangleGeometryBuilder.WriteVertices(vertices, position, size, cornerRadii, edgePadding);
+        Submit(perSideBorderPass);
+    }
+
+    /// <summary>
+    /// 绘制四边宽度和颜色都独立的内描边，边宽及颜色参数顺序均为左、上、右、下。
+    /// 颜色按到各边的距离与边宽之比分区，交界处抗锯齿；零宽边不参与颜色混合。
+    /// </summary>
+    /// <remarks>颜色遵循预乘 Alpha 约定。四种颜色相同时复用单色四边重载。</remarks>
+    public void DrawBordered(Vector2 position, Vector2 size, Vector4 cornerRadii,
+        Color fillColor, Vector4 borderWidths,
+        Color leftBorderColor, Color topBorderColor, Color rightBorderColor, Color bottomBorderColor,
+        Matrix transform)
+    {
+        if (size.X <= 0f || size.Y <= 0f)
+            return;
+
+        borderWidths = Vector4.Max(borderWidths, Vector4.Zero);
+        cornerRadii = Vector4.Max(cornerRadii, Vector4.Zero);
+
+        if (borderWidths == Vector4.Zero)
+        {
+            DrawFill(position, size, cornerRadii, fillColor, transform);
+            return;
+        }
+
+        if (leftBorderColor == topBorderColor && leftBorderColor == rightBorderColor &&
+            leftBorderColor == bottomBorderColor)
+        {
+            DrawBordered(position, size, cornerRadii, fillColor, borderWidths, leftBorderColor, transform);
+            return;
+        }
+
+        var edgePadding = 1f / transform.M11;
+        var inner = RectangleGeometryBuilder.BuildInnerContour(
+            position, size, cornerRadii, borderWidths, edgePadding);
+        var partition = RectangleGeometryBuilder.BuildBorderColorPartition(size, borderWidths);
+
+        BindTransform(transform);
+        colorParameter.SetValue(fillColor.ToVector4());
+        BindInnerContour(inner);
+        rectangleOriginParameter.SetValue(position);
+        rectangleSizeParameter.SetValue(size);
+        borderColorLeftParameter.SetValue(leftBorderColor.ToVector4());
+        borderColorTopParameter.SetValue(topBorderColor.ToVector4());
+        borderColorRightParameter.SetValue(rightBorderColor.ToVector4());
+        borderColorBottomParameter.SetValue(bottomBorderColor.ToVector4());
+        borderTopCornerWeightsParameter.SetValue(partition.TopCornerWeights);
+        borderBottomCornerWeightsParameter.SetValue(partition.BottomCornerWeights);
+        borderOppositeSplitsParameter.SetValue(partition.OppositeSplits);
+        borderSideMaskParameter.SetValue(partition.EnabledSides);
+        // 内部区域消失时仍要保留颜色分区，不能退回单色 DrawFill。
+        innerEnabledParameter.SetValue(inner.HasArea ? 1f : 0f);
+
+        RectangleGeometryBuilder.WriteVertices(vertices, position, size, cornerRadii, edgePadding);
+        Submit(perSideBorderColorsPass);
+    }
+
+    private void BindInnerContour(RectangleGeometryBuilder.InnerContour inner)
+    {
+        innerOriginParameter.SetValue(inner.Origin);
+        innerSizeParameter.SetValue(inner.Size);
+        innerInverseRadiusXParameter.SetValue(inner.InverseRadiusX);
+        innerInverseRadiusYParameter.SetValue(inner.InverseRadiusY);
+        innerCornerMaskParameter.SetValue(inner.RoundedCorners);
     }
 
     /// <summary>

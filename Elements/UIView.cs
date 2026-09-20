@@ -5,6 +5,12 @@ namespace SilkyUIFramework.Elements;
 [XmlElementMapping("View")]
 public partial class UIView
 {
+    public UIView()
+    {
+        // 装饰组件由当前视图终身持有，直接修改组件也必须使布局失效。
+        RectangleDecoration.BorderWidthsChanged += () => MarkLayoutDirty();
+    }
+
     #region IgnoreMouseInteraction Invalid IsMouseHovering DirtyMark
 
     /// <summary> 忽略鼠标交互, 不影响其子元素交互 </summary>
@@ -365,7 +371,7 @@ public partial class UIView
         }
 
         Bounds.Position = OuterBounds.Position + Margin;
-        InnerBounds.Position = Bounds.Position + new Vector2(Border) + Padding;
+        InnerBounds.Position = Bounds.Position + new Vector2(EffectiveBorderLeft, EffectiveBorderTop) + Padding;
 
         CleanupPositionDirtyMark();
     }

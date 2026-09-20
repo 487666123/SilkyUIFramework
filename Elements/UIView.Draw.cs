@@ -12,7 +12,7 @@ public partial class UIView
     /// <summary>
     /// 当前元素的矩形渲染器，负责背景、边框与阴影样式。
     /// </summary>
-    public readonly RectangleDecoration RectangleDecoration = new();
+    public RectangleDecoration RectangleDecoration { get; } = new();
 
     /// <summary>
     /// 背景色（代理到 <see cref="RectangleDecoration.BackgroundColor"/>）。
@@ -37,7 +37,6 @@ public partial class UIView
     /// </summary>
     public Color BorderColor
     {
-        get => RectangleDecoration.BorderColor;
         set => RectangleDecoration.BorderColor = value;
     }
 

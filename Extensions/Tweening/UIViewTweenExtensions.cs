@@ -39,17 +39,34 @@ public static class UIViewTweenExtensions
         }
 
         /// <summary>
-        /// 补间 <see cref="UIView"/> 的边框色。
+        /// 将四条边分别从各自当前颜色补间到同一个目标颜色。
+        /// 一个条目统一控制四边，在延迟结束时捕获起始颜色。
         /// </summary>
         public TweenEntry BorderColorTo(UIView view, Color color, float duration)
         {
-            return tween.TweenProperty(
+            return tween.TweenProperty<UIView, (Color Left, Color Top, Color Right, Color Bottom)>(
                 view,
-                static (target, value) => target.BorderColor = value,
-                static target => target.BorderColor,
-                color,
+                static (target, value) =>
+                {
+                    var decoration = target.RectangleDecoration;
+                    decoration.BorderColorLeft = value.Left;
+                    decoration.BorderColorTop = value.Top;
+                    decoration.BorderColorRight = value.Right;
+                    decoration.BorderColorBottom = value.Bottom;
+                },
+                static target =>
+                {
+                    var decoration = target.RectangleDecoration;
+                    return (decoration.BorderColorLeft, decoration.BorderColorTop,
+                        decoration.BorderColorRight, decoration.BorderColorBottom);
+                },
+                (color, color, color, color),
                 duration,
-                Color.Lerp);
+                static (from, to, amount) => (
+                    Color.Lerp(from.Left, to.Left, amount),
+                    Color.Lerp(from.Top, to.Top, amount),
+                    Color.Lerp(from.Right, to.Right, amount),
+                    Color.Lerp(from.Bottom, to.Bottom, amount)));
         }
     }
 }

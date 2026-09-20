@@ -1,4 +1,4 @@
-﻿namespace SilkyUIFramework;
+namespace SilkyUIFramework;
 
 /// <summary>
 /// 单轴（宽或高）的约束与计算结果缓存。
@@ -31,8 +31,17 @@ public struct AxisMetrics
     public void UpdateConstraints(
         Dimension min, Dimension max, float available,
         BoxSizing boxSizing, float padding, float border, float margin)
+        => UpdateConstraints(min, max, available, boxSizing, padding, border, border, margin);
+
+    /// <summary>
+    /// 根据当前轴起始侧、结束侧各自的边框厚度，更新尺寸约束。
+    /// padding 和 margin 为当前轴两侧的总和。
+    /// </summary>
+    public void UpdateConstraints(
+        Dimension min, Dimension max, float available,
+        BoxSizing boxSizing, float padding, float borderStart, float borderEnd, float margin)
     {
-        var sum = padding + border * 2;
+        var sum = padding + (borderStart + borderEnd);
 
         switch (boxSizing)
         {

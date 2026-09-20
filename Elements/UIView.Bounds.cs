@@ -1,4 +1,4 @@
-﻿namespace SilkyUIFramework.Elements;
+namespace SilkyUIFramework.Elements;
 
 public partial class UIView
 {
@@ -47,16 +47,17 @@ public partial class UIView
     public void SetPadding(float leftAndRight, float topAndBottom) =>
         Padding = new Margin(leftAndRight, topAndBottom, leftAndRight, topAndBottom);
 
+    /// <summary>统一设置四边宽度；布局失效通知由装饰组件统一发出。</summary>
     public float Border
     {
-        get => RectangleDecoration.BorderWidth;
-        set
-        {
-            if (RectangleDecoration.BorderWidth == value) return;
-            RectangleDecoration.BorderWidth = value;
-            MarkLayoutDirty();
-        }
+        set => RectangleDecoration.BorderWidth = value;
     }
+
+    // 与装饰绘制使用相同的非负边宽，不回写原始样式。
+    private float EffectiveBorderLeft => MathF.Max(0f, RectangleDecoration.BorderWidthLeft);
+    private float EffectiveBorderTop => MathF.Max(0f, RectangleDecoration.BorderWidthTop);
+    private float EffectiveBorderRight => MathF.Max(0f, RectangleDecoration.BorderWidthRight);
+    private float EffectiveBorderBottom => MathF.Max(0f, RectangleDecoration.BorderWidthBottom);
 
     #endregion
 
@@ -284,7 +285,7 @@ public partial class UIView
     {
         WidthMertrics.UpdateConstraints(
             _minWidth, _maxWidth, availableWidth, BoxSizing,
-            Padding.Horizontal, Border, Margin.Horizontal);
+            Padding.Horizontal, EffectiveBorderLeft, EffectiveBorderRight, Margin.Horizontal);
     }
 
     /// <summary>
@@ -295,7 +296,7 @@ public partial class UIView
     {
         HeightMertrics.UpdateConstraints(
             _minHeight, _maxHeight, availableHeight, BoxSizing,
-            Padding.Vertical, Border, Margin.Vertical);
+            Padding.Vertical, EffectiveBorderTop, EffectiveBorderBottom, Margin.Vertical);
     }
 
     /// <summary>
@@ -382,7 +383,7 @@ public partial class UIView
         OuterBounds.Width = width;
         var boundsWidth = width - Margin.Horizontal;
         Bounds.Width = boundsWidth;
-        InnerBounds.Width = boundsWidth - Padding.Horizontal - Border * 2;
+        InnerBounds.Width = boundsWidth - Padding.Horizontal - (EffectiveBorderLeft + EffectiveBorderRight);
     }
 
     /// <summary>
@@ -393,7 +394,7 @@ public partial class UIView
         OuterBounds.Height = height;
         var boundsHeight = height - Margin.Vertical;
         Bounds.Height = boundsHeight;
-        InnerBounds.Height = boundsHeight - Padding.Vertical - Border * 2;
+        InnerBounds.Height = boundsHeight - Padding.Vertical - (EffectiveBorderTop + EffectiveBorderBottom);
     }
 
     /// <summary>
@@ -402,7 +403,7 @@ public partial class UIView
     public void SetBoundsWidthRaw(float width)
     {
         Bounds.Width = width;
-        InnerBounds.Width = width - Padding.Horizontal - Border * 2;
+        InnerBounds.Width = width - Padding.Horizontal - (EffectiveBorderLeft + EffectiveBorderRight);
         OuterBounds.Width = width + Margin.Horizontal;
     }
 
@@ -412,7 +413,7 @@ public partial class UIView
     public void SetBoundsHeightRaw(float height)
     {
         Bounds.Height = height;
-        InnerBounds.Height = height - Padding.Vertical - Border * 2;
+        InnerBounds.Height = height - Padding.Vertical - (EffectiveBorderTop + EffectiveBorderBottom);
         OuterBounds.Height = height + Margin.Vertical;
     }
 
@@ -422,7 +423,7 @@ public partial class UIView
     public void SetInnerBoundsWidthRaw(float width)
     {
         InnerBounds.Width = width;
-        var boundsWidth = width + Padding.Horizontal + Border * 2;
+        var boundsWidth = width + Padding.Horizontal + (EffectiveBorderLeft + EffectiveBorderRight);
         Bounds.Width = boundsWidth;
         OuterBounds.Width = boundsWidth + Margin.Horizontal;
     }
@@ -433,7 +434,7 @@ public partial class UIView
     public void SetInnerBoundsHeightRaw(float height)
     {
         InnerBounds.Height = height;
-        var boundsHeight = height + Padding.Vertical + Border * 2;
+        var boundsHeight = height + Padding.Vertical + (EffectiveBorderTop + EffectiveBorderBottom);
         Bounds.Height = boundsHeight;
         OuterBounds.Height = boundsHeight + Margin.Vertical;
     }
