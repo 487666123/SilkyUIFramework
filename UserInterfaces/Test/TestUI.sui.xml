@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- sui:Class 填写对应 UIElementGroup 类名 -->
+<Body xmlns:sui="https://github.com/487666123/SilkyUIFramework"
+	  xmlns:prop="https://github.com/487666123/SilkyUIFramework/Properties"
+	  sui:Class="SilkyUIFramework.UserInterfaces.Test.TestUI" Enabled="false"
+	  Width="100px" Height="100px" Left="50#" Top="50#" BorderRadius="8 4 8 4"
+	  BackgroundColor="rgba(255,255,255,0.75)" BorderColor="rgba(255,0,0,0.75)">
+	<prop:RectangleDecoration BorderWidth="4" BorderWidthRight="2" />
+</Body>
