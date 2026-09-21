@@ -302,10 +302,14 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
     {
         var topLeft = Vector2.Transform(bounds.Position, transformMatrix);
         var rightBottom = Vector2.Transform(bounds.BottomRight, transformMatrix);
+
+        topLeft = new Vector2(MathF.Floor(topLeft.X), MathF.Floor(topLeft.Y));
+        rightBottom = new Vector2(MathF.Ceiling(rightBottom.X), MathF.Ceiling(rightBottom.Y));
+
         return new Rectangle(
-            (int)Math.Floor(topLeft.X), (int)Math.Floor(topLeft.Y),
-            (int)Math.Ceiling(rightBottom.X - topLeft.X),
-            (int)Math.Ceiling(rightBottom.Y - topLeft.Y));
+            (int)topLeft.X, (int)topLeft.Y,
+            (int)Math.Round(rightBottom.X - topLeft.X),
+            (int)Math.Round(rightBottom.Y - topLeft.Y));
     }
 
     /// <summary>
