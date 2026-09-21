@@ -222,9 +222,15 @@ float4 PerSideBorderColors(PSInput input) : SV_Target
     if (uInnerEnabled > 0.5)
         innerCoverage = InnerRectangleCoverage(input.InnerPosition, outerCoverage);
 
+    float borderCoverage = outerCoverage - innerCoverage;
+    // 仅在边框覆盖率为零时跳过混色，保留抗锯齿过渡中的微小贡献。
+    [branch]
+    if (borderCoverage == 0.0)
+        return uColor * innerCoverage;
+
     float4 borderColor = PerSideBorderColor(input.RectanglePosition);
     return uColor * innerCoverage
-         + borderColor * (outerCoverage - innerCoverage);
+         + borderColor * borderCoverage;
 }
 
 technique Rectangle

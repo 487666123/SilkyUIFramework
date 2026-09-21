@@ -13,7 +13,7 @@ public partial class CanvasViewer : BaseBody
     {
         InitializeComponent();
 
-        Enabled = true;
+        Enabled = false;
 
         Metrics.SetTemplateColumns([GridTrack.Fr(1f), GridTrack.Fr(1f), GridTrack.Fr(1f)]);
         Metrics.SetTemplateRows([GridTrack.Pixels(24f), GridTrack.Fr(1f)]);
