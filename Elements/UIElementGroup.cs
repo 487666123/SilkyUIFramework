@@ -326,14 +326,16 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
             return;
         }
 
+        var device = sb.GraphicsDevice;
+        var originalScissor = device.ScissorRectangle;
+        var scissorRectangle = GetClippingRectangle(device);
+
+        if (scissorRectangle.Width <= 0 || scissorRectangle.Height <= 0) return;
+
         // 进入裁剪分支前先结束当前批次，后续会切换裁剪状态或渲染目标。
         sb.End();
 
-        var device = sb.GraphicsDevice;
-        var originalScissor = device.ScissorRectangle;
-        var scissorRectangle = GetClippingRectangle(sb.GraphicsDevice);
-
-        if (IndependentRenderTarget && scissorRectangle.Width > 0 && scissorRectangle.Height > 0)
+        if (IndependentRenderTarget)
         {
             // 在独立 RenderTarget 中完成裁剪绘制，再回贴到主目标。
             var rtPool = SilkyUISystem.ServiceProvider.GetRequiredService<RenderTargetPool>();
@@ -388,6 +390,8 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
         }
 
         // 不启用独立 RenderTarget 时，直接使用设备裁剪矩形进行绘制。
+        // 裁剪矩形是屏幕坐标，离屏绘制时需加回视口偏移以转换到渲染目标坐标。
+        scissorRectangle.Offset(device.Viewport.X, device.Viewport.Y);
         device.ScissorRectangle = scissorRectangle;
         sb.Begin(SpriteSortMode.Deferred, null, null, null, SilkyUI.ScissorRasterizerState, null,
             SilkyUI.TransformMatrix);

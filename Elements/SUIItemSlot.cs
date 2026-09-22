@@ -82,33 +82,18 @@ public class SUIItemSlot : UIView
     /// <summary>子类重写此方法以限制可放入的物品类型。</summary>
     public virtual bool CanPutInItemSlot(Item item) => true;
 
-    /// <summary>处理左键点击交互：同物品堆叠 → 合并数量；不同物品 → 交换（受 <see cref="CanPutInItemSlot"/> 限制）。</summary>
+    /// <summary>处理左键点击交互：优先堆叠，无法堆叠时交换（受 <see cref="CanPutInItemSlot"/> 限制）。</summary>
     protected virtual void HandleItemSlotLeftClick()
     {
-        if (PlayerInUseItem) return;
+        if (PlayerInUseItem || !ItemInteractive || !Main.playerInventory
+            || (Main.mouseItem.IsAir && Item.IsAir) || !CanPutInItemSlot(Main.mouseItem))
+            return;
 
-        // 开启物品栏 &&（物品框 || 鼠标）至少有一个 NonAir
-        if (ItemInteractive && Main.playerInventory && (Main.mouseItem.NotAir() || Item.NotAir()))
-        {
-            // 物品相同且未堆叠满：尝试将鼠标上的物品堆叠到槽位中
-            if (Main.mouseItem.type == Item.type && Item.NotAir() && Item.NotFull())
-            {
-                TryStackItem(Item, Main.mouseItem, out var numTransferred);
-                if (numTransferred > 0)
-                {
-                    SoundEngine.PlaySound(SoundID.Grab);
-                }
-            }
-            // 物品不同：交换手中物品（受 CanPutInItemSlot 限制）
-            else
-            {
-                if (CanPutInItemSlot(Main.mouseItem))
-                {
-                    (Main.mouseItem, Item) = (Item, Main.mouseItem);
-                    SoundEngine.PlaySound(SoundID.Grab);
-                }
-            }
-        }
+        TryStackItem(Item, Main.mouseItem, out var numTransferred);
+        if (numTransferred > 0) return;
+
+        (Main.mouseItem, Item) = (Item, Main.mouseItem);
+        SoundEngine.PlaySound(SoundID.Grab);
     }
 
     /// <summary>右键长按计时器（帧计数），用于实现渐进加速的拆分逻辑。</summary>
@@ -142,15 +127,18 @@ public class SUIItemSlot : UIView
         if (PlayerInUseItem) return;
 
         // 物品不可交互 || 右键没有按下 || 鼠标没有悬浮 || 物品为空
-        if (!ItemInteractive || !Main.playerInventory || LeftMousePressed || !RightMousePressed || !IsMouseHovering || Item.IsAir) return;
+        if (!ItemInteractive || !Main.playerInventory || LeftMousePressed || !RightMousePressed
+            || !Main.mouseRight || !IsMouseHovering || Item.IsAir)
+            return;
 
         if (Main.mouseItem.IsAir)
         {
             // 鼠标上没有物品, 所以是首次拿起, 只有可以堆叠的物品可以用右键拿起
             if (Item.maxStack > 1)
             {
-                Main.mouseItem = new Item(Item.type);
-                Item.stack -= 1;
+                // 保留原物品数据，并让模组处理拆分时的自定义状态。
+                Main.mouseItem = ItemLoader.TransferWithLimit(Item, 1);
+                if (Item.stack <= 0) Item.TurnToAir();
                 SoundEngine.PlaySound(SoundID.MenuTick);
             }
         }
@@ -206,19 +194,20 @@ public class SUIItemSlot : UIView
     /// <param name="source">源物品（被抽取）。</param>
     /// <param name="numTransferred">实际转移的数量。</param>
     /// <param name="infiniteSource">源物品是否为无限（不会减少 stack）。</param>
-    /// <param name="numToTransfer">限制最大转移数量；为 null 时转移全部。</param>
+    /// <param name="numToTransfer">限制最大转移数量；为 null 时尽量填满目标堆叠。</param>
     public static void TryStackItem(Item destination, Item source, out int numTransferred, bool infiniteSource = false, int? numToTransfer = null)
     {
-        if (!destination.IsAir && !source.IsAir && destination.type == source.type && ItemLoader.CanStack(destination, source))
-        {
-            if (numToTransfer.HasValue)
-                numToTransfer = Math.Min(numToTransfer.Value, source.stack);
-            ItemLoader.StackItems(destination, source, out numTransferred, infiniteSource, numToTransfer);
-            SoundEngine.PlaySound(SoundID.MenuTick);
-            return;
-        }
-
         numTransferred = 0;
+        if (destination.IsAir || source.IsAir || destination.type != source.type)
+            return;
+
+        var transferLimit = Math.Min(numToTransfer ?? source.stack,
+            Math.Min(source.stack, destination.maxStack - destination.stack));
+        if (transferLimit <= 0 || !ItemLoader.CanStack(destination, source)) return;
+
+        ItemLoader.StackItems(destination, source, out numTransferred, infiniteSource, transferLimit);
+        if (source.stack <= 0) source.TurnToAir();
+        if (numTransferred > 0) SoundEngine.PlaySound(SoundID.MenuTick);
     }
 
     #region Draw

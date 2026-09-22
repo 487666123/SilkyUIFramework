@@ -38,7 +38,9 @@ public class UIStyleSheet(UIView element)
         UIElementState.Focus,
         UIElementState.Selected,
         UIElementState.Active,
-        UIElementState.Disabled
+        UIElementState.Custom1,
+        UIElementState.Custom2,
+        UIElementState.Disabled,
     ];
 
     private readonly UIView _element = element ?? throw new ArgumentNullException(nameof(element));

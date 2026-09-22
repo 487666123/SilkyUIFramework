@@ -1,75 +1,105 @@
-﻿using SilkyUIFramework.Animation;
-using SilkyUIFramework.Components;
+﻿using SilkyUIFramework.StyleSystem;
 
 namespace SilkyUIFramework.Elements;
+
+public class SUIToggleSwitchThumb : UIView
+{
+    public bool AutoBorderRadius { get; set; } = true;
+
+    public SUIToggleSwitchThumb()
+    {
+        Positioning = Positioning.Absolute;
+        IgnoreMouseInteraction = true;
+        SetSize(0f, 0f, 1f, 1f);
+        BackgroundColor = SUIColor.Background * 0.75f;
+    }
+
+    public override void Measure(float width, float height)
+    {
+        var size = Math.Min(width, height);
+        base.Measure(size, size);
+    }
+
+    protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
+    {
+        if (AutoBorderRadius)
+            BorderRadius = new Vector4(Math.Min(Bounds.Width, Bounds.Height) / 2f - 0.5f);
+        base.Draw(gameTime, spriteBatch);
+    }
+}
 
 /// <summary>
 /// 拨动开关
 /// </summary>
 [XmlElementMapping("ToggleSwitch")]
-public class SUIToggleSwitch : UIView
+public class SUIToggleSwitch : UIElementGroup
 {
+    public bool AutoBorderRadius { get; set; } = true;
+
+    public event Action<bool> SwitchDown;
+    public event Action<bool> StatusChanged;
+
+    public SUIToggleSwitchThumb Thumb { get; }
+
     public SUIToggleSwitch()
     {
+        Border = 2;
         SetPadding(2f);
         SetSize(36f, 20f);
 
-        Border = 2f;
-        BorderRadius = new Vector4(10f);
-        BorderColor = SUIColor.Border * 0.75f;
+        Thumb = new SUIToggleSwitchThumb().Join(this);
 
-        InternalRectangleDecoration.BackgroundColor = SUIColor.Background * 0.75f;
+        StyleSheet.SetStyle(UIElementState.Normal, new StyleDefinition()
+        {
+            [$"{nameof(Thumb)}.{nameof(BackgroundColor)}"] = SUIColor.Foreground,
+            [$"{nameof(Thumb)}.{nameof(Thumb.Left)}"] = new Anchor(0, 0, 0)
+        }.Background(SUIColor.Foreground * 0.25f)
+        .BorderColor(SUIColor.Foreground));
+
+        StyleSheet.SetStyle(UIElementState.Custom1, new StyleDefinition()
+        {
+            [$"{nameof(Thumb)}.{nameof(BackgroundColor)}"] = SUIColor.Highlight,
+            [$"{nameof(Thumb)}.{nameof(Thumb.Left)}"] = new Anchor(0, 0, 1)
+        }.Background(SUIColor.Highlight * 0.25f)
+        .BorderColor(SUIColor.Highlight));
     }
 
-    /// <summary> 状态改变时触发 </summary>
-    public event Action<bool> OnStatusChanges;
+    public virtual void OnSwitchDown(bool value)
+    {
+        Status = value;
+        SwitchDown?.Invoke(value);
+    }
 
-    private bool _status;
 
-    /// <summary> 状态 </summary>
+    public virtual void OnStatusChanged(bool value)
+    {
+        StatusChanged?.Invoke(value);
+
+        if (value) AddState(UIElementState.Custom1);
+        else RemoveState(UIElementState.Custom1);
+    }
+
     public virtual bool Status
     {
-        get => _status;
+        get;
         set
         {
-            if (_status == value) return;
-            _status = value;
-            StatusChanged(value);
+            if (field == value) return;
+            field = value;
+            OnStatusChanged(value);
         }
-    }
-
-    public readonly RectangleDecoration InternalRectangleDecoration = new();
-    public readonly AnimationTimer SwitchTimer = new(3);
-
-    public virtual void StatusChanged(bool value)
-    {
-        OnStatusChanges?.Invoke(value);
-        if (value) SwitchTimer.StartUpdate();
-        else SwitchTimer.StartReverseUpdate();
     }
 
     public override void OnLeftMouseDown(UIMouseEvent evt)
     {
-        Status = !Status;
         base.OnLeftMouseDown(evt);
-    }
-
-    protected override void UpdateStatus(GameTime gameTime)
-    {
-        base.UpdateStatus(gameTime);
-        SwitchTimer.Update(gameTime);
+        OnSwitchDown(!Status);
     }
 
     protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
+        if (AutoBorderRadius)
+            BorderRadius = new Vector4(Math.Min(Bounds.Width, Bounds.Height) / 2f - 0.5f);
         base.Draw(gameTime, spriteBatch);
-
-        var position = InnerBounds.Position;
-        var size = InnerBounds.Size;
-        var beadSize = new Vector2(MathHelper.Min(size.Width, size.Height));
-        var end = InnerBounds.BottomRight - beadSize;
-
-        InternalRectangleDecoration.CornerRadii = new Vector4(beadSize.Y / 2f);
-        InternalRectangleDecoration.DrawSurface(SwitchTimer.Lerp(position, end), beadSize, SilkyUI.TransformMatrix);
     }
 }

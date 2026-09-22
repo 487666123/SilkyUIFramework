@@ -20,5 +20,9 @@ public enum UIElementState
     Disabled = 1 << 3,
 
     /// <summary>选中。</summary>
-    Selected = 1 << 4
+    Selected = 1 << 4,
+
+    Custom1 = 1 << 5,
+
+    Custom2 = 1 << 6,
 }
