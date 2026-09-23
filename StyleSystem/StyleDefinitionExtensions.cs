@@ -59,7 +59,4 @@ public static class StyleDefinitionExtensions
 
     public static StyleDefinition Size(this StyleDefinition style, float width, float height) =>
         style.Width(width).Height(height);
-
-    public static StyleDefinition Nested(this StyleDefinition style, string path, object value) =>
-        style.Set(path, value);
 }

@@ -19,17 +19,13 @@ public class SUICross : UIView
     {
         StyleSheet.AllTransition.Duration = 0.2f;
 
-        StyleSheet.SetStyle(UIElementState.Normal, new StyleDefinition
-        {
-            [$"{nameof(CrossBorderColor)}"] = SUIColor.Border * 0.75f,
-            [$"{nameof(CrossBackgroundColor)}"] = SUIColor.Warn * 0.75f,
-        });
+        StyleSheet.SetStyle(UIElementState.Normal, new StyleDefinition()
+            .Set(nameof(CrossBorderColor), SUIColor.Border * 0.75f)
+            .Set(nameof(CrossBackgroundColor), SUIColor.Warn * 0.75f));
 
-        StyleSheet.SetStyle(UIElementState.Hover, new StyleDefinition
-        {
-            [$"{nameof(CrossBorderColor)}"] = SUIColor.Highlight,
-            [$"{nameof(CrossBackgroundColor)}"] = SUIColor.Warn,
-        });
+        StyleSheet.SetStyle(UIElementState.Hover, new StyleDefinition()
+            .Set(nameof(CrossBorderColor), SUIColor.Highlight)
+            .Set(nameof(CrossBackgroundColor), SUIColor.Warn));
     }
 
     public override void OnMouseEnter(UIMouseEvent evt)

@@ -1,7 +1,6 @@
 using SilkyUIFramework.Common.Reflection;
 using SilkyUIFramework.Common.Tweening;
 using SilkyUIFramework.Extensions;
-using SilkyUIFramework.Extensions.Tweening;
 
 namespace SilkyUIFramework.StyleSystem;
 
@@ -23,7 +22,7 @@ public class UIStyleSheet(UIView element)
         public Tween Tween;
 
         /// <summary>停止当前动画，保留访问器和属性当前值。</summary>
-        public void Stop()
+        public void StopTween()
         {
             Tween?.Kill();
             Tween = null;
@@ -54,6 +53,9 @@ public class UIStyleSheet(UIView element)
     // 每条路径只保存访问器和运行状态，不建立编译结果或状态组合缓存。
     // 路径格式无效时缓存 null，避免每次应用都重新解析并重复警告。
     private readonly Dictionary<string, PropertyState> _properties = [with(StringComparer.Ordinal)];
+
+    // 复用的合并结果字典，避免每次 ApplyStyle 时分配新字典。
+    private readonly Dictionary<string, StyleValue> _resolvedValues = new(StringComparer.Ordinal);
 
     /// <summary>没有属性专属配置时使用的过渡；null 或不可播放的配置表示直接赋值。</summary>
     public StyleTransition AllTransition { get; set; } = new();
@@ -125,7 +127,7 @@ public class UIStyleSheet(UIView element)
     #endregion
 
     /// <summary>
-    /// 有目标时先停止旧动画；当前值与目标类型相同且值不同时才应用目标，首次应用也使用同一规则。
+    /// 有目标时先停止旧动画；样式值类型必须与成员声明类型一致，值不同时才应用目标。
     /// 本次未声明目标的属性不作处理，保留运行记录并让已有动画继续。
     /// </summary>
     /// <param name="currentState">此次用于合并样式的状态组合；本方法不修改 UIView.State。</param>
@@ -143,7 +145,7 @@ public class UIStyleSheet(UIView element)
     /// </summary>
     public void Release()
     {
-        foreach (var property in _properties.Values) property?.Stop();
+        foreach (var property in _properties.Values) property?.StopTween();
     }
 
     /// <summary>查询和移除只接受 Normal 或一个已定义标志，不接受状态组合。</summary>
@@ -155,20 +157,24 @@ public class UIStyleSheet(UIView element)
 
     /// <summary>
     /// 合并基础样式及当前激活状态的样式，高优先级覆盖同路径的低优先级值。
-    /// 每次都读取最新定义，返回独立的目标值字典，不修改原始定义。
+    /// 每次都读取最新定义，复用实例字典以减少 GC 压力。
     /// </summary>
-    private Dictionary<string, object> ResolveValues(UIElementState currentState)
+    /// <returns>
+    /// 复用的内部字典实例，仅在当前调用的上下文中有效；
+    /// 不可保存返回值引用，下次调用会清空并重新填充此字典。
+    /// </returns>
+    private Dictionary<string, StyleValue> ResolveValues(UIElementState currentState)
     {
-        var values = new Dictionary<string, object>(StringComparer.Ordinal);
+        _resolvedValues.Clear();
 
         foreach (var state in StatePriority)
         {
             if (state != UIElementState.Normal && !currentState.HasFlag(state)) continue;
             if (!_styles.TryGetValue(state, out var style)) continue;
-            foreach (var (path, value) in style) values[path] = value;
+            foreach (var (path, value) in style) _resolvedValues[path] = value;
         }
 
-        return values;
+        return _resolvedValues;
     }
 
     /// <summary>取得或创建路径运行记录；路径格式无效时返回 null。</summary>
@@ -193,37 +199,36 @@ public class UIStyleSheet(UIView element)
     }
 
     /// <summary>
-    /// 停止旧动画，解析本次实际对象并比较当前值与目标；类型不同或值相等时跳过。
+    /// 停止旧动画，解析本次实际对象并比较当前值与目标；类型不符时抛出异常，值相等时跳过。
     /// 需要过渡时固定绑定该对象的成员，没有可用过渡时直接赋值。
     /// </summary>
-    private void ApplyProperty(string path, object targetValue)
+    private void ApplyProperty(string path, StyleValue targetValue)
     {
         var property = GetProperty(path);
         if (property == null) return;
-        property.Stop();
+        property.StopTween();
 
-        if (!property.Accessor.TryResolveMember(_element, out var owner, out var memberName, out var valueType)) return;
+        if (!property.Accessor.TryResolveMember(_element, out var owner, out var memberName, out _)) return;
         var accessor = ObjectAccessorCache.GetAccessor(owner);
-        var currentValue = accessor.GetGetter(memberName)(owner);
-        if (!CanAssign(valueType, targetValue) || currentValue?.GetType() != targetValue?.GetType() ||
-            Equals(currentValue, targetValue)) return;
+        if (targetValue.IsCurrentValue(accessor, owner, memberName)) return;
 
         var transition = _transitions.GetValueOrDefault(path, AllTransition);
-        if (!_element.IsInsideTree || !(transition?.CanPlay() ?? false) || !TweenLerpRegistry.TryGet(valueType, out _))
+        if (!_element.IsInsideTree || !(transition?.CanPlay() ?? false) || !targetValue.CanTween)
         {
-            accessor.GetSetter(memberName)(owner, targetValue);
+            targetValue.SetValue(accessor, owner, memberName);
             return;
         }
 
         var tween = property.Tween = _element.CreateTween();
         tween.OnFinished += () =>
         {
+            // 防止旧动画完成时清空新动画的引用
             if (ReferenceEquals(property.Tween, tween)) property.Tween = null;
         };
 
         try
         {
-            tween.MemberTo(owner, memberName, targetValue, transition.Duration)
+            targetValue.CreateTween(tween, accessor, owner, memberName, transition.Duration)
                 .SetEase(transition.Ease)
                 .SetTrans(transition.Trans)
                 .SetDelay(transition.Delay);
@@ -233,15 +238,5 @@ public class UIStyleSheet(UIView element)
             tween.Kill();
             throw;
         }
-    }
-
-    /// <summary>判断是否可直接赋值，支持引用类型和可空值类型；不做字符串或数值类型转换。</summary>
-    private static bool CanAssign(Type type, object value)
-    {
-        // Nullable<T> 有值时装箱为 T，无值时装箱为 null，因此需要分别判断。
-        var underlyingType = Nullable.GetUnderlyingType(type);
-        return value == null
-            ? underlyingType != null || !type.IsValueType
-            : (underlyingType ?? type).IsInstanceOfType(value);
     }
 }

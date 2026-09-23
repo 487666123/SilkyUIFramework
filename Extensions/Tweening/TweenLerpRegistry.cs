@@ -2,7 +2,7 @@ namespace SilkyUIFramework.Extensions.Tweening;
 
 /// <summary>
 /// Tween 扩展层的默认插值函数注册中心。
-/// 反射成员补间会按成员真实类型从这里查询 lerp 函数。
+/// 按成员值类型保存和查询强类型插值委托。
 /// </summary>
 public class TweenLerpRegistry : ILoadable
 {
@@ -26,8 +26,8 @@ public class TweenLerpRegistry : ILoadable
 
     #endregion
 
-    // 强类型调用保留原委托；运行时 object 调用使用注册时生成的包装，避免动态反射调用。
-    private static readonly Dictionary<Type, (Delegate Typed, Func<object, object, float, object> Boxed)> _lerpFuncs = [];
+    // 保留原始强类型委托，创建补间时按 T 取回，不生成 object 插值包装。
+    private static readonly Dictionary<Type, Delegate> _lerpFuncs = [];
 
     /// <summary>
     /// 注册或覆盖指定类型的插值函数。
@@ -35,7 +35,7 @@ public class TweenLerpRegistry : ILoadable
     public static void Register<T>(Func<T, T, float, T> lerpFunc)
     {
         ArgumentNullException.ThrowIfNull(lerpFunc);
-        _lerpFuncs[typeof(T)] = (lerpFunc, (from, to, amount) => lerpFunc((T)from, (T)to, amount));
+        _lerpFuncs[typeof(T)] = lerpFunc;
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public class TweenLerpRegistry : ILoadable
     public static bool TryGet<T>(out Func<T, T, float, T> lerpFunc)
     {
         if (_lerpFuncs.TryGetValue(typeof(T), out var value) &&
-            value.Typed is Func<T, T, float, T> typedLerpFunc)
+            value is Func<T, T, float, T> typedLerpFunc)
         {
             lerpFunc = typedLerpFunc;
             return true;
@@ -63,34 +63,11 @@ public class TweenLerpRegistry : ILoadable
         throw CreateMissingLerpException(typeof(T));
     }
 
-    /// <summary>按成员声明类型获取 object 形式的插值函数；值类型经此入口会装箱。</summary>
-    public static bool TryGet(Type type, out Func<object, object, float, object> lerpFunc)
-    {
-        ArgumentNullException.ThrowIfNull(type);
-        if (_lerpFuncs.TryGetValue(type, out var functions))
-        {
-            lerpFunc = functions.Boxed;
-            return true;
-        }
-        lerpFunc = null;
-        return false;
-    }
-
-    internal static Delegate Get(Type type)
-    {
-        ArgumentNullException.ThrowIfNull(type);
-
-        if (_lerpFuncs.TryGetValue(type, out var lerpFunc))
-            return lerpFunc.Typed;
-
-        throw CreateMissingLerpException(type);
-    }
-
-    internal static InvalidOperationException CreateMissingLerpException(Type type)
+    private static InvalidOperationException CreateMissingLerpException(Type type)
     {
         return new InvalidOperationException(
             $"No lerp function registered for type '{type.FullName}'. " +
             $"Register one with {nameof(TweenLerpRegistry)}.{nameof(Register)}<T>() " +
-            "or use MemberTo<T>() overload with an explicit lerp function.");
+            "or use the MemberTo<TTarget, TValue>() overload with an explicit lerp function.");
     }
 }

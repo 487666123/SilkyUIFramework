@@ -50,18 +50,16 @@ public class SUIToggleSwitch : UIElementGroup
         Thumb = new SUIToggleSwitchThumb().Join(this);
 
         StyleSheet.SetStyle(UIElementState.Normal, new StyleDefinition()
-        {
-            [$"{nameof(Thumb)}.{nameof(BackgroundColor)}"] = SUIColor.Foreground,
-            [$"{nameof(Thumb)}.{nameof(Thumb.Left)}"] = new Anchor(0, 0, 0)
-        }.Background(SUIColor.Foreground * 0.25f)
-        .BorderColor(SUIColor.Foreground));
+            .Set($"{nameof(Thumb)}.{nameof(BackgroundColor)}", SUIColor.Foreground)
+            .Set($"{nameof(Thumb)}.{nameof(Thumb.Left)}", new Anchor(0, 0, 0))
+            .Background(SUIColor.Foreground * 0.25f)
+            .BorderColor(SUIColor.Foreground));
 
         StyleSheet.SetStyle(UIElementState.Custom1, new StyleDefinition()
-        {
-            [$"{nameof(Thumb)}.{nameof(BackgroundColor)}"] = SUIColor.Highlight,
-            [$"{nameof(Thumb)}.{nameof(Thumb.Left)}"] = new Anchor(0, 0, 1)
-        }.Background(SUIColor.Highlight * 0.25f)
-        .BorderColor(SUIColor.Highlight));
+            .Set($"{nameof(Thumb)}.{nameof(BackgroundColor)}", SUIColor.Highlight)
+            .Set($"{nameof(Thumb)}.{nameof(Thumb.Left)}", new Anchor(0, 0, 1))
+            .Background(SUIColor.Highlight * 0.25f)
+            .BorderColor(SUIColor.Highlight));
     }
 
     public virtual void OnSwitchDown(bool value)
