@@ -17,13 +17,11 @@ public class SUICross : UIView
 
     public SUICross()
     {
-        StyleSheet.AllTransition.Duration = 0.2f;
-
-        StyleSheet.SetStyle(UIElementState.Normal, new StyleDefinition()
+        StyleSheet.SetStyle(new StyleDefinition()
             .Set(nameof(CrossBorderColor), SUIColor.Border * 0.75f)
             .Set(nameof(CrossBackgroundColor), SUIColor.Warn * 0.75f));
 
-        StyleSheet.SetStyle(UIElementState.Hover, new StyleDefinition()
+        StyleSheet.SetStyle(StyleMarkers.Hover, new StyleDefinition()
             .Set(nameof(CrossBorderColor), SUIColor.Highlight)
             .Set(nameof(CrossBackgroundColor), SUIColor.Warn));
     }

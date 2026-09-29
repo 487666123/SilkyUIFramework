@@ -4,24 +4,34 @@ namespace SilkyUIFramework.Elements;
 
 public partial class UIView
 {
-    private UIElementState _state = UIElementState.Normal;
+    private readonly HashSet<StyleMarker> _styleMarkers = [];
 
-    public UIElementState State => _state;
+    public IReadOnlyCollection<StyleMarker> ActiveStyleMarkers => _styleMarkers;
 
     /// <summary>此元素专属的样式表，首次访问时创建并固定绑定到当前元素。</summary>
     public UIStyleSheet StyleSheet => field ??= new UIStyleSheet(this);
 
-    public void SetState(UIElementState state)
-    {
-        if (_state == state) return;
+    public bool HasStyleMarker(StyleMarker marker) => _styleMarkers.Contains(marker);
 
-        _state = state;
+    public void AddStyleMarker(StyleMarker marker)
+    {
+        if (!marker.IsValid) throw new ArgumentException("样式标记不能为空。", nameof(marker));
+        if (!_styleMarkers.Add(marker)) return;
         ApplyCurrentStyle();
     }
 
-    public void AddState(UIElementState state) => SetState(_state | state);
+    public void RemoveStyleMarker(StyleMarker marker)
+    {
+        if (!marker.IsValid) throw new ArgumentException("样式标记不能为空。", nameof(marker));
+        if (!_styleMarkers.Remove(marker)) return;
+        ApplyCurrentStyle();
+    }
 
-    public void RemoveState(UIElementState state) => SetState(_state & ~state);
+    public void SetStyleMarker(StyleMarker marker, bool enabled)
+    {
+        if (enabled) AddStyleMarker(marker);
+        else RemoveStyleMarker(marker);
+    }
 
-    private void ApplyCurrentStyle() => StyleSheet?.ApplyStyle(_state);
+    private void ApplyCurrentStyle() => StyleSheet?.ApplyStyle(_styleMarkers);
 }

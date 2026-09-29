@@ -1,29 +1,37 @@
 namespace SilkyUIFramework.Common.Reflection;
 
 /// <summary>
-/// 嵌套属性访问器
+/// 按各层对象的运行时类型访问嵌套属性或字段。
 /// </summary>
+/// <remarks>
+/// 根对象或中间节点为 null 时停止访问；根类型不兼容、成员缺失或所需读写操作不可用时抛出异常。
+/// </remarks>
 public sealed class PropertyPathAccessor
 {
+    // 缓存单个成员的声明类型，并按需获取读写委托。
     private sealed class MemberAccess(ObjectAccessor accessor, string memberName)
     {
+        /// <summary>成员的声明类型，不随当前值变化。</summary>
         public Type ValueType { get; } = accessor.GetMemberType(memberName);
 
+        /// <summary>首次读取时获取并缓存 getter。</summary>
         public Func<object, object> Getter => field ??= accessor.GetGetter(memberName);
+        /// <summary>首次写入时获取并缓存 setter。</summary>
         public Action<object, object> Setter => field ??= accessor.GetSetter(memberName);
     }
 
+    /// <summary>根对象必须兼容的类型。</summary>
     public Type RootType { get; }
+    // 保存路径副本，避免外部修改影响成员解析和缓存。
     private readonly string[] _propertyPath;
+    /// <summary>返回成员路径的副本。</summary>
     public string[] PropertyPath => [.. _propertyPath];
+    // 同一路径段可能遇到不同的派生类型，需要分别缓存。
     private readonly Dictionary<(int SegmentIndex, Type RuntimeType), MemberAccess> _memberCache = [];
 
     /// <summary>
-    /// 根据根类型创建嵌套属性访问器；成员在访问时按实际运行时类型解析。
+    /// 保存根类型和成员路径；路径不能为空，各段不能为空白，成员在访问时解析。
     /// </summary>
-    /// <param name="rootType">允许使用的根对象类型。</param>
-    /// <param name="propertyPath">属性段列表，不能为空且每段不能为空白。</param>
-    /// <exception cref="ArgumentException"><paramref name="propertyPath"/> 为空或含空白段。</exception>
     public PropertyPathAccessor(Type rootType, string[] propertyPath)
     {
         ArgumentNullException.ThrowIfNull(rootType);
@@ -40,23 +48,14 @@ public sealed class PropertyPathAccessor
     }
 
     /// <summary>
-    /// 根据每一层对象的实际运行时类型获取嵌套成员值。
+    /// 获取末端成员值；根对象或中间节点为 null 时返回 null。
     /// </summary>
-    /// <param name="root">根对象。</param>
-    /// <returns>成员值；根对象或中间节点为 null 时返回 null。</returns>
-    /// <exception cref="ArgumentException"><paramref name="root"/> 的类型与 <see cref="RootType"/> 不兼容。</exception>
-    /// <exception cref="InvalidOperationException">当前运行时类型中不存在路径成员，或成员不可读。</exception>
     public object GetValue(object root) => TryGetValue(root, out var value, out _) ? value : null;
 
     /// <summary>
-    /// 尝试获取嵌套成员值及其在当前运行时类型上的声明类型。
+    /// 读取末端成员值及其声明类型；末端值为 null 也视为成功。
     /// </summary>
-    /// <param name="root">根对象。</param>
-    /// <param name="value">读取成功时为末端成员值；该值本身可以为 null。</param>
-    /// <param name="valueType">读取成功时为末端成员的声明类型。</param>
-    /// <returns>读取成功时返回 true，包括末端值为 null；仅根对象或中间节点为 null 时返回 false。</returns>
-    /// <exception cref="ArgumentException"><paramref name="root"/> 的类型与 <see cref="RootType"/> 不兼容。</exception>
-    /// <exception cref="InvalidOperationException">当前运行时类型中不存在路径成员，或成员不可读。</exception>
+    /// <returns>根对象或中间节点为 null 时返回 false，否则返回 true。</returns>
     public bool TryGetValue(object root, out object value, out Type valueType)
     {
         value = null;
@@ -71,14 +70,9 @@ public sealed class PropertyPathAccessor
     }
 
     /// <summary>
-    /// 尝试设置嵌套成员值，并返回其在当前运行时类型上的声明类型。
+    /// 写入末端成员值，并返回其声明类型。
     /// </summary>
-    /// <param name="root">根对象。</param>
-    /// <param name="value">要写入末端成员的值。</param>
-    /// <param name="valueType">写入成功时为末端成员的声明类型。</param>
-    /// <returns>调用 setter 成功时返回 true；仅根对象或中间节点为 null 时返回 false。</returns>
-    /// <exception cref="ArgumentException"><paramref name="root"/> 的类型与 <see cref="RootType"/> 不兼容。</exception>
-    /// <exception cref="InvalidOperationException">路径成员不存在、中间成员不可读或末端成员不可写。</exception>
+    /// <returns>根对象或中间节点为 null 时返回 false，写入成功时返回 true。</returns>
     public bool TrySetValue(object root, object value, out Type valueType)
     {
         valueType = null;
@@ -93,7 +87,7 @@ public sealed class PropertyPathAccessor
 
     /// <summary>
     /// 解析末端成员的所属对象、名称和声明类型；根或中间节点为 null 时返回 false。
-    /// 返回的对象可用于固定绑定动画，后续替换路径中的对象不会改变这次绑定。
+    /// 返回当前所属对象，后续替换路径节点不会更新该对象引用。
     /// </summary>
     public bool TryResolveMember(object root, out object owner, out string memberName, out Type valueType)
     {
@@ -106,6 +100,7 @@ public sealed class PropertyPathAccessor
         return true;
     }
 
+    /// <summary>遍历中间节点并解析末端成员，不读取末端值；遇到 null 节点时返回 false。</summary>
     private bool TryResolveFinalMember(object root, out object owner, out MemberAccess member)
     {
         owner = null;
@@ -131,6 +126,7 @@ public sealed class PropertyPathAccessor
         return true;
     }
 
+    /// <summary>按路径段索引和所属对象的运行时类型复用成员访问器。</summary>
     private MemberAccess GetOrCreateMemberAccess(int segmentIndex, Type runtimeType)
     {
         var key = (SegmentIndex: segmentIndex, RuntimeType: runtimeType);

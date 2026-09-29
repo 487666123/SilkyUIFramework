@@ -5,14 +5,14 @@ using SilkyUIFramework.Extensions;
 namespace SilkyUIFramework.StyleSystem;
 
 /// <summary>
-/// 一个 UIView 的状态样式。每次应用时合并最新定义，再直接赋值或创建属性过渡。
-/// Normal 始终参与合并；需要退出状态后恢复的属性，应在 Normal 中提供基础值。
+/// 一个 UIView 的样式规则表。每次应用时合并最新定义，再直接赋值或创建属性过渡。
+/// 无条件规则始终参与合并；需要退出标记后恢复的属性，应在无条件规则中提供基础值。
 /// 路径在每次应用时解析，动画固定绑定当时的对象，不追踪运行期间的对象替换。
 /// </summary>
 /// <param name="element">此样式表唯一绑定的元素；样式定义可以共享，运行状态不能共享。</param>
 public class UIStyleSheet(UIView element)
 {
-    /// <summary>一条属性路径的访问器与当前动画，不保存历史目标或类型。</summary>
+    /// <summary>一条属性路径的访问器与当前动画及其绑定信息。</summary>
     private sealed class PropertyState(PropertyPathAccessor accessor)
     {
         /// <summary>缓存路径解析能力；每次应用样式时重新查找实际对象，动画运行时不再解析路径。</summary>
@@ -21,31 +21,34 @@ public class UIStyleSheet(UIView element)
         /// <summary>当前管理的动画；没有动画或动画结束后为 null。</summary>
         public Tween Tween;
 
+        public object Owner;
+        public StyleValue TargetValue;
+        // 保存配置值的快照，以识别同一配置对象被原地修改的情况。
+        public (float Duration, float Delay, EaseType Ease, TransitionType Trans) Transition;
+
+        public void ClearTween()
+        {
+            Tween = null;
+            Owner = null;
+            TargetValue = null;
+            Transition = default;
+        }
+
         /// <summary>停止当前动画，保留访问器和属性当前值。</summary>
         public void StopTween()
         {
             Tween?.Kill();
-            Tween = null;
+            ClearTween();
         }
     }
 
-    // 从低到高覆盖同名属性，和枚举的数值顺序无关。
-    private static readonly UIElementState[] StatePriority =
-    [
-        UIElementState.Normal,
-        UIElementState.Hover,
-        UIElementState.Focus,
-        UIElementState.Selected,
-        UIElementState.Active,
-        UIElementState.Custom1,
-        UIElementState.Custom2,
-        UIElementState.Disabled,
-    ];
-
     private readonly UIView _element = element ?? throw new ArgumentNullException(nameof(element));
 
+    private sealed record StyleRule(StyleSelector Selector, StyleDefinition Definition, long Order);
+
     // 保存定义本身的引用，因此共享定义的修改能在下次合并时直接读到。
-    private readonly Dictionary<UIElementState, StyleDefinition> _styles = [];
+    private readonly List<StyleRule> _rules = [];
+    private long _nextRuleOrder;
 
     // 按完整属性路径配置过渡；存在专属配置时，即使它不可播放，也不回退到 AllTransition。
     private readonly Dictionary<string, StyleTransition> _transitions = [with(StringComparer.Ordinal)];
@@ -54,56 +57,51 @@ public class UIStyleSheet(UIView element)
     // 路径格式无效时缓存 null，避免每次应用都重新解析并重复警告。
     private readonly Dictionary<string, PropertyState> _properties = [with(StringComparer.Ordinal)];
 
-    // 复用的合并结果字典，避免每次 ApplyStyle 时分配新字典。
-    private readonly Dictionary<string, StyleValue> _resolvedValues = new(StringComparer.Ordinal);
-
     /// <summary>没有属性专属配置时使用的过渡；null 或不可播放的配置表示直接赋值。</summary>
-    public StyleTransition AllTransition { get; set; } = new();
+    public StyleTransition DefaultTransition { get; set; } = new();
 
     #region set/get style
 
     /// <summary>
-    /// 为指定状态设置样式；多个标志表示分别设置同一份定义，Normal 需单独设置。
-    /// 定义可以共享，修改后在各元素下一次 ApplyStyle 时生效。
+    /// 设置基础样式。基础样式始终参与合并。
     /// </summary>
-    /// <param name="state">一个或多个状态标志；组合表示批量设置，不是仅在这些状态同时出现时匹配。</param>
-    /// <param name="style">保存属性路径与目标值的定义，不能为 null。</param>
-    /// <returns>当前样式表，支持链式配置。</returns>
-    public UIStyleSheet SetStyle(UIElementState state, StyleDefinition style)
+    public UIStyleSheet SetStyle(StyleDefinition style) => SetStyle(StyleSelector.Empty, style);
+
+    /// 设置要求指定标记存在的样式。
+    public UIStyleSheet SetStyle(StyleMarker marker, StyleDefinition style) =>
+        SetStyle(StyleSelector.AllOf(marker), style);
+
+    /// 设置要求所有指定标记存在的复合样式。
+    public UIStyleSheet SetStyle(StyleSelector selector, StyleDefinition style)
     {
+        ArgumentNullException.ThrowIfNull(selector);
         ArgumentNullException.ThrowIfNull(style);
-        foreach (var singleState in StatePriority)
-        {
-            // Normal 为零，HasFlag(Normal) 总为 true，批量设置时需要显式排除它。
-            if (singleState == UIElementState.Normal && state != UIElementState.Normal) continue;
-            if (state.HasFlag(singleState)) _styles[singleState] = style;
-        }
+
+        _rules.RemoveAll(rule => rule.Selector.Equals(selector));
+        _rules.Add(new StyleRule(selector, style, _nextRuleOrder++));
         return this;
     }
 
-    /// <summary>获取一个已定义单状态的样式；不存在时返回 null。</summary>
-    public StyleDefinition GetStyle(UIElementState state)
-    {
-        ValidateSingleState(state);
-        return _styles.GetValueOrDefault(state);
-    }
+    /// 设置要求所有指定标记存在的复合样式。
+    public UIStyleSheet SetStyle(StyleDefinition style, params StyleMarker[] requiredMarkers) =>
+        SetStyle(new StyleSelector(requiredMarkers), style);
 
-    /// <summary>检查一个已定义单状态是否配置了样式。</summary>
-    public bool HasStyle(UIElementState state)
-    {
-        ValidateSingleState(state);
-        return _styles.ContainsKey(state);
-    }
+    /// <summary>获取一个已定义单标记的样式；不存在时返回 null。</summary>
+    public StyleDefinition GetStyle(StyleMarker marker) => GetStyle(StyleSelector.AllOf(marker));
 
-    /// <summary>移除单状态的样式，下次应用时生效。</summary>
-    public bool RemoveStyle(UIElementState state)
-    {
-        ValidateSingleState(state);
-        return _styles.Remove(state);
-    }
+    /// <summary>获取一个已定义选择器的样式；不存在时返回 null。</summary>
+    public StyleDefinition GetStyle(StyleSelector selector) =>
+        _rules.LastOrDefault(rule => rule.Selector.Equals(selector))?.Definition;
 
-    /// <summary>返回配置过样式的状态，不代表元素当前激活的状态；返回值是定义字典的键集合。</summary>
-    public IEnumerable<UIElementState> GetDefinedStates() => _styles.Keys;
+    public bool HasStyle(StyleSelector selector) => GetStyle(selector) is not null;
+
+    public bool HasStyle(StyleMarker marker) => HasStyle(StyleSelector.AllOf(marker));
+
+    public bool RemoveStyle(StyleSelector selector) => _rules.RemoveAll(rule => rule.Selector.Equals(selector)) > 0;
+
+    public bool RemoveStyle(StyleMarker marker) => RemoveStyle(StyleSelector.AllOf(marker));
+
+    public IEnumerable<StyleSelector> GetDefinedSelectors() => _rules.Select(rule => rule.Selector);
 
     /// <summary>给多个属性设置同一份专属过渡；保存配置引用，在下次应用样式时读取。</summary>
     /// <param name="propertyPaths">完整属性路径，区分大小写，每条路径都不能为空白。</param>
@@ -127,14 +125,14 @@ public class UIStyleSheet(UIView element)
     #endregion
 
     /// <summary>
-    /// 有目标时先停止旧动画；样式值类型必须与成员声明类型一致，值不同时才应用目标。
+    /// 目标、绑定对象及过渡配置不变时保留当前动画；否则按当前值重新应用目标。
+    /// 样式值类型必须与成员声明类型一致。
     /// 本次未声明目标的属性不作处理，保留运行记录并让已有动画继续。
     /// </summary>
-    /// <param name="currentState">此次用于合并样式的状态组合；本方法不修改 UIView.State。</param>
-    public void ApplyStyle(UIElementState currentState)
+    public void ApplyStyle(IEnumerable<StyleMarker> activeMarkers)
     {
-        // 只处理合并结果中明确声明的目标；未出现的路径不停止动画，也不清空记录。
-        var values = ResolveValues(currentState);
+        ArgumentNullException.ThrowIfNull(activeMarkers);
+        var values = ResolveValues(activeMarkers);
         foreach (var (path, targetValue) in values)
             ApplyProperty(path, targetValue);
     }
@@ -148,33 +146,24 @@ public class UIStyleSheet(UIView element)
         foreach (var property in _properties.Values) property?.StopTween();
     }
 
-    /// <summary>查询和移除只接受 Normal 或一个已定义标志，不接受状态组合。</summary>
-    private static void ValidateSingleState(UIElementState state)
-    {
-        if (!StatePriority.Contains(state))
-            throw new ArgumentOutOfRangeException(nameof(state), state, "只允许传入一个已定义的 UI 状态。");
-    }
-
     /// <summary>
-    /// 合并基础样式及当前激活状态的样式，高优先级覆盖同路径的低优先级值。
-    /// 每次都读取最新定义，复用实例字典以减少 GC 压力。
+    /// 合并所有匹配规则。条件数量越多的规则优先级越高；相同条件数量按注册顺序覆盖。
     /// </summary>
-    /// <returns>
-    /// 复用的内部字典实例，仅在当前调用的上下文中有效；
-    /// 不可保存返回值引用，下次调用会清空并重新填充此字典。
-    /// </returns>
-    private Dictionary<string, StyleValue> ResolveValues(UIElementState currentState)
+    /// <returns>本次应用解析出的属性目标集合。</returns>
+    private Dictionary<string, StyleValue> ResolveValues(IEnumerable<StyleMarker> activeMarkers)
     {
-        _resolvedValues.Clear();
+        var activeMarkerSet = activeMarkers.ToHashSet();
+        var resolvedValues = new Dictionary<string, StyleValue>();
 
-        foreach (var state in StatePriority)
+        foreach (var rule in _rules
+                     .Where(rule => rule.Selector.Matches(activeMarkerSet))
+                     .OrderBy(rule => rule.Selector.Specificity)
+                     .ThenBy(rule => rule.Order))
         {
-            if (state != UIElementState.Normal && !currentState.HasFlag(state)) continue;
-            if (!_styles.TryGetValue(state, out var style)) continue;
-            foreach (var (path, value) in style) _resolvedValues[path] = value;
+            foreach (var (path, value) in rule.Definition) resolvedValues[path] = value;
         }
 
-        return _resolvedValues;
+        return resolvedValues;
     }
 
     /// <summary>取得或创建路径运行记录；路径格式无效时返回 null。</summary>
@@ -199,31 +188,45 @@ public class UIStyleSheet(UIView element)
     }
 
     /// <summary>
-    /// 停止旧动画，解析本次实际对象并比较当前值与目标；类型不符时抛出异常，值相等时跳过。
+    /// 解析本次实际对象，保留目标与配置未变的动画；否则停止旧动画并比较当前值与目标。
+    /// 类型不符时抛出异常，值相等时跳过。
     /// 需要过渡时固定绑定该对象的成员，没有可用过渡时直接赋值。
     /// </summary>
     private void ApplyProperty(string path, StyleValue targetValue)
     {
         var property = GetProperty(path);
         if (property == null) return;
-        property.StopTween();
+        if (!property.Accessor.TryResolveMember(_element, out var owner, out var memberName, out _))
+        {
+            property.StopTween();
+            return;
+        }
 
-        if (!property.Accessor.TryResolveMember(_element, out var owner, out var memberName, out _)) return;
+        var transition = _transitions.GetValueOrDefault(path, DefaultTransition);
+        var canTween = _element.IsInsideTree && (transition?.CanPlay() ?? false) && targetValue.CanTween;
+        if (canTween && property.Tween is { IsFinished: false } &&
+            ReferenceEquals(property.Owner, owner) && targetValue.HasSameValue(property.TargetValue) &&
+            property.Transition == (transition.Duration, transition.Delay, transition.Ease, transition.Trans))
+            return;
+
+        property.StopTween();
         var accessor = ObjectAccessorCache.GetAccessor(owner);
         if (targetValue.IsCurrentValue(accessor, owner, memberName)) return;
 
-        var transition = _transitions.GetValueOrDefault(path, AllTransition);
-        if (!_element.IsInsideTree || !(transition?.CanPlay() ?? false) || !targetValue.CanTween)
+        if (!canTween)
         {
             targetValue.SetValue(accessor, owner, memberName);
             return;
         }
 
         var tween = property.Tween = _element.CreateTween();
+        property.Owner = owner;
+        property.TargetValue = targetValue;
+        property.Transition = (transition.Duration, transition.Delay, transition.Ease, transition.Trans);
         tween.OnFinished += () =>
         {
             // 防止旧动画完成时清空新动画的引用
-            if (ReferenceEquals(property.Tween, tween)) property.Tween = null;
+            if (ReferenceEquals(property.Tween, tween)) property.ClearTween();
         };
 
         try

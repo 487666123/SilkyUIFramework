@@ -49,13 +49,13 @@ public class SUIToggleSwitch : UIElementGroup
 
         Thumb = new SUIToggleSwitchThumb().Join(this);
 
-        StyleSheet.SetStyle(UIElementState.Normal, new StyleDefinition()
+        StyleSheet.SetStyle(new StyleDefinition()
             .Set($"{nameof(Thumb)}.{nameof(BackgroundColor)}", SUIColor.Foreground)
             .Set($"{nameof(Thumb)}.{nameof(Thumb.Left)}", new Anchor(0, 0, 0))
             .Background(SUIColor.Foreground * 0.25f)
             .BorderColor(SUIColor.Foreground));
 
-        StyleSheet.SetStyle(UIElementState.Custom1, new StyleDefinition()
+        StyleSheet.SetStyle(StyleMarkers.Checked, new StyleDefinition()
             .Set($"{nameof(Thumb)}.{nameof(BackgroundColor)}", SUIColor.Highlight)
             .Set($"{nameof(Thumb)}.{nameof(Thumb.Left)}", new Anchor(0, 0, 1))
             .Background(SUIColor.Highlight * 0.25f)
@@ -73,8 +73,7 @@ public class SUIToggleSwitch : UIElementGroup
     {
         StatusChanged?.Invoke(value);
 
-        if (value) AddState(UIElementState.Custom1);
-        else RemoveState(UIElementState.Custom1);
+        SetStyleMarker(StyleMarkers.Checked, value);
     }
 
     public virtual bool Status

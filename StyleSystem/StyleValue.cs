@@ -17,6 +17,9 @@ public abstract class StyleValue
     /// <summary>查询当前注册表，不在共享样式值中缓存插值函数。</summary>
     internal abstract bool CanTween { get; }
 
+    /// <summary>按声明类型和值比较两个样式目标，不依赖包装对象的引用。</summary>
+    internal abstract bool HasSameValue(StyleValue other);
+
     /// <summary>校验成员类型并读取当前值，使用强类型比较判断是否已达到目标。</summary>
     internal abstract bool IsCurrentValue(ObjectAccessor accessor, object owner, string memberName);
 
@@ -38,6 +41,9 @@ public sealed class StyleValue<T>(T value) : StyleValue
 
     internal override bool CanTween => TweenLerpRegistry.TryGet<T>(out _);
 
+    internal override bool HasSameValue(StyleValue other) =>
+        other is StyleValue<T> typed && EqualityComparer<T>.Default.Equals(Value, typed.Value);
+
     internal override bool IsCurrentValue(ObjectAccessor accessor, object owner, string memberName)
     {
         var getter = accessor.GetTypedGetter<object, T>(memberName);
@@ -49,8 +55,8 @@ public sealed class StyleValue<T>(T value) : StyleValue
         accessor.GetTypedSetter<object, T>(memberName)(owner, Value);
     }
 
-    internal override TweenEntry CreateTween(Tween tween, ObjectAccessor accessor, object owner,
-        string memberName, float duration)
+    internal override TweenEntry CreateTween(Tween tween,
+        ObjectAccessor accessor, object owner, string memberName, float duration)
     {
         return tween.TweenProperty(
             owner,
