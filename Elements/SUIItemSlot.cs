@@ -1,4 +1,4 @@
-﻿using SilkyUIFramework.Components;
+using SilkyUIFramework.Components;
 
 namespace SilkyUIFramework.Elements;
 
@@ -96,14 +96,33 @@ public class SUIItemSlot : UIView
         SoundEngine.PlaySound(SoundID.Grab);
     }
 
-    /// <summary>右键长按计时器（帧计数），用于实现渐进加速的拆分逻辑。</summary>
-    protected TimeSpan LastRightClickActionTime;
+    /// <summary>长按首次按下后，开始连续转移前的等待时间（秒）。</summary>
+    private const double RightHoldRepeatDelay = 0.3;
 
-    /// <summary>记录右键按下的起始帧，为长按加速拆分提供基准。</summary>
+    /// <summary>开始连续转移时的速率（个/秒）。</summary>
+    private const double RightHoldBaseRate = 6;
+
+    /// <summary>速率翻倍所需的时间（秒）。</summary>
+    private const double RightHoldDoublingTime = 0.5;
+
+    /// <summary>最高转移速率（个/秒）。</summary>
+    private const double RightHoldMaxRate = 1000;
+
+    /// <summary>单帧参与计算的最大时长（秒），避免卡顿或中断后突然转移一大批。</summary>
+    private const double RightHoldMaxFrameTime = 0.1;
+
+    private TimeSpan _rightHoldStartTime;
+    private TimeSpan _rightHoldLastTime;
+
+    /// <summary>尚未转移的累计数量（含小数），用于在低速阶段均匀地逐个转移。</summary>
+    private double _rightHoldPending;
+
+    /// <summary>记录右键按下时间，并安排按下瞬间的首次转移。</summary>
     public override void OnRightMouseDown(UIMouseEvent evt)
     {
         base.OnRightMouseDown(evt);
-        LastRightClickActionTime = Main.gameTimeCache.TotalGameTime;
+        _rightHoldStartTime = _rightHoldLastTime = Main.gameTimeCache.TotalGameTime;
+        _rightHoldPending = 1;
     }
 
     protected override void Update(GameTime gameTime)
@@ -113,17 +132,16 @@ public class SUIItemSlot : UIView
     }
 
     /// <summary>
-    /// 右键长按拆分逻辑，带渐进加速曲线：
-    /// <list type="bullet">
-    ///   <item>0~30 tick：每 15 tick 拆分 1 个（精确控制）</item>
-    ///   <item>30~60 tick：每 5 tick 拆分 1 个</item>
-    ///   <item>60~90 tick：每 tick 拆分 1 个</item>
-    ///   <item>90~150 tick：每 tick 拆分 11 个</item>
-    ///   <item>150+ tick：每 tick 拆分 33 个</item>
-    /// </list>
+    /// 右键长按拆分：按下时立即拿起 1 个；停顿 <see cref="RightHoldRepeatDelay"/> 秒后开始连续拆分，
+    /// 速率从 <see cref="RightHoldBaseRate"/> 个/秒起每 <see cref="RightHoldDoublingTime"/> 秒翻倍，
+    /// 上限 <see cref="RightHoldMaxRate"/> 个/秒。按真实时间累计，不受帧率和跳帧设置影响。
     /// </summary>
     protected virtual void HandleItemSlotRightLongPress()
     {
+        var now = Main.gameTimeCache.TotalGameTime;
+        var deltaTime = Math.Min((now - _rightHoldLastTime).TotalSeconds, RightHoldMaxFrameTime);
+        _rightHoldLastTime = now;
+
         if (PlayerInUseItem) return;
 
         // 物品不可交互 || 右键没有按下 || 鼠标没有悬浮 || 物品为空
@@ -131,59 +149,29 @@ public class SUIItemSlot : UIView
             || !Main.mouseRight || !IsMouseHovering || Item.IsAir)
             return;
 
+        // 越过初始停顿后，按当前速率累计应转移的数量；小数部分留到后续帧，使低速阶段也均匀。
+        var repeatTime = (now - _rightHoldStartTime).TotalSeconds - RightHoldRepeatDelay;
+        if (repeatTime > 0)
+        {
+            var rate = Math.Min(RightHoldBaseRate * Math.Pow(2, repeatTime / RightHoldDoublingTime), RightHoldMaxRate);
+            _rightHoldPending += rate * Math.Min(deltaTime, repeatTime);
+        }
+
+        var count = (int)_rightHoldPending;
+        if (count <= 0) return;
+        _rightHoldPending -= count;
+
         if (Main.mouseItem.IsAir)
         {
-            // 鼠标上没有物品, 所以是首次拿起, 只有可以堆叠的物品可以用右键拿起
-            if (Item.maxStack > 1)
-            {
-                // 保留原物品数据，并让模组处理拆分时的自定义状态。
-                Main.mouseItem = ItemLoader.TransferWithLimit(Item, 1);
-                if (Item.stack <= 0) Item.TurnToAir();
-                SoundEngine.PlaySound(SoundID.MenuTick);
-            }
+            // 只有可以堆叠的物品可以用右键拿起；保留原物品数据，并让模组处理拆分时的自定义状态。
+            if (Item.maxStack <= 1) return;
+            Main.mouseItem = ItemLoader.TransferWithLimit(Item, Math.Min(count, Item.maxStack));
+            if (Item.stack <= 0) Item.TurnToAir();
+            SoundEngine.PlaySound(SoundID.MenuTick);
         }
-        else
+        else if (Item.type == Main.mouseItem.type)
         {
-            var tick = (int)(Main.gameTimeCache.TotalGameTime - LastRightClickActionTime).TotalMilliseconds;
-            // 鼠标上有物品
-            if (Item.type == Main.mouseItem.type)
-            {
-                // 右键长按加速曲线：先慢（逐 tick 可控），后快（批量转移）
-                switch (tick)
-                {
-                    case < 500:
-                    {
-                        if (tick % 250 is 0)
-                        {
-                            TryStackItem(Main.mouseItem, Item, out _, numToTransfer: 1);
-                        }
-                        break;
-                    }
-                    case < 1000:
-                    {
-                        if (tick % 100 is 0)
-                        {
-                            TryStackItem(Main.mouseItem, Item, out _, numToTransfer: 1);
-                        }
-                        break;
-                    }
-                    case < 2000:
-                    {
-                        TryStackItem(Main.mouseItem, Item, out _, numToTransfer: 1);
-                        break;
-                    }
-                    case < 3000:
-                    {
-                        TryStackItem(Main.mouseItem, Item, out _, numToTransfer: 9);
-                        break;
-                    }
-                    default:
-                    {
-                        TryStackItem(Main.mouseItem, Item, out _, numToTransfer: 36);
-                        break;
-                    }
-                }
-            }
+            TryStackItem(Main.mouseItem, Item, out _, numToTransfer: count);
         }
     }
 
