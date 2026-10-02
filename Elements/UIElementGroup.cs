@@ -36,11 +36,13 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
     /// </summary>
     internal sealed override void Initialize()
     {
+        if (IsInitialized) return;
         base.Initialize();
 
-        foreach (var item in Elements)
+        // Lifecycle callbacks may add, remove, or reparent children.
+        foreach (var item in Elements.ToArray())
         {
-            item.Initialize();
+            if (item.Parent == this) item.Initialize();
         }
     }
 
@@ -82,9 +84,10 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
         if (SilkyUI != null || silkyUI == null) return;
         base.HandleEnterTree(silkyUI);
 
-        foreach (var el in Elements)
+        foreach (var el in Elements.ToArray())
         {
-            el.HandleEnterTree(silkyUI);
+            if (SilkyUI != silkyUI) return;
+            if (el.Parent == this) el.HandleEnterTree(silkyUI);
         }
     }
 
@@ -161,8 +164,8 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
         ElementsOrderIsDirty = true;
 
         OnAddChild(child);
-        child.HandleEnterTree(SilkyUI);
         child.Initialize();
+        if (child.Parent == this) child.HandleEnterTree(SilkyUI);
     }
 
     /// <summary>

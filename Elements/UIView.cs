@@ -134,19 +134,21 @@ public partial class UIView
     public string Id { get; set; } = string.Empty;
 
     private bool _initialized = false;
+    internal bool IsInitialized => _initialized;
 
     /// <summary>
-    /// 初始化元素
+    /// 初始化元素；OnInitialize 在元素生命周期内仅调用一次，并先于 OnEnterTree。
     /// </summary>
     internal virtual void Initialize()
     {
         if (_initialized) return;
         _initialized = true;
         OnInitialize();
-        // 动态加入树的元素会先 EnterTree 再 Initialize，样式需等初始化完成。
-        if (IsInsideTree) ApplyCurrentStyle();
     }
 
+    /// <summary>
+    /// 创建子元素并设置默认属性；不保证已连接到 SilkyUI，运行时订阅应放在 OnEnterTree。
+    /// </summary>
     protected virtual void OnInitialize() { }
 
     public SilkyUI SilkyUI { get; private set; }
@@ -154,11 +156,12 @@ public partial class UIView
     internal virtual void HandleEnterTree(SilkyUI silkyUI)
     {
         if (SilkyUI != null || silkyUI == null) return;
+        if (!_initialized) Initialize();
+        if (SilkyUI != null) return;
         SilkyUI = silkyUI;
         SubscribeDataContext();
         OnEnterTree();
-        // 已初始化的元素进入或重新进入时，先建立当前样式。
-        if (_initialized && IsInsideTree) ApplyCurrentStyle();
+        if (IsInsideTree) ApplyCurrentStyle();
     }
 
     internal virtual void HandleExitTree()
@@ -170,7 +173,9 @@ public partial class UIView
         OnExitTree();
     }
 
-    /// <summary> 当元素加入UI树中时调用 </summary>
+    /// <summary>
+    /// 每次连接到 UI 树时调用；保证已执行 OnInitialize，且可访问所属 SilkyUI。
+    /// </summary>
     protected virtual void OnEnterTree() { }
 
     /// <summary> 当元素移出UI树中时调用 </summary>
