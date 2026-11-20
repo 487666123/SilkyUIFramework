@@ -1,4 +1,4 @@
-﻿using SilkyUIFramework.Layout;
+using SilkyUIFramework.Layout;
 
 namespace SilkyUIFramework.Elements;
 
@@ -7,7 +7,7 @@ public partial class UIElementGroup
     #region Properties & Fields LayoutType LayoutDirection Gap
 
     /// <summary>
-    /// 目前仅有 Flexbox 可以使用，请不要自定义布局。
+    /// 布局类型。内置 Flexbox 与 Grid；Custom 需通过 <see cref="LayoutModule"/> 注入以当前容器为 Container 的自定义模块。
     /// </summary>
     public LayoutType LayoutType
     {

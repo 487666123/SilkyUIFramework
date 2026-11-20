@@ -99,9 +99,9 @@ public partial class UIElementGroup : UIView, IContainer<UIView>
         if (SilkyUI == null) return;
         base.HandleExitTree();
 
-        foreach (var el in Elements)
+        foreach (var el in Elements.ToArray())
         {
-            el.HandleExitTree();
+            if (el.Parent == this) el.HandleExitTree();
         }
     }
 

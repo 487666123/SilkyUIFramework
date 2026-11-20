@@ -1,6 +1,4 @@
-using SilkyUIFramework.Layout;
-
-namespace SilkyUIFramework;
+namespace SilkyUIFramework.Layout.Flexbox;
 
 /// <summary>
 /// 表示 Flex 布局中的一条布局线（Row 或 Column）及其尺寸信息。
