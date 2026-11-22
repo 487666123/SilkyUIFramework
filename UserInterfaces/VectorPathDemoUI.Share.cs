@@ -31,6 +31,8 @@ public sealed partial class VectorPathDemoUI
     protected override void OnInitialize()
     {
         base.OnInitialize();
+        InitializeComponent();
+        InitializeGallerySlots();
         AddChild(_shareButton);
         AddChild(_shareTooltip);
     }
@@ -40,7 +42,6 @@ public sealed partial class VectorPathDemoUI
         var center = _layout.ShareButtonCenter;
         _shareTransform = Matrix.CreateScale(_layout.Scale, _layout.Scale, 1f) *
             Matrix.CreateTranslation(center.X, center.Y, 0f) * transform;
-        _shareButton.Prepare(_shareTransform, bounds);
         _shareButtonSurface = new ShareSurface(ShareButtonOutline, _shareTransform, bounds, -ShareButtonRadius);
         _shareSurface = null;
     }
@@ -51,7 +52,6 @@ public sealed partial class VectorPathDemoUI
         _shareButton.IsShown = true;
         _shareButton.Center = layout.ShareButtonCenter;
         _shareButton.Radius = ShareButtonRadius * layout.Scale;
-        _shareButton.PixelOffset = offset;
 
         var hovering = Main.instance.IsActive && !_dragGrabOffset.HasValue && _shareButton.IsMouseHovering;
         var step = (float)gameTime.ElapsedGameTime.TotalSeconds / (hovering ? 1.3f : 0.76f);
@@ -81,6 +81,11 @@ public sealed partial class VectorPathDemoUI
             _shareMeshProgress = _shareProgress;
         }
         _shareSurface.Draw(spriteBatch, renderer, offset);
+        var glyphSize = new Vector2(2f * _shareButton.Radius);
+        var glyphPosition = _layout.ShareButtonCenter - glyphSize / 2f;
+        var glyphOrigin = SUISvgIcon.PixelOrigin(glyphPosition, _meshTransform);
+        renderer.DrawInUI(spriteBatch, _shareButton.PrepareMesh(glyphSize, _meshTransform), Color.White,
+            new Point(glyphOrigin.X + offset.X, glyphOrigin.Y + offset.Y));
     }
 
     private static PathGradient CreateShareBrush(float top, Color light, Color dark) =>
@@ -153,10 +158,10 @@ public sealed partial class VectorPathDemoUI
 
     private sealed class ShareSurface(VectorPath outline, Matrix transform, Rectangle bounds, float gradientTop)
     {
-        private static readonly Color EdgeLight = Color.Lerp(VectorPathDemoIcons.Blue.Edge, VectorPathDemoIcons.Blue.Light, 0.48f);
-        private readonly PathGradient _fillBrush = CreateShareBrush(gradientTop, VectorPathDemoIcons.Blue.Light, VectorPathDemoIcons.Blue.Dark);
+        private static readonly Color EdgeLight = Color.Lerp(ControlBlueEdge, ControlBlueLight, 0.48f);
+        private readonly PathGradient _fillBrush = CreateShareBrush(gradientTop, ControlBlueLight, ControlBlueDark);
         // 外框与底色共用渐变坐标，让浅色区域的外框也相应提亮。
-        private readonly PathGradient _edgeBrush = CreateShareBrush(gradientTop, EdgeLight, VectorPathDemoIcons.Blue.Edge);
+        private readonly PathGradient _edgeBrush = CreateShareBrush(gradientTop, EdgeLight, ControlBlueEdge);
         private readonly PathMesh _face = PathRenderer.PrepareFill(outline, transform, bounds);
         private readonly PathMesh _edge = PathRenderer.PrepareStroke(outline, ShareEdgeStroke, transform, bounds);
         private readonly PathMesh _highlight = PathRenderer.PrepareStroke(outline, ShareInnerEdgeStroke, transform, bounds);
@@ -164,8 +169,7 @@ public sealed partial class VectorPathDemoUI
 
         public void Draw(SpriteBatch spriteBatch, PathRenderer renderer, Point offset)
         {
-            var palette = VectorPathDemoIcons.Blue;
-            renderer.DrawInUI(spriteBatch, _face, palette.Edge * 0.16f, new Point(offset.X, offset.Y + _shadowOffset));
+            renderer.DrawInUI(spriteBatch, _face, ControlBlueEdge * 0.16f, new Point(offset.X, offset.Y + _shadowOffset));
             renderer.DrawGradientInUI(spriteBatch, _edge, _edgeBrush, offset);
             // 用与图标一致的白色高光强度混合描边，渐变覆盖描边内半部。
             renderer.DrawInUI(spriteBatch, _highlight, Color.White * 0.45f, offset);
@@ -173,7 +177,7 @@ public sealed partial class VectorPathDemoUI
         }
     }
 
-    private sealed class ShareButtonView : UIView
+    private sealed class ShareButtonView : SUISvgIcon
     {
         private static readonly PathStroke GlyphStroke = new(2f, PathLineCap.Round, PathLineJoin.Round);
         private static readonly VectorPath Glyph = new VectorPathBuilder()
@@ -184,25 +188,19 @@ public sealed partial class VectorPathDemoUI
             .AddCircle(new Vector2(4f, 5f), 1.7f)
             .Build();
 
-        private PathMesh _glyphMesh;
+        public ShareButtonView()
+        {
+            DrawFromParent = true;
+            Icon = new SvgIcon(new Vector4(-ShareButtonRadius, -ShareButtonRadius, ShareButtonRadius * 2f, ShareButtonRadius * 2f),
+                [new SvgIconLayer(Glyph, Color.White, GlyphStroke)]);
+        }
 
         public bool IsShown { get; set; }
         public Vector2 Center { get; set; }
         public float Radius { get; set; }
-        public Point PixelOffset { get; set; }
 
         public override bool ContainsPoint(Vector2 point) =>
             IsShown && Vector2.DistanceSquared(point, Center) <= Radius * Radius;
-
-        public void Prepare(Matrix transform, Rectangle bounds) =>
-            _glyphMesh = PathRenderer.PrepareStroke(Glyph, GlyphStroke, transform, bounds);
-
-        protected override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
-        {
-            if (!IsShown) return;
-            var resources = SilkyUISystem.ServiceProvider.GetRequiredService<VectorPathDemoResources>();
-            resources.GetRenderer(spriteBatch.GraphicsDevice).DrawInUI(spriteBatch, _glyphMesh, Color.White, PixelOffset);
-        }
     }
 
     private sealed class ShareTooltipView : UIView

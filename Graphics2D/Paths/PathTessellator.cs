@@ -3,21 +3,29 @@ namespace SilkyUIFramework.Graphics2D.Paths;
 /// <summary>已经按目标像素尺寸准备好的路径网格，可换颜色后重复绘制。</summary>
 public sealed class PathMesh
 {
-    internal VertexPositionColor[] Vertices { get; }
+    private readonly int _vertexCount;
+    private readonly int _indexCount;
 
-    internal int[] Indices { get; }
-
+    internal VertexPositionColor[] VertexBuffer { get; }
+    internal int[] IndexBuffer { get; }
+    internal ReadOnlySpan<VertexPositionColor> Vertices => VertexBuffer.AsSpan(0, _vertexCount);
+    internal ReadOnlySpan<int> Indices => IndexBuffer.AsSpan(0, _indexCount);
     internal Matrix LocalToPixel { get; }
 
     /// <summary>获取网格是否没有可绘制的三角形。</summary>
-    public bool IsEmpty => Indices.Length == 0;
+    public bool IsEmpty => _indexCount == 0;
 
     internal PathMesh(VertexPositionColor[] vertices, int[] indices) : this(vertices, indices, Matrix.Identity) { }
 
     internal PathMesh(VertexPositionColor[] vertices, int[] indices, Matrix localToPixel)
+        : this(vertices, vertices.Length, indices, indices.Length, localToPixel) { }
+
+    internal PathMesh(VertexPositionColor[] vertices, int vertexCount, int[] indices, int indexCount, Matrix localToPixel)
     {
-        Vertices = vertices;
-        Indices = indices;
+        VertexBuffer = vertices;
+        IndexBuffer = indices;
+        _vertexCount = vertexCount;
+        _indexCount = indexCount;
         LocalToPixel = localToPixel;
     }
 }

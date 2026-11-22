@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Body xmlns:s="https://github.com/487666123/SilkyUIFramework"
+      s:Class="SilkyUIFramework.UserInterfaces.VectorPathDemoUI"
+      Border="0" BackgroundColor="rgba(0,0,0,0)" Gap="0">
+    <!-- 布局控件提供边界，展板用路径网格绘制外观。 -->
+    <ElementGroup s:Name="HeaderLayout" Positioning="Absolute" Left="1px" Top="1px"
+                  Width="-2px 100%" Height="48px">
+        <View s:Name="TitleMarkLayout" Positioning="Absolute" Left="18px" Top="50#" Width="24px" Height="24px" />
+        <SvgIcon s:Name="CloseLayout" Positioning="Absolute" Left="-14px 100#" Top="50#" Width="34px" Height="34px" />
+    </ElementGroup>
+    <View s:Name="HeaderDividerLayout" Positioning="Absolute" Left="1px" Top="49px" Width="-2px 100%" Height="1px" />
+    <ElementGroup s:Name="SidebarLayout" Positioning="Absolute" Top="50px" Width="166px" Height="-51px 100%">
+        <ElementGroup s:Name="CategoryLayout" Positioning="Absolute" Left="13px" Top="42px"
+                      Width="-26px 100%" Height="199px" FlexDirection="Column" Gap="5" />
+        <View s:Name="GradientDividerLayout" Positioning="Absolute" Left="13px" Top="255px" Width="-26px 100%" Height="1px" />
+        <View s:Name="GradientTitleLayout" Positioning="Absolute" Left="24px" Top="274px" Width="1px" Height="1px" />
+        <View s:Name="LinearLayout" Positioning="Absolute" Left="13px" Top="291px" Width="-26px 100%" Height="63px" />
+        <View s:Name="RadialLayout" Positioning="Absolute" Left="13px" Top="363px" Width="-26px 100%" Height="79px" />
+        <View s:Name="ShareLayout" Positioning="Absolute" Left="18px" Top="-12px 100#" Width="32px" Height="32px" />
+    </ElementGroup>
+    <View s:Name="SideDividerLayout" Positioning="Absolute" Left="166px" Top="50px" Width="1px" Height="-51px 100%" />
+    <ElementGroup s:Name="ContentLayout" Positioning="Absolute" Left="183px" Top="63px"
+                  Width="-200px 100%" Height="-80px 100%">
+        <ElementGroup s:Name="ToolbarLayout" Positioning="Absolute" Width="100%" Height="39px">
+            <ElementGroup s:Name="SizeSliderLayout" Positioning="Absolute" Left="-40px 100#" Top="50#"
+                          Width="118px" Height="26px">
+                <View s:Name="SizeTrackLayout" Positioning="Absolute" Left="8px" Top="50#" Width="102px" Height="6px" />
+            </ElementGroup>
+        </ElementGroup>
+        <ElementGroup s:Name="IconGridLayout" Positioning="Absolute" Top="50px" Width="100%" Height="-50px 100%"
+                      LayoutType="Grid" Gap="9" />
+    </ElementGroup>
+</Body>

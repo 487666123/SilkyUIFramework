@@ -224,7 +224,7 @@ public sealed class PathRenderer : IDisposable
                 ApplyGradient(gradient, translation * projection, x, y);
             }
             _device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList,
-                mesh.Vertices, 0, mesh.Vertices.Length, mesh.Indices, 0, mesh.Indices.Length / 3);
+                mesh.VertexBuffer, 0, mesh.Vertices.Length, mesh.IndexBuffer, 0, mesh.Indices.Length / 3);
         }
         finally
         {
