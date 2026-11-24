@@ -18,6 +18,8 @@ public sealed partial class VectorPathDemoUI
     private const float ShareBubbleHalfHeight = 10f;
     private const float SharePinchGap = 1.8f;
     private const float ShareDetachGap = 4.2f;
+    private const float ShareOpenSeconds = 0.42f;
+    private const float ShareCloseSeconds = 0.27f;
 
     private readonly ShareButtonView _shareButton = new();
     private readonly ShareTooltipView _shareTooltip = new() { IgnoreMouseInteraction = true };
@@ -54,14 +56,11 @@ public sealed partial class VectorPathDemoUI
         _shareButton.Radius = ShareButtonRadius * layout.Scale;
 
         var hovering = Main.instance.IsActive && !_dragGrabOffset.HasValue && _shareButton.IsMouseHovering;
-        var step = (float)gameTime.ElapsedGameTime.TotalSeconds / (hovering ? 1.3f : 0.76f);
+        var step = (float)gameTime.ElapsedGameTime.TotalSeconds / (hovering ? ShareOpenSeconds : ShareCloseSeconds);
         _shareProgress = Math.Clamp(_shareProgress + (hovering ? step : -step), 0f, 1f);
 
-        var eased = MathHelper.SmoothStep(0f, 1f, _shareProgress);
-        // 在细颈阶段连续减速。速度只在起点和终点降到零。
-        var motion = eased + 0.78f * MathF.Sin(MathHelper.TwoPi * eased) / MathHelper.TwoPi;
-        // 把减速段放在两侧轮廓已拉开、细颈还较宽的位置。
-        motion += 0.74f * motion * (1f - motion);
+        // 两端平滑减速，鼠标进出时从当前形状反向播放。
+        var motion = MathHelper.SmoothStep(0f, 1f, _shareProgress);
         // 细颈分离后，让提示框继续上移，为两侧描边留出间距。
         var lift = MathHelper.Lerp(10f, ShareBubbleLift, motion) + ShareBubbleExtraLift * SharePhase(motion, 0.88f, 1f);
         var bubbleCenter = new Vector2(0f, -lift);

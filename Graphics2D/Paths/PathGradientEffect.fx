@@ -21,9 +21,9 @@ bool uRadial;
 float uTileMode;
 
 // 停止点的 RGB 是否已乘以 Alpha，以及是否在线性 sRGB 中插值。
-float uPremultiplied;
+bool uPremultiplied;
 
-float uLinearRgb;
+bool uLinearRgb;
 
 // 简单渐变直接从参数读取两端颜色。
 float4 uFirstColor;
@@ -34,6 +34,8 @@ struct GradientVertex
 {
     float4 Position : POSITION0;
 
+    // COLOR0 来自 FNA 的 VertexPositionColor，覆盖率存放在 RGBA 的第四个分量 A。
+    // 用 float4 才能显式取 .a，声明为 float 只会读取第一个分量 R。
     float4 Coverage : COLOR0;
 };
 
@@ -129,17 +131,18 @@ float GradientPosition(float2 coordinate)
 // 将插值颜色转成用于混合的预乘 sRGB，再用覆盖率缩放 RGB 和 Alpha。
 float4 ApplyCoverage(float4 color, float coverage)
 {
-    if (uLinearRgb > 0.5)
+    if (uLinearRgb)
     {
         // sRGB 转换作用于未预乘的颜色，转换后再乘回 Alpha。
-        if (uPremultiplied > 0.5)
+        if (uPremultiplied)
             color.rgb = color.a > 0 ? color.rgb / color.a : float3(0, 0, 0);
         color.rgb = ToSrgb(color.rgb) * color.a;
     }
-    else if (uPremultiplied < 0.5)
+    else if (!uPremultiplied)
     {
         color.rgb *= color.a;
     }
+    
     return color * coverage;
 }
 

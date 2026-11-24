@@ -56,11 +56,11 @@ public sealed partial class VectorPathDemoUI : BaseBody
             "数据看板", "折线图", "图表", "饼图", "环形图", "面积图", "漏斗图", "动态", "上涨", "下跌", "仪表", "热力图"),
         new("界面与布局", "M2 3H16V15H2Z M2 7H16 M7 7V15", "看板", "侧边栏", "列表视图", "网格"),
         new("文件与数据", "M4 2H10L14 6V16H4Z M10 2V6H14 M7 10H11 M7 13H11",
-            "收件箱", "数据库", "服务器", "报表文件", "演示", "下载", "导出"),
+            "收件箱", "阅读", "数据库", "服务器", "报表文件", "演示", "下载", "导出"),
         new("人物与通知", "M12 5A3 3 0 1 0 6 5A3 3 0 1 0 12 5Z M3 16V15Q3 11 7 11H11Q15 11 15 15V16",
             "多人", "用户", "通知", "日历"),
         new("操作与状态", "M2 5H6 M10 5H16 M6 3H10V7H6Z M2 13H9 M13 13H16 M9 11H13V15H9Z",
-            "设置", "调节", "筛选", "搜索", "同步", "完成", "警告", "更多",
+            "设置", "工具", "调节", "筛选", "搜索", "同步", "完成", "警告", "更多",
             "全部拿走", "全部放入", "快速堆叠", "排序"),
     ];
 
@@ -113,6 +113,8 @@ public sealed partial class VectorPathDemoUI : BaseBody
     private bool _collapsed;
 
     private bool _closePressed;
+
+    private readonly SUISvgIcon _titleMark = new() { Icon = VectorPathDemoIcons.GalleryMark };
 
     private readonly SUISvgIcon _launcherGlyph = new()
     {
@@ -299,9 +301,7 @@ public sealed partial class VectorPathDemoUI : BaseBody
         UpdateDrag(viewportSize);
         var offset = ToPixels(transform);
 
-        var resources = SilkyUISystem.ServiceProvider.GetRequiredService<PathDrawingResources>();
-
-        var renderer = resources.GetRenderer(spriteBatch.GraphicsDevice);
+        var renderer = PathRenderer.Instance;
         renderer.DrawInUI(spriteBatch, _gallery, Color.White, offset);
         var animationTime = gameTime.TotalGameTime.TotalSeconds;
         renderer.DrawInUI(spriteBatch, _animatedIcons.Update(animationTime), Color.White, offset);
@@ -425,8 +425,7 @@ public sealed partial class VectorPathDemoUI : BaseBody
 
         var offset = new Point((int)MathF.Round(pixel.X), (int)MathF.Round(pixel.Y));
 
-        var resources = SilkyUISystem.ServiceProvider.GetRequiredService<PathDrawingResources>();
-        resources.GetRenderer(spriteBatch.GraphicsDevice).DrawInUI(spriteBatch, _launcherMesh, Color.White, offset);
+        PathRenderer.Instance.DrawInUI(spriteBatch, _launcherMesh, Color.White, offset);
 
         var origin = new Vector2((offset.X - transform.M41) / scale.X, (offset.Y - transform.M42) / scale.Y);
 
@@ -475,8 +474,9 @@ public sealed partial class VectorPathDemoUI : BaseBody
         FillBox(layout.RadialSampleCard, 10f, TileColor);
         FillBox(layout.SizeTrack, 3f, OutlineColor);
         FillBox(layout.SizeTrack.Inset(0.8f * layout.Scale), 2.2f, SelectedColor);
-        FillBox(layout.TitleMark, 6f, AccentColor);
-        FillBox(layout.TitleMark.Inset(6f * layout.Scale), 2.5f, PanelColor);
+        var titleMark = layout.TitleMark;
+        AppendIconMesh(vertices, indices, _titleMark.PrepareMesh(titleMark.Size, transform),
+            SUISvgIcon.PixelOrigin(titleMark.Position, transform));
 
         var tiles = new VectorPathBuilder();
         for (var i = 0; i < _visibleIcons.Count; i++)

@@ -51,9 +51,17 @@ public sealed partial class VectorPathDemoUI
         private PathMesh PrepareMesh(float progress)
         {
             var motion = _part.Motion;
+            var deformation = Matrix.CreateScale(1f + motion.ScaleDelta.X * progress, 1f + motion.ScaleDelta.Y * progress, 1f);
+            if (motion.PageFlip)
+            {
+                // 书脊固定。纸页转到侧面时投影收窄，翻过书脊后宽度变为负数。
+                var angle = MathHelper.Pi * progress;
+                deformation.M11 = MathF.Cos(angle);
+                deformation.M12 = -0.28f * MathF.Sin(angle);
+                if (MathF.Abs(deformation.M11) < 0.01f) return new PathMesh([], []);
+            }
             var pose = progress == 0f ? Matrix.Identity :
-                Matrix.CreateTranslation(-motion.Pivot.X, -motion.Pivot.Y, 0f) *
-                Matrix.CreateScale(1f + motion.ScaleDelta.X * progress, 1f + motion.ScaleDelta.Y * progress, 1f) *
+                Matrix.CreateTranslation(-motion.Pivot.X, -motion.Pivot.Y, 0f) * deformation *
                 Matrix.CreateRotationZ(motion.Angle * progress) *
                 Matrix.CreateTranslation(motion.Pivot.X + motion.Shift.X * progress, motion.Pivot.Y + motion.Shift.Y * progress, 0f);
             return _view.PrepareLayerRange(_part.FirstLayer, _part.LayerCount, _size, _transform, pose);

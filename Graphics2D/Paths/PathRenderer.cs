@@ -6,6 +6,8 @@ namespace SilkyUIFramework.Graphics2D.Paths;
 /// <remarks>绘制颜色采用 SilkyUI 的预乘 Alpha 约定。网格准备过程无需访问图形设备。</remarks>
 public sealed class PathRenderer : IDisposable
 {
+    internal static PathRenderer Instance => field ??= new PathRenderer(Main.instance.GraphicsDevice);
+
     private readonly GraphicsDevice _device;
 
     private readonly BasicEffect _effect;
@@ -254,8 +256,8 @@ public sealed class PathRenderer : IDisposable
         parameters["uGradientY"].SetValue(y);
         parameters["uRadial"].SetValue(gradient.IsRadial);
         parameters["uTileMode"].SetValue((float)gradient.TileMode);
-        parameters["uPremultiplied"].SetValue(gradient.Premultiplied ? 1f : 0f);
-        parameters["uLinearRgb"].SetValue(gradient.LinearRgb ? 1f : 0f);
+        parameters["uPremultiplied"].SetValue(gradient.Premultiplied);
+        parameters["uLinearRgb"].SetValue(gradient.LinearRgb);
         var stops = gradient.Stops;
         if (stops.Length == 1 || (stops.Length == 2 && stops[0].Position == 0f && stops[1].Position == 1f))
         {

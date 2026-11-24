@@ -114,8 +114,7 @@ public class SUISvgIcon : UIView
         var mesh = PrepareMesh(InnerBounds.Size, transform);
         if (mesh.IsEmpty) return;
         var origin = PixelOrigin(InnerBounds.Position, transform);
-        var resources = SilkyUISystem.ServiceProvider.GetRequiredService<PathDrawingResources>();
-        resources.GetRenderer(spriteBatch.GraphicsDevice).DrawInUI(spriteBatch, mesh, Color.White, origin);
+        PathRenderer.Instance.DrawInUI(spriteBatch, mesh, Color.White, origin);
     }
 
     internal static Point PixelOrigin(Vector2 position, Matrix transform)

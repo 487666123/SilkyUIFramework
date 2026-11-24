@@ -22,6 +22,14 @@ internal static class VectorPathDemoIcons
     internal static Icon Close { get; } = new("关闭", Still(SquareWithBottomBand(Pink)),
         Still(Line(White, 2.2f, "M12 9L19 16M19 9L12 16")));
 
+    internal static SvgIcon GalleryMark { get; } = new(ViewBox,
+        [.. Body(D("M7.3 5.1L21.7 1.9Q24 1.4 24.5 3.6L27.4 16.7Q27.9 18.9 25.7 19.4L11.3 22.6Q9.1 23.1 8.6 20.9L5.7 7.8Q5.2 5.6 7.3 5.1Z"), Blue),
+            .. Body(Box(3.8f, 6.1f, 20.3f, 17f), Blue, front: true, shadow: false),
+            Fill(Blue.Mark, Box(7.7f, 9.8f, 4.1f, 4.1f, 1.2f)),
+            Fill(Blue.Mark, Circle(17.8f, 11.85f, 2.05f)),
+            Fill(Blue.Mark, Circle(9.75f, 17.35f, 2.05f)),
+            Fill(Blue.Mark, Box(15.75f, 15.3f, 4.1f, 4.1f, 1.2f))]);
+
     internal static IReadOnlyList<Icon> All { get; } =
     [
         new("数据看板", Still(Body(Wide, Orange)), Still(Fill(White, Screen)),
@@ -63,6 +71,8 @@ internal static class VectorPathDemoIcons
             Still(Line(White, 1.6f, "M8.5 9H22.5M8.5 16H22.5")),
             Move(new(6, 0), Body(Circle(12, 9, 2.65f), Orange, front: true, shadow: false)),
             Move(new(-5, 0), Body(Circle(19, 16, 2.65f), Orange, front: true, shadow: false))),
+        Reading(),
+        Wrench(),
         Funnel("筛选", Pink),
         new("搜索", Still(Body(Box(5.5f, 1, 17, 23), Orange)),
             Still(Line(White, 1.6f, "M8.7 6.5H19M8.7 10.5H15.3")),
@@ -134,6 +144,32 @@ internal static class VectorPathDemoIcons
             Stretch(Center, new(0.28f, 0.28f), Fill(White, CloverLeaves())),
             Still(Fill(Green.Mark, Circle(15.5f, 12.5f, 1.3f)))),
     ];
+
+    private static Icon Reading()
+    {
+        var cover = D("M4 6.9Q4 4.9 6 4.7C9.6 4.3 13 5.1 15.5 6.8C18 5.1 21.4 4.3 25 4.7Q27 4.9 27 6.9V19.5Q27 21.6 24.8 21.3C21.3 20.8 18.4 21.2 15.5 22.8C12.6 21.2 9.7 20.8 6.2 21.3Q4 21.6 4 19.5Z");
+        var page = D("M15.5 6.8C18.2 5 21.1 4.4 24.1 4.9Q25 5 25 6V17.3Q25 18.7 23.7 18.5C20.8 18.2 18.1 18.8 15.5 20.5Z");
+        var mirror = Matrix.CreateScale(-1f, 1f, 1f) * Matrix.CreateTranslation(31f, 0f, 0f);
+        return new Icon("阅读", Still(Body(cover, Purple)),
+            Still(Fill(White, page.Transform(mirror)), Fill(White, page),
+                Line(Purple.Mark, 1.6f, "M8.6 9.5Q10.5 9.4 12.4 10.2M8.6 13.4Q10.5 13.3 12.4 14.1"),
+                Line(Purple.Soft, 1.6f, "M18.7 10.2Q20.5 9.4 22.2 9.5M18.7 14.1Q20.5 13.3 22.2 13.4")),
+            new Group([.. Body(page, Purple, front: true, shadow: false),
+                Line(Purple.Mark, 1.6f, "M18.7 10.2Q20.5 9.4 22.2 9.5M18.7 14.1Q20.5 13.3 22.2 13.4")],
+                new Motion(new Vector2(15.5f, 12.5f), default, default, 0f, 0f, PageFlip: true)));
+    }
+
+    private static Icon Wrench()
+    {
+        var restAngle = MathHelper.ToRadians(-36f);
+        var restPose = Matrix.CreateTranslation(-Center.X, -Center.Y, 0f) * Matrix.CreateRotationZ(restAngle) *
+            Matrix.CreateTranslation(Center.X, Center.Y, 0f);
+        var silhouette = D("M6.8 10.1H17.4C18 8.1 19.7 6.9 21.8 6.9Q23.9 6.9 25.6 8.4Q26 8.9 25.4 9.2L22.2 10.7V14.3L25.4 15.8Q26 16.1 25.6 16.6C23 19.3 18.6 18.6 17.4 14.9H6.8A2.4 2.4 0 0 1 6.8 10.1Z");
+        var handle = Box(7.3f, 11f, 8.1f, 3f, 1.5f);
+        var jaw = Vector2.Transform(new Vector2(22.2f, 12.5f), restPose);
+        return new Icon("工具", new Group([.. Body(silhouette.Transform(restPose), Orange), Fill(Orange.Light, handle.Transform(restPose))],
+            new Motion(jaw, default, default, MathHelper.ToRadians(-23f), 0f)));
+    }
 
     private static Icon Plot(string name, Palette palette, string curve, float lift) =>
         new(name, Still(Body(Wide, palette)), Still(Fill(White, Screen)), Move(new(0, -lift), Line(palette.Mark, 1.6f, curve)));
@@ -293,9 +329,10 @@ internal static class VectorPathDemoIcons
 
     internal readonly record struct Group(Layer[] Layers, Motion Motion);
     internal readonly record struct Part(int FirstLayer, int LayerCount, Motion Motion);
-    internal readonly record struct Motion(Vector2 Pivot, Vector2 Shift, Vector2 ScaleDelta, float Angle, float Delay, bool Repeat = false)
+    internal readonly record struct Motion(Vector2 Pivot, Vector2 Shift, Vector2 ScaleDelta, float Angle, float Delay,
+        bool Repeat = false, bool PageFlip = false)
     {
-        public bool IsMoving => Shift != Vector2.Zero || ScaleDelta != Vector2.Zero || Angle != 0f;
+        public bool IsMoving => PageFlip || Shift != Vector2.Zero || ScaleDelta != Vector2.Zero || Angle != 0f;
     }
 
     private readonly record struct Palette(Color Edge)
