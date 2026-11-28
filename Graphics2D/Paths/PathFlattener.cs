@@ -8,8 +8,8 @@ internal sealed record PathContour(List<PathPoint> Points, bool Closed);
 /// <summary>路径展平器：按目标像素精度将曲线展平为折线，输出点仍使用路径局部坐标。</summary>
 internal sealed class PathFlattener(Matrix transform)
 {
-    /// <summary>容差平方：以 1/8 像素为平直度阈值；比较距离平方可省去开方。</summary>
-    private const double ToleranceSquared = 0.125 * 0.125;
+    /// <summary>容差平方：以 1/2 像素为平直度阈值；比较距离平方可省去开方。</summary>
+    private const double ToleranceSquared = 0.5 * 0.5;
 
     /// <summary>最大深度：即使尚未达到像素精度，也在此深度停止，限制细分规模。</summary>
     private const int MaxDepth = 16;
@@ -88,7 +88,7 @@ internal sealed class PathFlattener(Matrix transform)
     private void Cubic(List<PathPoint> points, HomogeneousPoint a, HomogeneousPoint b,
         HomogeneousPoint c, HomogeneousPoint d, int depth, bool corner)
     {
-        if (depth == MaxDepth || (IsFlat(a, b, d) && IsFlat(a, c, d)))
+        if (depth == MaxDepth || IsFlat(a, b, c, d))
         {
             points.Add(new PathPoint(d.Position, corner));
             return;
@@ -113,8 +113,21 @@ internal sealed class PathFlattener(Matrix transform)
     {
         var (dx, dy) = TransformDelta(a, end);
         var (x, y) = TransformDelta(a, b);
-        var length = dx * dx + dy * dy;
+        return IsFlat(dx, dy, dx * dx + dy * dy, x, y);
+    }
 
+    private bool IsFlat(HomogeneousPoint a, HomogeneousPoint b, HomogeneousPoint c, HomogeneousPoint end)
+    {
+        var (dx, dy) = TransformDelta(a, end);
+        var length = dx * dx + dy * dy;
+        var first = TransformDelta(a, b);
+        if (!IsFlat(dx, dy, length, first.X, first.Y)) return false;
+        var second = TransformDelta(a, c);
+        return IsFlat(dx, dy, length, second.X, second.Y);
+    }
+
+    private static bool IsFlat(double dx, double dy, double length, double x, double y)
+    {
         // 投影范围：投影限制在两端之间，避免把越过端点又折返的曲线误判为直线。
         var t = length == 0d ? 0d : Math.Clamp((x * dx + y * dy) / length, 0d, 1d);
         x -= t * dx;

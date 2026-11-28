@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace SilkyUIFramework.Graphics2D.Paths;
 
 /// <summary>已经按目标像素尺寸准备好的路径网格，可换颜色后重复绘制。</summary>
@@ -46,7 +48,12 @@ internal sealed class PathTessellator(Rectangle bounds, PathFillRule rule, bool 
 
     private readonly List<int> _indices = [];
 
-    private readonly SortedDictionary<int, double> _coverageChanges = [];
+    private readonly Dictionary<int, double> _coverageChanges = [];
+    private readonly List<int> _coveragePositions = [];
+    private Dictionary<CoverageSpan, int> _previousSpans = [];
+    private Dictionary<CoverageSpan, int> _currentSpans = [];
+
+    private readonly record struct CoverageSpan(int Left, int Right, byte Alpha);
 
     private int? _coverageRow;
 
@@ -111,9 +118,21 @@ internal sealed class PathTessellator(Rectangle bounds, PathFillRule rule, bool 
                 next++;
             }
             crossings.Clear();
+            var ordered = true;
+            var previousX = double.NegativeInfinity;
             foreach (var edge in active)
-                crossings.Add((edge, edge.XAt(middle)));
-            crossings.Sort((a, b) => a.X.CompareTo(b.X));
+            {
+                var x = edge.XAt(middle);
+                ordered &= x >= previousX;
+                previousX = x;
+                crossings.Add((edge, x));
+            }
+            if (!ordered)
+            {
+                crossings.Sort((a, b) => a.X.CompareTo(b.X));
+                // 下一条水平带沿用本次顺序；没有交点和新边时无需重新排序。
+                for (int j = 0; j < crossings.Count; j++) active[j] = crossings[j].Edge;
+            }
             spans.Clear();
             var winding = 0;
 
@@ -166,13 +185,14 @@ internal sealed class PathTessellator(Rectangle bounds, PathFillRule rule, bool 
             events.Add(top);
             events.Add(bottom);
             active.RemoveAll(previous => previous.Bottom.Y <= top);
+            var x0 = edge.XAt(top);
             foreach (var previous in active)
             {
+                // 水平范围不重叠的边不可能相交，端点接触已由顶点事件处理。
+                if (edge.MaxX < previous.MinX || previous.MaxX < edge.MinX) continue;
                 var end = Math.Min(bottom, previous.Bottom.Y);
-                AddCrossing(events, top, end, edge.XAt(top) - previous.XAt(top), edge.XAt(end) - previous.XAt(end));
+                AddCrossing(events, top, end, x0 - previous.XAt(top), edge.XAt(end) - previous.XAt(end));
             }
-            var x0 = edge.XAt(top);
-
             var x1 = edge.XAt(bottom);
             AddCrossing(events, top, bottom, x0 - _bounds.Left, x1 - _bounds.Left);
             AddCrossing(events, top, bottom, x0 - _bounds.Right, x1 - _bounds.Right);
@@ -236,8 +256,15 @@ internal sealed class PathTessellator(Rectangle bounds, PathFillRule rule, bool 
     private void AddCoverage(int start, int end, double amount)
     {
         if (start >= end) return;
-        _coverageChanges[start] = _coverageChanges.GetValueOrDefault(start) + amount;
-        _coverageChanges[end] = _coverageChanges.GetValueOrDefault(end) - amount;
+        AddCoverageChange(start, amount);
+        AddCoverageChange(end, -amount);
+    }
+
+    private void AddCoverageChange(int x, double amount)
+    {
+        ref var change = ref CollectionsMarshal.GetValueRefOrAddDefault(_coverageChanges, x, out var exists);
+        change += amount;
+        if (!exists) _coveragePositions.Add(x);
     }
 
     private void FlushCoverage()
@@ -248,17 +275,43 @@ internal sealed class PathTessellator(Rectangle bounds, PathFillRule rule, bool 
         int start = 0;
 
         byte alpha = 0;
-        foreach (var (x, change) in _coverageChanges)
+        _coveragePositions.Sort();
+        foreach (var x in _coveragePositions)
         {
-            coverage += change;
+            coverage += _coverageChanges[x];
             var next = (byte)Math.Round(255d * Math.Clamp(coverage, 0d, 1d));
             if (next == alpha) continue;
             if (alpha != 0)
-                AddQuad(start, x, start, x, row, row + 1d, alpha);
+                AddCoverageQuad(start, x, row, alpha);
             start = x;
             alpha = next;
         }
         _coverageChanges.Clear();
+        _coveragePositions.Clear();
+        (_previousSpans, _currentSpans) = (_currentSpans, _previousSpans);
+        _currentSpans.Clear();
+    }
+
+    private void AddCoverageQuad(int left, int right, int row, byte alpha)
+    {
+        var span = new CoverageSpan(left, right, alpha);
+        // 只延长紧邻上一行且覆盖率完全相同的矩形，不改变采样和混合结果。
+        if (_previousSpans.TryGetValue(span, out var first) && _vertices[first + 2].Position.Y == row)
+        {
+            var bottomLeft = _vertices[first + 2];
+            var bottomRight = _vertices[first + 3];
+            bottomLeft.Position.Y = row + 1f;
+            bottomRight.Position.Y = row + 1f;
+            _vertices[first + 2] = bottomLeft;
+            _vertices[first + 3] = bottomRight;
+        }
+        else
+        {
+            first = _vertices.Count;
+            AddQuad(left, right, left, right, row, row + 1d, alpha);
+            if (first == _vertices.Count) return;
+        }
+        _currentSpans.Add(span, first);
     }
 
     private void AddQuad(double leftTop, double rightTop, double leftBottom, double rightBottom,
@@ -290,6 +343,9 @@ internal sealed class PathTessellator(Rectangle bounds, PathFillRule rule, bool 
 
     private readonly record struct Edge(Vector2 Top, Vector2 Bottom, int Winding)
     {
-        public double XAt(double y) => Top.X + (y - Top.Y) / ((double)Bottom.Y - Top.Y) * ((double)Bottom.X - Top.X);
+        private readonly double _slope = ((double)Bottom.X - Top.X) / ((double)Bottom.Y - Top.Y);
+        public float MinX => Math.Min(Top.X, Bottom.X);
+        public float MaxX => Math.Max(Top.X, Bottom.X);
+        public double XAt(double y) => Top.X + (y - Top.Y) * _slope;
     }
 }
