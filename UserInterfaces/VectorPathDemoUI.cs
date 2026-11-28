@@ -3,53 +3,48 @@ using SilkyUIFramework.Layout;
 
 namespace SilkyUIFramework.UserInterfaces;
 
-/// <summary>在游戏内展示路径图标及线性和径向渐变。</summary>
+/// <summary>矢量路径演示页：展示路径图标、渐变、虚线描边和轮廓动画。</summary>
 [RegisterUI]
 public sealed partial class VectorPathDemoUI : BaseBody
 {
-    private static readonly Color PanelColor = Color.White;
-
-    private static readonly Color OutlineColor = new(222, 226, 234);
-
-    private static readonly Color TileColor = new(246, 247, 250);
-
-    private static readonly Color SelectedColor = new(231, 239, 255);
-
-    private static readonly Color AccentColor = new(56, 107, 212);
-
-    private static readonly Color ControlBlueLight = new(156, 199, 255);
-    private static readonly Color ControlBlueDark = new(89, 152, 248);
-    private static readonly Color ControlBlueEdge = new(61, 122, 222);
-
-    private static readonly Color TextColor = new(37, 44, 58);
-
-    private static readonly Color HintColor = new(97, 106, 124);
-
-    private static readonly Vector2 LauncherSize = new(132f, 42f);
-
     private const float LauncherDragThreshold = 7f;
-
     private const float CategorySlideSeconds = 0.18f;
-
     private const float CategoryLabelInset = 34f;
+    private const int MinIconSize = 24;
+    private const int MaxIconSize = 48;
+    private const float TileWidth = 99f;
+    private const float TileHeight = 90f;
 
-    private static readonly PathStroke CategoryGlyphStroke = new(1.6f, PathLineCap.Round, PathLineJoin.Round);
+    private static readonly Color _panelColor = Color.White;
+    private static readonly Color _outlineColor = new(222, 226, 234);
+    private static readonly Color _tileColor = new(246, 247, 250);
+    private static readonly Color _selectedColor = new(231, 239, 255);
+    private static readonly Color _accentColor = new(56, 107, 212);
+    private static readonly Color _controlBlueLight = new(156, 199, 255);
+    private static readonly Color _controlBlueDark = new(89, 152, 248);
+    private static readonly Color _controlBlueEdge = new(61, 122, 222);
+    private static readonly Color _textColor = new(37, 44, 58);
+    private static readonly Color _hintColor = new(97, 106, 124);
 
-    private static readonly VectorPath LinearSample = new VectorPathBuilder()
+    private static readonly Vector2 _launcherSize = new(132f, 42f);
+
+    private static readonly PathStroke _categoryGlyphStroke = new(1.6f, PathLineCap.Round, PathLineJoin.Round);
+
+    private static readonly VectorPath _linearSamplePath = new VectorPathBuilder()
         .AddRoundRect(Vector2.Zero, new Vector2(114f, 29f), new Vector2(8f)).Build();
 
-    private static readonly VectorPath RadialSample = new VectorPathBuilder()
+    private static readonly VectorPath _radialSamplePath = new VectorPathBuilder()
         .AddCircle(new Vector2(22f), 22f).Build();
 
-    private static readonly PathGradient LinearBrush = PathGradient.Linear(
+    private static readonly PathGradient _linearBrush = PathGradient.Linear(
         Vector2.Zero, new Vector2(114f, 29f),
         [new Color(57, 116, 238), new Color(126, 87, 226), new Color(228, 99, 157)],
         [0f, 0.42f, 1f]);
 
-    private static readonly PathGradient RadialBrush = PathGradient.Radial(
+    private static readonly PathGradient _radialBrush = PathGradient.Radial(
         new Vector2(16f, 14f), 29f, [new Color(220, 255, 224), new Color(20, 144, 119)]);
 
-    private static readonly Category[] Categories =
+    private static readonly Category[] _categories =
     [
         new("全部图标", "M2 2H7V7H2Z M11 2H16V7H11Z M2 11H7V16H2Z M11 11H16V16H11Z"),
         new("图表", "M2 3V16H16 M6 12V9 M10 12V5 M14 12V7",
@@ -58,98 +53,115 @@ public sealed partial class VectorPathDemoUI : BaseBody
         new("文件与数据", "M4 2H10L14 6V16H4Z M10 2V6H14 M7 10H11 M7 13H11",
             "收件箱", "阅读", "数据库", "服务器", "报表文件", "演示", "下载", "导出"),
         new("人物与通知", "M12 5A3 3 0 1 0 6 5A3 3 0 1 0 12 5Z M3 16V15Q3 11 7 11H11Q15 11 15 15V16",
-            "多人", "用户", "通知", "日历"),
+            "多人", "用户", "玩家属性面板", "通知", "日历"),
         new("操作与状态", "M2 5H6 M10 5H16 M6 3H10V7H6Z M2 13H9 M13 13H16 M9 11H13V15H9Z",
             "设置", "工具", "调节", "筛选", "搜索", "同步", "完成", "警告", "更多",
             "全部拿走", "全部放入", "快速堆叠", "排序"),
     ];
 
-    private const int MinIconSize = 24;
-    private const int MaxIconSize = 48;
+    private readonly SUISvgIcon[] _categorySlots = new SUISvgIcon[_categories.Length];
+    private readonly SUISvgIcon[] _iconSlots = new SUISvgIcon[VectorPathDemoIcons.All.Count];
 
     private IReadOnlyList<VectorPathDemoIcons.Icon> _visibleIcons = VectorPathDemoIcons.All;
-
-    private int _category;
-
+    private int _selectedCategoryIndex;
     private float _categorySlideStart;
-
     private float _categorySlidePosition;
-
     private float _categorySlideElapsed = CategorySlideSeconds;
-
     private PathMesh _categoryHighlight;
-
     private PathMesh _categoryGlyphs;
 
     private int _iconSize = 32;
     private bool _sizeDragging;
     private PathMesh _sizeSlider;
-
-    private PathMesh _gallery;
-
     private GalleryIconBatch _animatedIcons;
 
-    private PathMesh _linearSample;
-
-    private PathMesh _radialSample;
-
-    private const float TileWidth = 99f;
-    private const float TileHeight = 90f;
-    private readonly SUISvgIcon[] _categorySlots = new SUISvgIcon[Categories.Length];
-    private readonly SUISvgIcon[] _iconSlots = new SUISvgIcon[VectorPathDemoIcons.All.Count];
     private int _layoutColumns;
     private GalleryLayout _layout;
-
     private Matrix _meshTransform;
-
     private Rectangle _meshBounds;
-
-    private Vector2 _dragOffset;
-
-    private Vector2? _dragGrabOffset;
-
+    private PathMesh _galleryMesh;
+    private PathMesh _linearSample;
+    private PathMesh _radialSample;
     private bool _loggedFirstDraw;
 
+    private Vector2 _dragOffset;
+    private Vector2? _dragGrabOffset;
     private bool _collapsed;
-
     private bool _closePressed;
 
     private readonly SUISvgIcon _titleMark = new() { Icon = VectorPathDemoIcons.GalleryMark };
+
+    private readonly SUITempShape _demoRoundRect = new()
+    {
+        Positioning = Positioning.Absolute,
+        Left = new Anchor(17f),
+        Top = new Anchor(455f),
+        IgnoreMouseInteraction = true,
+        DrawFromParent = true,
+        Width = new Dimension(82f),
+        Height = new Dimension(40f),
+        CornerRadius = 10f,
+        StrokeColor = _accentColor,
+        StrokeWidth = 2f,
+        DashLength = 6f,
+        GapLength = 4f,
+    };
+
+    private readonly SUITempShape _demoCircle = new()
+    {
+        Positioning = Positioning.Absolute,
+        Left = new Anchor(109f),
+        Top = new Anchor(455f),
+        IgnoreMouseInteraction = true,
+        DrawFromParent = true,
+        Width = new Dimension(40f),
+        Height = new Dimension(40f),
+        IsCircle = true,
+        StrokeColor = new Color(20, 144, 119),
+        StrokeWidth = 2.5f,
+        DashLength = 5f,
+        GapLength = 4f,
+    };
 
     private readonly SUISvgIcon _launcherGlyph = new()
     {
         ViewBox = new Vector4(0f, 0f, 132f, 42f),
         PathData = "M13 15.5H17V19.5H13Z M20 15.5H24V19.5H20Z M13 22.5H17V26.5H13Z M20 22.5H24V26.5H20Z",
-        FillColor = AccentColor,
+        FillColor = _accentColor,
     };
 
     private readonly SUISvgIcon _launcherChevron = new()
     {
         Icon = new SvgIcon(new Vector4(0f, 0f, 132f, 42f),
-            [new SvgIconLayer(VectorPath.ParseSvgPathData("M111 16L116 21L111 26"), HintColor,
+            [new SvgIconLayer(VectorPath.ParseSvgPathData("M111 16L116 21L111 26"), _hintColor,
                 new PathStroke(1.8f, PathLineCap.Round, PathLineJoin.Round))]),
     };
 
     private Vector2? _launcherPosition;
-
     private Vector2 _launcherViewport;
-
     private Vector2 _launcherScale;
-
     private PathMesh _launcherMesh;
-
     private (Vector2 Mouse, Vector2 Position)? _launcherPress;
-
     private bool _launcherDragged;
 
     /// <inheritdoc/>
     public override bool IsInteractable => !Main.gameMenu;
 
     /// <inheritdoc/>
+    protected override void OnInitialize()
+    {
+        base.OnInitialize();
+        InitializeComponent();
+        InitializeGallerySlots();
+        AddChild(_shareButton);
+        AddChild(_shareTooltip);
+    }
+
+    /// <inheritdoc/>
     public override UIView GetElementAt(Vector2 mousePosition)
     {
         if (!IsInteractable || _layout.Scale <= 0f || SilkyUI is null) return null;
-        var target = _collapsed ? LauncherBox : DisplayLayout().Panel;
+        var target = _collapsed ? LauncherBox : GetDisplayLayout().Panel;
         if (!target.Contains(mousePosition)) return null;
         return _collapsed ? this : _shareButton.GetElementAt(mousePosition) ?? this;
     }
@@ -168,7 +180,7 @@ public sealed partial class VectorPathDemoUI : BaseBody
             return;
         }
 
-        var layout = DisplayLayout();
+        var layout = GetDisplayLayout();
         if (layout.CloseButton.Contains(mouse))
         {
             _closePressed = true;
@@ -180,18 +192,18 @@ public sealed partial class VectorPathDemoUI : BaseBody
             return;
         }
 
-        for (var i = 0; i < Categories.Length; i++)
+        for (var i = 0; i < _categories.Length; i++)
         {
             if (layout.Category(i).Contains(mouse))
             {
-                if (_category == i) return;
+                if (_selectedCategoryIndex == i) return;
                 _categorySlideStart = _categorySlidePosition;
                 _categorySlideElapsed = 0f;
-                _category = i;
-                var names = Categories[i].IconNames;
+                _selectedCategoryIndex = i;
+                var names = _categories[i].IconNames;
                 _visibleIcons = names.Length == 0 ? VectorPathDemoIcons.All :
                     VectorPathDemoIcons.All.Where(icon => names.Contains(icon.Name)).ToArray();
-                _gallery = null;
+                _galleryMesh = null;
                 return;
             }
         }
@@ -210,16 +222,16 @@ public sealed partial class VectorPathDemoUI : BaseBody
         if (_sizeDragging)
         {
             _sizeDragging = false;
-            SetIconSize(DisplayLayout(), evt.MousePosition.X);
+            SetIconSize(GetDisplayLayout(), evt.MousePosition.X);
         }
         _dragGrabOffset = null;
         if (_closePressed)
         {
             _closePressed = false;
-            var closeButton = DisplayLayout().CloseButton;
+            var closeButton = GetDisplayLayout().CloseButton;
             if (closeButton.Contains(evt.MousePosition))
             {
-                _launcherPosition ??= closeButton.Center - LauncherSize / 2f;
+                _launcherPosition ??= closeButton.Center - _launcherSize / 2f;
                 _collapsed = true;
             }
             return;
@@ -254,7 +266,7 @@ public sealed partial class VectorPathDemoUI : BaseBody
             _closePressed = false;
         }
         var mouse = new Vector2(Main.mouseX, Main.mouseY);
-        if (_sizeDragging) SetIconSize(DisplayLayout(), mouse.X);
+        if (_sizeDragging) SetIconSize(GetDisplayLayout(), mouse.X);
         if (IsInteractable && (_dragGrabOffset.HasValue || _launcherPress.HasValue || _sizeDragging ||
             GetElementAt(mouse) is not null))
             Main.LocalPlayer.mouseInterface = true;
@@ -279,13 +291,13 @@ public sealed partial class VectorPathDemoUI : BaseBody
         }
 
         var bounds = new Rectangle(0, 0, viewport.Width, viewport.Height);
-        if (_gallery is null || transform != _meshTransform || bounds != _meshBounds)
+        if (_galleryMesh is null || transform != _meshTransform || bounds != _meshBounds)
         {
             _layout = ArrangeGallery(viewportSize);
-            _gallery = PrepareGallery(_layout, transform, bounds);
+            _galleryMesh = PrepareGallery(_layout, transform, bounds);
             PrepareCategoryMeshes(transform, bounds);
-            _linearSample = PrepareGradientSample(LinearSample, _layout.LinearSampleOrigin, _layout.Scale, transform, bounds);
-            _radialSample = PrepareGradientSample(RadialSample, _layout.RadialSampleOrigin, _layout.Scale, transform, bounds);
+            _linearSample = PrepareGradientSample(_linearSamplePath, _layout.LinearSampleOrigin, _layout.Scale, transform, bounds);
+            _radialSample = PrepareGradientSample(_radialSamplePath, _layout.RadialSampleOrigin, _layout.Scale, transform, bounds);
             PrepareShareDemo(transform, bounds);
             _animatedIcons = null;
             _meshTransform = transform;
@@ -299,21 +311,24 @@ public sealed partial class VectorPathDemoUI : BaseBody
         }
 
         UpdateDrag(viewportSize);
-        var offset = ToPixels(transform);
+        var offset = GetDragPixelOffset(transform);
 
         var renderer = PathRenderer.Instance;
-        renderer.DrawInUI(spriteBatch, _gallery, Color.White, offset);
+        renderer.DrawInUI(spriteBatch, _galleryMesh, Color.White, offset);
         var animationTime = gameTime.TotalGameTime.TotalSeconds;
         renderer.DrawInUI(spriteBatch, _animatedIcons.Update(animationTime), Color.White, offset);
         renderer.DrawInUI(spriteBatch, _sizeSlider, Color.White, offset);
         DrawCategories(gameTime, spriteBatch, renderer, transform, offset);
-        renderer.DrawGradientInUI(spriteBatch, _linearSample, LinearBrush, offset);
-        renderer.DrawGradientInUI(spriteBatch, _radialSample, RadialBrush, offset);
-        var displayLayout = DisplayLayout();
+        renderer.DrawGradientInUI(spriteBatch, _linearSample, _linearBrush, offset);
+        renderer.DrawGradientInUI(spriteBatch, _radialSample, _radialBrush, offset);
+        var displayLayout = GetDisplayLayout();
+        var shapeTransform = Matrix.CreateScale(_layout.Scale, _layout.Scale, 1f) * transform;
+        _demoRoundRect.DrawShape(spriteBatch, _demoRoundRect.InnerBounds.Size, displayLayout.RoundRectSample.Position, shapeTransform);
+        _demoCircle.DrawShape(spriteBatch, _demoCircle.InnerBounds.Size, displayLayout.CircleSample.Position, shapeTransform);
         DrawCloseIcon(spriteBatch, renderer, transform, offset);
         DrawShareDemo(gameTime, spriteBatch, renderer, displayLayout, offset);
         DrawLabels(spriteBatch, displayLayout);
-        if (!_loggedFirstDraw && !_gallery.IsEmpty)
+        if (!_loggedFirstDraw && !_galleryMesh.IsEmpty)
         {
             _loggedFirstDraw = true;
             SilkyUIFramework.Instance.Logger.Debug($"SilkyUI 游戏内图标库已提交首帧，共 {_visibleIcons.Count} 个图标。");
@@ -329,12 +344,12 @@ public sealed partial class VectorPathDemoUI : BaseBody
 
         var vertices = new List<VertexPositionColor>();
         var indices = new List<int>();
-        for (var i = 0; i < Categories.Length; i++)
+        for (var i = 0; i < _categories.Length; i++)
         {
             var origin = _layout.Category(i).LeftCenter + new Vector2(10f, -9f) * _layout.Scale;
-            var color = i == _category ? AccentColor : TextColor;
+            var category = _categories[i];
             var slot = _categorySlots[i];
-            slot.Icon = color == AccentColor ? Categories[i].SelectedIcon : Categories[i].NormalIcon;
+            slot.Icon = i == _selectedCategoryIndex ? category.SelectedIcon : category.NormalIcon;
             AppendIconMesh(vertices, indices, slot.PrepareMesh(new Vector2(18f * _layout.Scale), transform),
                 SUISvgIcon.PixelOrigin(origin, transform));
         }
@@ -345,13 +360,13 @@ public sealed partial class VectorPathDemoUI : BaseBody
     {
         _categorySlideElapsed = Math.Min(_categorySlideElapsed + (float)gameTime.ElapsedGameTime.TotalSeconds, CategorySlideSeconds);
         var remaining = 1f - _categorySlideElapsed / CategorySlideSeconds;
-        _categorySlidePosition = MathHelper.Lerp(_categorySlideStart, _category, 1f - remaining * remaining * remaining);
+        _categorySlidePosition = MathHelper.Lerp(_categorySlideStart, _selectedCategoryIndex, 1f - remaining * remaining * remaining);
 
         // 只平移高亮网格，复用它的像素覆盖率。
         var rowStep = _layout.Category(1).Position - _layout.Category(0).Position;
         var slide = Vector2.TransformNormal(rowStep * _categorySlidePosition, transform);
         var highlightOffset = new Point(offset.X + (int)MathF.Round(slide.X), offset.Y + (int)MathF.Round(slide.Y));
-        renderer.DrawInUI(spriteBatch, _categoryHighlight, SelectedColor, highlightOffset);
+        renderer.DrawInUI(spriteBatch, _categoryHighlight, _selectedColor, highlightOffset);
         renderer.DrawInUI(spriteBatch, _categoryGlyphs, Color.White, offset);
     }
 
@@ -371,7 +386,7 @@ public sealed partial class VectorPathDemoUI : BaseBody
         return PathRenderer.PrepareFill(path, sampleTransform, bounds);
     }
 
-    private GalleryBox LauncherBox => new(_launcherPosition.GetValueOrDefault(), LauncherSize);
+    private GalleryBox LauncherBox => new(_launcherPosition.GetValueOrDefault(), _launcherSize);
 
     private void MoveLauncher(Vector2 mouse)
     {
@@ -384,9 +399,9 @@ public sealed partial class VectorPathDemoUI : BaseBody
 
     private Vector2 ClampLauncher(Vector2 position)
     {
-        var margin = Vector2.Min(new Vector2(6f), Vector2.Max(Vector2.Zero, (_launcherViewport - LauncherSize) / 2f));
+        var margin = Vector2.Min(new Vector2(6f), Vector2.Max(Vector2.Zero, (_launcherViewport - _launcherSize) / 2f));
 
-        var max = Vector2.Max(margin, _launcherViewport - LauncherSize - margin);
+        var max = Vector2.Max(margin, _launcherViewport - _launcherSize - margin);
         return Vector2.Clamp(position, margin, max);
     }
 
@@ -401,22 +416,22 @@ public sealed partial class VectorPathDemoUI : BaseBody
         {
             var localTransform = Matrix.CreateScale(scale.X, scale.Y, 1f);
 
-            var bounds = new Rectangle(0, 0, (int)MathF.Ceiling(LauncherSize.X * scale.X), (int)MathF.Ceiling(LauncherSize.Y * scale.Y));
+            var bounds = new Rectangle(0, 0, (int)MathF.Ceiling(_launcherSize.X * scale.X), (int)MathF.Ceiling(_launcherSize.Y * scale.Y));
 
-            var outer = new VectorPathBuilder().AddRoundRect(Vector2.Zero, LauncherSize, new Vector2(13f)).Build();
+            var outer = new VectorPathBuilder().AddRoundRect(Vector2.Zero, _launcherSize, new Vector2(13f)).Build();
 
-            var inner = new VectorPathBuilder().AddRoundRect(Vector2.One, LauncherSize - new Vector2(2f), new Vector2(12f)).Build();
+            var inner = new VectorPathBuilder().AddRoundRect(Vector2.One, _launcherSize - new Vector2(2f), new Vector2(12f)).Build();
 
             var badge = new VectorPathBuilder().AddRoundRect(new Vector2(6f, 8.5f), new Vector2(25f), new Vector2(8f)).Build();
 
             var vertices = new List<VertexPositionColor>();
 
             var indices = new List<int>();
-            AppendMesh(vertices, indices, PathRenderer.PrepareFill(outer, localTransform, bounds), OutlineColor, OutlineColor);
-            AppendMesh(vertices, indices, PathRenderer.PrepareFill(inner, localTransform, bounds), PanelColor, PanelColor);
-            AppendMesh(vertices, indices, PathRenderer.PrepareFill(badge, localTransform, bounds), SelectedColor, SelectedColor);
-            AppendIconMesh(vertices, indices, _launcherGlyph.PrepareMesh(LauncherSize, localTransform), Point.Zero);
-            AppendIconMesh(vertices, indices, _launcherChevron.PrepareMesh(LauncherSize, localTransform), Point.Zero);
+            AppendMesh(vertices, indices, PathRenderer.PrepareFill(outer, localTransform, bounds), _outlineColor, _outlineColor);
+            AppendMesh(vertices, indices, PathRenderer.PrepareFill(inner, localTransform, bounds), _panelColor, _panelColor);
+            AppendMesh(vertices, indices, PathRenderer.PrepareFill(badge, localTransform, bounds), _selectedColor, _selectedColor);
+            AppendIconMesh(vertices, indices, _launcherGlyph.PrepareMesh(_launcherSize, localTransform), Point.Zero);
+            AppendIconMesh(vertices, indices, _launcherChevron.PrepareMesh(_launcherSize, localTransform), Point.Zero);
             _launcherMesh = new PathMesh(vertices.ToArray(), indices.ToArray());
             _launcherScale = scale;
         }
@@ -433,18 +448,18 @@ public sealed partial class VectorPathDemoUI : BaseBody
 
         const float textScale = 0.86f;
 
-        var center = origin + new Vector2(39f, LauncherSize.Y / 2f + TextDrawingHelper.GetFontOffset(font) * textScale);
-        spriteBatch.DrawString(font, "图标库", center, TextColor, 0f, new Vector2(0f, font.LineSpacing / 2f), textScale, 0, 0f);
+        var center = origin + new Vector2(39f, _launcherSize.Y / 2f + TextDrawingHelper.GetFontOffset(font) * textScale);
+        spriteBatch.DrawString(font, "图标库", center, _textColor, 0f, new Vector2(0f, font.LineSpacing / 2f), textScale, 0, 0f);
     }
 
-    private Point ToPixels(Matrix transform) =>
+    private Point GetDragPixelOffset(Matrix transform) =>
         new((int)MathF.Round(_dragOffset.X * transform.M11), (int)MathF.Round(_dragOffset.Y * transform.M22));
 
-    private GalleryLayout DisplayLayout()
+    private GalleryLayout GetDisplayLayout()
     {
         var transform = SilkyUI.TransformMatrix;
 
-        var offset = ToPixels(transform);
+        var offset = GetDragPixelOffset(transform);
         return _layout with { Origin = _layout.Origin + new Vector2(offset.X / transform.M11, offset.Y / transform.M22) };
     }
 
@@ -463,17 +478,17 @@ public sealed partial class VectorPathDemoUI : BaseBody
         var vertices = new List<VertexPositionColor>();
 
         var indices = new List<int>();
-        FillBox(layout.Panel, 19f, OutlineColor);
-        FillBox(layout.Panel.Inset(layout.Scale), 18f, PanelColor);
-        FillBox(layout.HeaderDivider, 0f, OutlineColor);
-        FillBox(layout.SideDivider, 0f, OutlineColor);
-        FillBox(layout.Toolbar, 11f, OutlineColor);
-        FillBox(layout.Toolbar.Inset(layout.Scale), 10f, PanelColor);
-        FillBox(layout.GradientDivider, 0f, OutlineColor);
-        FillBox(layout.LinearSampleCard, 10f, TileColor);
-        FillBox(layout.RadialSampleCard, 10f, TileColor);
-        FillBox(layout.SizeTrack, 3f, OutlineColor);
-        FillBox(layout.SizeTrack.Inset(0.8f * layout.Scale), 2.2f, SelectedColor);
+        FillBox(layout.Panel, 19f, _outlineColor);
+        FillBox(layout.Panel.Inset(layout.Scale), 18f, _panelColor);
+        FillBox(layout.HeaderDivider, 0f, _outlineColor);
+        FillBox(layout.SideDivider, 0f, _outlineColor);
+        FillBox(layout.Toolbar, 11f, _outlineColor);
+        FillBox(layout.Toolbar.Inset(layout.Scale), 10f, _panelColor);
+        FillBox(layout.GradientDivider, 0f, _outlineColor);
+        FillBox(layout.LinearSampleCard, 10f, _tileColor);
+        FillBox(layout.RadialSampleCard, 10f, _tileColor);
+        FillBox(layout.SizeTrack, 3f, _outlineColor);
+        FillBox(layout.SizeTrack.Inset(0.8f * layout.Scale), 2.2f, _selectedColor);
         var titleMark = layout.TitleMark;
         AppendIconMesh(vertices, indices, _titleMark.PrepareMesh(titleMark.Size, transform),
             SUISvgIcon.PixelOrigin(titleMark.Position, transform));
@@ -484,7 +499,7 @@ public sealed partial class VectorPathDemoUI : BaseBody
             var tile = layout.Tile(i);
             tiles.AddRoundRect(tile.Position, tile.Size, new Vector2(14f * layout.Scale));
         }
-        Append(PathRenderer.PrepareFill(tiles.Build(), transform, bounds), TileColor, TileColor, 0f, 1f);
+        Append(PathRenderer.PrepareFill(tiles.Build(), transform, bounds), _tileColor, _tileColor, 0f, 1f);
 
         return new PathMesh(vertices.ToArray(), indices.ToArray());
 
@@ -513,10 +528,11 @@ public sealed partial class VectorPathDemoUI : BaseBody
             foreach (var part in icon.Parts)
                 parts.Add(new IconPart(slot, part, size, transform, origin, icon.Phase));
         }
-        for (var i = _visibleIcons.Count; i < _iconSlots.Length; i++) _iconSlots[i].Icon = null;
+        for (var i = _visibleIcons.Count; i < _iconSlots.Length; i++)
+            _iconSlots[i].Icon = null;
+
         return new GalleryIconBatch(parts);
     }
-
 
     private PathMesh PrepareSizeSlider(GalleryLayout layout, Matrix transform, Rectangle bounds)
     {
@@ -532,14 +548,14 @@ public sealed partial class VectorPathDemoUI : BaseBody
         {
             var fill = new VectorPathBuilder().AddRoundRect(track.Position,
                 new Vector2(width, track.Size.Y), new Vector2(3f * scale)).Build();
-            AppendMesh(vertices, indices, PathRenderer.PrepareFill(fill, transform, bounds), ControlBlueLight, ControlBlueDark,
+            AppendMesh(vertices, indices, PathRenderer.PrepareFill(fill, transform, bounds), _controlBlueLight, _controlBlueDark,
                 Vector2.Transform(track.Position, transform).Y, track.Size.Y * transform.M22);
         }
 
         // 手柄沿用图标的蓝色渐变、深色外框和浅色内高光。
-        FillThumb(center + new Vector2(0f, scale), 8f, ControlBlueEdge * 0.16f, ControlBlueEdge * 0.16f);
-        FillThumb(center, 8f, ControlBlueEdge, ControlBlueEdge);
-        FillThumb(center, 7f, ControlBlueLight, ControlBlueDark);
+        FillThumb(center + new Vector2(0f, scale), 8f, _controlBlueEdge * 0.16f, _controlBlueEdge * 0.16f);
+        FillThumb(center, 8f, _controlBlueEdge, _controlBlueEdge);
+        FillThumb(center, 7f, _controlBlueLight, _controlBlueDark);
         var highlight = new VectorPathBuilder().AddCircle(center, 6.25f * scale).Build();
         var stroke = new PathStroke(0.75f * scale, PathLineCap.Round, PathLineJoin.Round);
         var highlightColor = Color.White * 0.45f;
@@ -583,27 +599,27 @@ public sealed partial class VectorPathDemoUI : BaseBody
         var scale = layout.Scale;
 
         var header = layout.Header;
-        Draw("SilkyUI 图标库", header.LeftCenter + new Vector2(53f * scale, 0f), TextColor, 1.04f);
-        Draw("拖动标题栏移动", layout.CloseButton.LeftCenter - new Vector2(12f * scale, 0f), HintColor, 0.76f, 1f);
-        Draw("分类", layout.Category(0).LeftCenter + new Vector2(11f, -30.5f) * scale, HintColor, 0.78f);
-        for (var i = 0; i < Categories.Length; i++)
+        Draw("SilkyUI 图标库", header.LeftCenter + new Vector2(53f * scale, 0f), _textColor, 1.04f);
+        Draw("拖动标题栏移动", layout.CloseButton.LeftCenter - new Vector2(12f * scale, 0f), _hintColor, 0.76f, 1f);
+        Draw("分类", layout.Category(0).LeftCenter + new Vector2(11f, -30.5f) * scale, _hintColor, 0.78f);
+        for (var i = 0; i < _categories.Length; i++)
         {
             var box = layout.Category(i);
-            Draw(Categories[i].Label, box.LeftCenter + new Vector2(CategoryLabelInset * scale, 0f), i == _category ? AccentColor : TextColor, 0.85f);
+            Draw(_categories[i].Label, box.LeftCenter + new Vector2(CategoryLabelInset * scale, 0f), i == _selectedCategoryIndex ? _accentColor : _textColor, 0.85f);
         }
 
-        Draw("渐变演示", layout.GradientTitle, HintColor, 0.78f);
-        Draw("线性渐变", layout.LinearSampleCard.Center + new Vector2(0f, 20f) * scale, TextColor, 0.74f, 0.5f);
-        Draw("径向渐变", layout.RadialSampleCard.Center + new Vector2(0f, 26f) * scale, TextColor, 0.74f, 0.5f);
+        Draw("渐变演示", layout.GradientTitle, _hintColor, 0.78f);
+        Draw("线性渐变", layout.LinearSampleCard.Center + new Vector2(0f, 20f) * scale, _textColor, 0.74f, 0.5f);
+        Draw("径向渐变", layout.RadialSampleCard.Center + new Vector2(0f, 26f) * scale, _textColor, 0.74f, 0.5f);
 
         var toolbar = layout.Toolbar;
-        Draw($"{Categories[_category].Label}  ·  {_visibleIcons.Count}", toolbar.LeftCenter + new Vector2(14f * scale, 0f), TextColor, 0.85f);
-        Draw("尺寸", layout.SizeSlider.LeftCenter - new Vector2(8f * scale, 0f), HintColor, 0.75f, 1f);
-        Draw(_iconSize.ToString(), layout.SizeSlider.RightCenter + new Vector2(20f * scale, 0f), AccentColor, 0.76f, 0.5f);
+        Draw($"{_categories[_selectedCategoryIndex].Label}  ·  {_visibleIcons.Count}", toolbar.LeftCenter + new Vector2(14f * scale, 0f), _textColor, 0.85f);
+        Draw("尺寸", layout.SizeSlider.LeftCenter - new Vector2(8f * scale, 0f), _hintColor, 0.75f, 1f);
+        Draw(_iconSize.ToString(), layout.SizeSlider.RightCenter + new Vector2(20f * scale, 0f), _accentColor, 0.76f, 0.5f);
         for (var i = 0; i < _visibleIcons.Count; i++)
         {
             var tile = layout.Tile(i);
-            Draw(_visibleIcons[i].Name, tile.Position + new Vector2(tile.Size.X / 2f, 75f * scale), TextColor, 0.74f, 0.5f);
+            Draw(_visibleIcons[i].Name, tile.Position + new Vector2(tile.Size.X / 2f, 75f * scale), _textColor, 0.74f, 0.5f);
         }
 
         void Draw(string text, Vector2 position, Color color, float textScale, float alignment = 0f)
@@ -622,10 +638,10 @@ public sealed partial class VectorPathDemoUI : BaseBody
         private readonly VectorPath _glyph = VectorPath.ParseSvgPathData(GlyphData);
 
         public SvgIcon NormalIcon => field ??= new SvgIcon(new Vector4(0f, 0f, 18f, 18f),
-            [new SvgIconLayer(_glyph, TextColor, CategoryGlyphStroke)]);
+            [new SvgIconLayer(_glyph, _textColor, _categoryGlyphStroke)]);
 
         public SvgIcon SelectedIcon => field ??= new SvgIcon(new Vector4(0f, 0f, 18f, 18f),
-            [new SvgIconLayer(_glyph, AccentColor, CategoryGlyphStroke)]);
+            [new SvgIconLayer(_glyph, _accentColor, _categoryGlyphStroke)]);
     }
 
     private readonly record struct GalleryBox(Vector2 Position, Vector2 Size)
@@ -646,6 +662,8 @@ public sealed partial class VectorPathDemoUI : BaseBody
     {
         CloseLayout.Icon = VectorPathDemoIcons.Close.Artwork;
         CloseLayout.DrawFromParent = true;
+        SidebarLayout.AddChild(_demoRoundRect);
+        SidebarLayout.AddChild(_demoCircle);
         for (var i = 0; i < _categorySlots.Length; i++)
         {
             var slot = new SUISvgIcon { Width = new Dimension(0f, 1f), Height = new Dimension(29f), FlexShrink = 0f, DrawFromParent = true };
@@ -668,11 +686,11 @@ public sealed partial class VectorPathDemoUI : BaseBody
         var horizontalInset = -ContentLayout.Width.Pixels;
         var columns = Math.Clamp((int)((available.X - horizontalInset + gap.Width) / (TileWidth + gap.Width)), 4, 8);
         var rows = (_iconSlots.Length + columns - 1) / columns;
-        var radialBottom = SidebarLayout.Top.Pixels + RadialLayout.Top.Pixels + RadialLayout.Height.Pixels;
+        var shapeBottom = SidebarLayout.Top.Pixels + _demoCircle.Top.Pixels + _demoCircle.Height.Pixels;
         var shareBottomInset = -SidebarLayout.Top.Pixels - SidebarLayout.Height.Pixels - ShareLayout.Top.Pixels +
             ShareLayout.Height.Pixels / 2f;
         var tooltipRise = ShareBubbleLift + ShareBubbleExtraLift + ShareBubbleHalfHeight + ShareOuterEdgeWidth + ShareInnerEdgeWidth;
-        var sidebarHeight = radialBottom + 13f + shareBottomInset + tooltipRise;
+        var sidebarHeight = shapeBottom + 13f + shareBottomInset + tooltipRise;
         var ideal = new Vector2(horizontalInset + columns * TileWidth + (columns - 1) * gap.Width,
             Math.Max(IconGridLayout.Top.Pixels - ContentLayout.Height.Pixels + rows * TileHeight + (rows - 1) * gap.Height, sidebarHeight));
 
@@ -706,6 +724,8 @@ public sealed partial class VectorPathDemoUI : BaseBody
         public Vector2 GradientTitle => Box(View.GradientTitleLayout).Position;
         public GalleryBox LinearSampleCard => Box(View.LinearLayout);
         public GalleryBox RadialSampleCard => Box(View.RadialLayout);
+        public GalleryBox RoundRectSample => Box(View._demoRoundRect);
+        public GalleryBox CircleSample => Box(View._demoCircle);
         public Vector2 ShareButtonCenter => Box(View.ShareLayout).Center;
         public Vector2 LinearSampleOrigin => LinearSampleCard.Position + new Vector2(13f, 8f) * Scale;
         public Vector2 RadialSampleOrigin => RadialSampleCard.Position + new Vector2(48f, 7f) * Scale;

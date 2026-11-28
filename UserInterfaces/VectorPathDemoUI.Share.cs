@@ -6,12 +6,6 @@ public sealed partial class VectorPathDemoUI
 {
     private const float ShareOuterEdgeWidth = 1.4f;
     private const float ShareInnerEdgeWidth = 1f;
-    // 渐变填充盖住描边的内半部，露出的宽度由分享组件独立定义。
-    private static readonly PathStroke ShareEdgeStroke = new(
-        2f * (ShareOuterEdgeWidth + ShareInnerEdgeWidth), PathLineCap.Round, PathLineJoin.Round);
-    private static readonly PathStroke ShareInnerEdgeStroke = new(
-        2f * ShareInnerEdgeWidth, PathLineCap.Round, PathLineJoin.Round);
-    private static readonly VectorPath ShareButtonOutline = new VectorPathBuilder().AddCircle(Vector2.Zero, ShareButtonRadius).Build();
     private const float ShareButtonRadius = 16f;
     private const float ShareBubbleLift = 33f;
     private const float ShareBubbleExtraLift = 11f;
@@ -21,6 +15,13 @@ public sealed partial class VectorPathDemoUI
     private const float ShareOpenSeconds = 0.42f;
     private const float ShareCloseSeconds = 0.27f;
 
+    // 渐变填充盖住描边的内半部，露出的宽度由分享组件独立定义。
+    private static readonly PathStroke _shareEdgeStroke = new(
+        2f * (ShareOuterEdgeWidth + ShareInnerEdgeWidth), PathLineCap.Round, PathLineJoin.Round);
+    private static readonly PathStroke _shareInnerEdgeStroke = new(
+        2f * ShareInnerEdgeWidth, PathLineCap.Round, PathLineJoin.Round);
+    private static readonly VectorPath _shareButtonOutline = new VectorPathBuilder().AddCircle(Vector2.Zero, ShareButtonRadius).Build();
+
     private readonly ShareButtonView _shareButton = new();
     private readonly ShareTooltipView _shareTooltip = new() { IgnoreMouseInteraction = true };
     private Matrix _shareTransform;
@@ -29,22 +30,12 @@ public sealed partial class VectorPathDemoUI
     private float _shareProgress;
     private float _shareMeshProgress;
 
-    /// <inheritdoc/>
-    protected override void OnInitialize()
-    {
-        base.OnInitialize();
-        InitializeComponent();
-        InitializeGallerySlots();
-        AddChild(_shareButton);
-        AddChild(_shareTooltip);
-    }
-
     private void PrepareShareDemo(Matrix transform, Rectangle bounds)
     {
         var center = _layout.ShareButtonCenter;
         _shareTransform = Matrix.CreateScale(_layout.Scale, _layout.Scale, 1f) *
             Matrix.CreateTranslation(center.X, center.Y, 0f) * transform;
-        _shareButtonSurface = new ShareSurface(ShareButtonOutline, _shareTransform, bounds, -ShareButtonRadius);
+        _shareButtonSurface = new ShareSurface(_shareButtonOutline, _shareTransform, bounds, -ShareButtonRadius);
         _shareSurface = null;
     }
 
@@ -59,10 +50,10 @@ public sealed partial class VectorPathDemoUI
         var step = (float)gameTime.ElapsedGameTime.TotalSeconds / (hovering ? ShareOpenSeconds : ShareCloseSeconds);
         _shareProgress = Math.Clamp(_shareProgress + (hovering ? step : -step), 0f, 1f);
 
-        // 两端平滑减速，鼠标进出时从当前形状反向播放。
-        var motion = MathHelper.SmoothStep(0f, 1f, _shareProgress);
-        // 细颈分离后，让提示框继续上移，为两侧描边留出间距。
-        var lift = MathHelper.Lerp(10f, ShareBubbleLift, motion) + ShareBubbleExtraLift * SharePhase(motion, 0.88f, 1f);
+        // 展开时快速起步并逐渐减速，鼠标移开时沿同一曲线反向播放。
+        var remaining = 1f - _shareProgress;
+        var motion = 1f - remaining * remaining * remaining;
+        var lift = MathHelper.Lerp(10f, ShareBubbleLift + ShareBubbleExtraLift, motion);
         var bubbleCenter = new Vector2(0f, -lift);
         var growth = SharePhase(motion, 0f, 0.5f);
         var bubbleHalfSize = Vector2.Lerp(new Vector2(7f, 5f), new Vector2(24f, ShareBubbleHalfHeight), growth);
@@ -74,7 +65,7 @@ public sealed partial class VectorPathDemoUI
         {
             var outline = CreateShareOutline(bubbleCenter, bubbleHalfSize, _shareProgress > 0f);
             // 两个轮廓在分离后仍使用同一套渐变坐标。
-            _shareSurface = ReferenceEquals(outline, ShareButtonOutline) ? _shareButtonSurface :
+            _shareSurface = ReferenceEquals(outline, _shareButtonOutline) ? _shareButtonSurface :
                 new ShareSurface(outline, _shareTransform, _meshBounds,
                     Math.Min(-ShareButtonRadius, bubbleCenter.Y - bubbleHalfSize.Y));
             _shareMeshProgress = _shareProgress;
@@ -95,7 +86,7 @@ public sealed partial class VectorPathDemoUI
 
     private static VectorPath CreateShareOutline(Vector2 bubbleCenter, Vector2 bubbleHalfSize, bool showBubble)
     {
-        if (!showBubble) return ShareButtonOutline;
+        if (!showBubble) return _shareButtonOutline;
 
         var outline = new VectorPathBuilder();
         var buttonRadii = new Vector2(ShareButtonRadius);
@@ -111,7 +102,7 @@ public sealed partial class VectorPathDemoUI
         var bubbleBottom = Math.Min(bubbleCenter.Y + bubbleHalfSize.Y, buttonRight.Y - 2f * emerge);
         var halfWidth = bubbleHalfSize.X * emerge;
         if (bubbleBottom <= bubbleTop || halfWidth <= 0f)
-            return ShareButtonOutline;
+            return _shareButtonOutline;
 
         var corner = Math.Min(8f, Math.Min((bubbleBottom - bubbleTop) * 0.5f, halfWidth * 0.75f));
         var cornerRadii = new Vector2(corner);
@@ -149,7 +140,7 @@ public sealed partial class VectorPathDemoUI
                 .CubicTo(Mirror(buttonControl), Mirror(lowerControl), Mirror(waist));
         }
         outline.CubicTo(Mirror(upperControl), Mirror(rootControl), rootLeft).Close();
-        if (detached) outline.AddPath(ShareButtonOutline);
+        if (detached) outline.AddPath(_shareButtonOutline);
         return outline.Build();
 
         static Vector2 Mirror(Vector2 point) => new(-point.X, point.Y);
@@ -157,18 +148,18 @@ public sealed partial class VectorPathDemoUI
 
     private sealed class ShareSurface(VectorPath outline, Matrix transform, Rectangle bounds, float gradientTop)
     {
-        private static readonly Color EdgeLight = Color.Lerp(ControlBlueEdge, ControlBlueLight, 0.48f);
-        private readonly PathGradient _fillBrush = CreateShareBrush(gradientTop, ControlBlueLight, ControlBlueDark);
+        private static readonly Color _edgeLight = Color.Lerp(_controlBlueEdge, _controlBlueLight, 0.48f);
+        private readonly PathGradient _fillBrush = CreateShareBrush(gradientTop, _controlBlueLight, _controlBlueDark);
         // 外框与底色共用渐变坐标，让浅色区域的外框也相应提亮。
-        private readonly PathGradient _edgeBrush = CreateShareBrush(gradientTop, EdgeLight, ControlBlueEdge);
+        private readonly PathGradient _edgeBrush = CreateShareBrush(gradientTop, _edgeLight, _controlBlueEdge);
         private readonly PathMesh _face = PathRenderer.PrepareFill(outline, transform, bounds);
-        private readonly PathMesh _edge = PathRenderer.PrepareStroke(outline, ShareEdgeStroke, transform, bounds);
-        private readonly PathMesh _highlight = PathRenderer.PrepareStroke(outline, ShareInnerEdgeStroke, transform, bounds);
+        private readonly PathMesh _edge = PathRenderer.PrepareStroke(outline, _shareEdgeStroke, transform, bounds);
+        private readonly PathMesh _highlight = PathRenderer.PrepareStroke(outline, _shareInnerEdgeStroke, transform, bounds);
         private readonly int _shadowOffset = Math.Max(1, (int)MathF.Round(1.5f * transform.M22));
 
         public void Draw(SpriteBatch spriteBatch, PathRenderer renderer, Point offset)
         {
-            renderer.DrawInUI(spriteBatch, _face, ControlBlueEdge * 0.16f, new Point(offset.X, offset.Y + _shadowOffset));
+            renderer.DrawInUI(spriteBatch, _face, _controlBlueEdge * 0.16f, new Point(offset.X, offset.Y + _shadowOffset));
             renderer.DrawGradientInUI(spriteBatch, _edge, _edgeBrush, offset);
             // 用与图标一致的白色高光强度混合描边，渐变覆盖描边内半部。
             renderer.DrawInUI(spriteBatch, _highlight, Color.White * 0.45f, offset);
@@ -178,8 +169,8 @@ public sealed partial class VectorPathDemoUI
 
     private sealed class ShareButtonView : SUISvgIcon
     {
-        private static readonly PathStroke GlyphStroke = new(2f, PathLineCap.Round, PathLineJoin.Round);
-        private static readonly VectorPath Glyph = new VectorPathBuilder()
+        private static readonly PathStroke _glyphStroke = new(2f, PathLineCap.Round, PathLineJoin.Round);
+        private static readonly VectorPath _glyph = new VectorPathBuilder()
             .MoveTo(new Vector2(-2.5f, -1f)).LineTo(new Vector2(2.5f, -4f))
             .MoveTo(new Vector2(-2.5f, 1f)).LineTo(new Vector2(2.5f, 4f))
             .AddCircle(new Vector2(-4f, 0f), 1.7f)
@@ -191,7 +182,7 @@ public sealed partial class VectorPathDemoUI
         {
             DrawFromParent = true;
             Icon = new SvgIcon(new Vector4(-ShareButtonRadius, -ShareButtonRadius, ShareButtonRadius * 2f, ShareButtonRadius * 2f),
-                [new SvgIconLayer(Glyph, Color.White, GlyphStroke)]);
+                [new SvgIconLayer(_glyph, Color.White, _glyphStroke)]);
         }
 
         public bool IsShown { get; set; }

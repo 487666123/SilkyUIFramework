@@ -106,7 +106,10 @@ public sealed partial class VectorPathDemoUI
         public PathMesh Update(double seconds)
         {
             var changed = _mesh is null;
-            foreach (var part in parts) changed |= part.Update(seconds);
+            // 所有图层都要推进动画，即使前面的图层已经触发网格更新。
+            foreach (var part in parts)
+                changed |= part.Update(seconds);
+
             if (changed) _mesh = AssembleMesh();
             return _mesh;
         }
